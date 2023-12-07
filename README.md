@@ -12,12 +12,17 @@
 
 Cross-platform WebSocket Servers:
 
-- Elegant, typed, and simple interface to define your WebSocket server handlers
-- Performant per-server handlers instead of per-connection events API ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
-- Zero dependencies with bundled [ws](https://github.com/websockets/ws) types and runtime for [Node.js](https://nodejs.org/) support
-- Native integration with [Bun](https://bun.sh/) and [Deno](https://deno.com/) WebSocket API
-- Super lightweight tree-shakable packaging
-- Developer-Friendly logging
+👉 Elegant, typed, and simple interface to implement platform-agnostic WebSocket servers
+
+🚀 High-performance server handlers, avoiding heavy per-connection events API ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
+
+📦 No external dependencies, includes [ws](https://github.com/websockets/ws) types and Node.js support
+
+🔗 Seamlessly integrates with [Bun](https://bun.sh/) and [Deno](https://deno.com/)
+
+💡 Extremely lightweight and tree-shakable packaging with ESM and CJS support
+
+🔍 Developer-friendly logs
 
 ## Install
 
@@ -64,7 +69,7 @@ See [playground/node.ts](./playground/node.ts) for demo and [src/adapters/node.t
 
 ## Integration with **Bun**
 
-To integrate crosws with your Bun server, you need to check for `server.upgrade` and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
+To integrate CrossWS with your Bun server, you need to check for `server.upgrade` and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
 
 ```ts
 import bunAdapter from "./dist/adapters/bun";
@@ -114,13 +119,13 @@ See [playground/deno.ts](./playground/deno.ts) for demo and [src/adapters/deno.t
 
 You can define your custom adapters using `defineWebSocketAdapter` wrapper.
 
-See other adapter implementations in [./src/adapters](./src/adapters/) to get and idea how adapters can be implemented and feel free to directly make a Pull Request to support your environment in CrossWS!
+See other adapter implementations in [./src/adapters](./src/adapters/) to get an idea of how adapters can be implemented and feel free to directly make a Pull Request to support your environment in CrossWS!
 
 ## Handler API
 
 Previously you saw in the adapter examples that we pass `onMessage` option.
 
-First object passed to adapters is a list of global handlers that will get called during lifecycle of a WebSocket connection. You can use `defineWebSocketHandler` utility to make a typed websocket handler object and pass it to the actual adapter when needed.
+The first object passed to adapters is a list of global handlers that will get called during the lifecycle of a WebSocket connection. You can use `defineWebSocketHandler` utility to make a typed WebSocket handler object and pass it to the actual adapter when needed.
 
 **Note: API is subject to change! Feedbacks Welcome!**
 
@@ -151,20 +156,20 @@ const websocketHandler = defineWebSocketHandler({
 
 ### `WebSocketPeer`
 
-Websocket handler methods accept a peer instance as first argument. peer is a wrapper over platform natives WebSocket connection instance and alows to send message.
+Websocket handler methods accept a peer instance as the first argument. peer is a wrapper over platform natives WebSocket connection instance and allows to send messages.
 
-**Tip:** You can safely log a peer instance to console using `console.log` it will be automatically stringified with useful information including remote address and connection status!
+**Tip:** You can safely log a peer instance to the console using `console.log` it will be automatically stringified with useful information including the remote address and connection status!
 
 ### `WebSocketMessage`
 
-Second argument to `onMessage` event handler is a message object. You can access raw data using `message.rawData` or stringified message using `message.text()`.
+The second argument to `onMessage` event handler is a message object. You can access raw data using `message.rawData` or stringified message using `message.text()`.
 
-**Tip:** You can safely log `message` object to console using `console.log` it will be automatically stringified!
+**Tip:** You can safely log `message` object to the console using `console.log` it will be automatically stringified!
 
 ## Development
 
 - Clone this repository
-- Install latest LTS version of [Node.js](https://nodejs.org/en/)
+- Install the latest LTS version of [Node.js](https://nodejs.org/en/)
 - Enable [Corepack](https://github.com/nodejs/corepack) using `corepack enable`
 - Install dependencies using `pnpm install`
 - Run interactive tests using `pnpm dev`
