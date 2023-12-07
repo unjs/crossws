@@ -7,13 +7,13 @@
 
 <!-- [![Codecov][codecov-src]][codecov-href] -->
 
-> [!WIP]
-> This project and API is under heavy development and opened to test integrations. Don't rely on it for production yet. Feedbacks welcome about API design!
+> [!WARNING]
+> This project and API are under heavy development and trial. Please don't rely on it for production yet. Feedback is more than welcome!
 
-Cross-platform WebSocket server adapters:
+Cross-platform WebSocket Servers:
 
-- Elegant, typed and simple interface to define WebSocket handlers
-- Performant per-server handlers instead of per-connection events api ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
+- Elegant, typed, and simple interface to define your WebSocket server handlers
+- Performant per-server handlers instead of per-connection events API ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
 - Zero dependencies with bundled [ws](https://github.com/websockets/ws) types and runtime for [Node.js](https://nodejs.org/) support
 - Native integration with [Bun](https://bun.sh/) and [Deno](https://deno.com/) WebSocket API
 - Super lightweight tree-shakable packaging
@@ -37,11 +37,11 @@ bun install crossws
 
 ## Integration
 
-CrossWS allows integrating your WebSocket handlers with different runtimes and platforms using built-in adapters. Each runtime has specific method of integrating WebSocket. Once integrated, your custom handlers (such as `onMessage`) will work consitent even if you change the runtime!
+CrossWS allows integrating your WebSocket handlers with different runtimes and platforms using built-in adapters. Each runtime has a specific method of integrating WebSocket. Once integrated, your custom handlers (such as `onMessage`) will work consistently even if you change the runtime!
 
 ### Integration with **Node.js**
 
-In order to integrate crosws with your Node.js HTTP server, you need to connect `upgrade` event to `handleUpgrade` method returned from adapter. Behind the scenes CrossWS uses an embdeded version of [ws](https://github.com/websockets/ws).
+To integrate CrossWS with your Node.js HTTP server, you need to connect the `upgrade` event to the `handleUpgrade` method returned from the adapter. Behind the scenes, CrossWS uses an embedded version of [ws](https://github.com/websockets/ws).
 
 ```ts
 // Initialize Server
@@ -64,7 +64,7 @@ See [playground/node.ts](./playground/node.ts) for demo and [src/adapters/node.t
 
 ## Integration with **Bun**
 
-In order to integrate crosws with your Bun server, you need to check for `server.upgrade` and also pass `websocket` object returned from adapter to server options. CrossWS leverages native Bun WebSocket API.
+To integrate crosws with your Bun server, you need to check for `server.upgrade` and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
 
 ```ts
 import bunAdapter from "./dist/adapters/bun";
@@ -90,7 +90,7 @@ See [playground/bun.ts](./playground/bun.ts) for demo and [src/adapters/bun.ts](
 
 ## Integration with **Deno**
 
-In order to integrate crosws with your Deno server, you need to check for `upgrade` header than then call `handleUpgrade` method from adapter passing the incoming request object. Returned value is server upgrade response.
+To integrate CrossWS with your Deno server, you need to check for the `upgrade` header and then call `handleUpgrade` method from the adapter passing the incoming request object. The returned value is the server upgrade response.
 
 ```ts
 import denoAdapter from "crossws/adapters/deno";
