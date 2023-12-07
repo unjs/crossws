@@ -67,7 +67,7 @@ server.on("upgrade", handleUpgrade);
 
 See [playground/node.ts](./playground/node.ts) for demo and [src/adapters/node.ts](./src/adapters/node.ts) for implementation.
 
-## Integration with **Bun**
+### Integration with **Bun**
 
 To integrate CrossWS with your Bun server, you need to check for `server.upgrade` and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
 
@@ -93,7 +93,7 @@ Bun.serve({
 
 See [playground/bun.ts](./playground/bun.ts) for demo and [src/adapters/bun.ts](./src/adapters/bun.ts) for implementation.
 
-## Integration with **Deno**
+### Integration with **Deno**
 
 To integrate CrossWS with your Deno server, you need to check for the `upgrade` header and then call `handleUpgrade` method from the adapter passing the incoming request object. The returned value is the server upgrade response.
 
@@ -115,7 +115,7 @@ Deno.serve({ port: 3000 }, (req) => {
 
 See [playground/deno.ts](./playground/deno.ts) for demo and [src/adapters/deno.ts](./src/adapters/deno.ts) for implementation.
 
-## Integration with other runtimes
+### Integration with other runtimes
 
 You can define your custom adapters using `defineWebSocketAdapter` wrapper.
 
