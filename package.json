@@ -1,0 +1,67 @@
+{
+  "name": "crossws",
+  "version": "0.0.0",
+  "description": "",
+  "repository": "unjs/crossws",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./adapters/bun": {
+      "types": "./dist/adapters/bun.d.ts",
+      "import": "./dist/adapters/bun.mjs",
+      "require": "./dist/adapters/bun.cjs"
+    },
+    "./adapters/deno": {
+      "types": "./dist/adapters/deno.d.ts",
+      "import": "./dist/adapters/deno.mjs",
+      "require": "./dist/adapters/deno.cjs"
+    },
+    "./adapters/node": {
+      "types": "./dist/adapters/node.d.ts",
+      "import": "./dist/adapters/node.mjs",
+      "require": "./dist/adapters/node.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest dev",
+    "play:node": "jiti playground/node.ts",
+    "play:bun": "bun playground/bun.ts",
+    "play:deno": "deno run -A playground/deno.ts",
+    "lint": "eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src test",
+    "lint:fix": "eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src test -w",
+    "prepack": "pnpm run build",
+    "release": "pnpm test && changelogen --release && npm publish && git push --follow-tags",
+    "test": "pnpm lint && pnpm test:types && vitest run --coverage",
+    "test:types": "tsc --noEmit --skipLibCheck"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.3",
+    "@types/web": "^0.0.125",
+    "@types/ws": "^8.5.10",
+    "@vitest/coverage-v8": "^1.0.1",
+    "changelogen": "^0.5.5",
+    "eslint": "^8.55.0",
+    "eslint-config-unjs": "^0.2.1",
+    "jiti": "^1.21.0",
+    "prettier": "^3.1.0",
+    "typescript": "^5.3.2",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
+    "unbuild": "^2.0.0",
+    "vitest": "^1.0.1",
+    "ws": "^8.14.2"
+  },
+  "packageManager": "pnpm@8.11.0"
+}
