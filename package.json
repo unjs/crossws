@@ -48,10 +48,10 @@
     "test:types": "tsc --noEmit --skipLibCheck"
   },
   "devDependencies": {
-    "@types/node": "^20.11.5",
+    "@types/node": "^20.11.8",
     "@types/web": "^0.0.135",
     "@types/ws": "^8.5.10",
-    "@vitest/coverage-v8": "^1.2.1",
+    "@vitest/coverage-v8": "^1.2.2",
     "changelogen": "^0.5.5",
     "eslint": "^8.56.0",
     "eslint-config-unjs": "^0.2.1",
@@ -60,8 +60,8 @@
     "typescript": "^5.3.3",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
     "unbuild": "^2.0.0",
-    "vitest": "^1.2.1",
+    "vitest": "^1.2.2",
     "ws": "^8.16.0"
   },
-  "packageManager": "pnpm@8.14.1"
+  "packageManager": "pnpm@8.15.0"
 }
