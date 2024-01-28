@@ -20,6 +20,9 @@ devDependencies:
   '@vitest/coverage-v8':
     specifier: ^1.2.2
     version: 1.2.2(vitest@1.2.2)
+  bun-types:
+    specifier: ^1.0.25
+    version: 1.0.25
   changelogen:
     specifier: ^0.5.5
     version: 0.5.5
@@ -1569,6 +1572,14 @@ packages:
     resolution: {integrity: sha512-qwVpFEHNfhYJIzNRBvd2C1kyo6jz3ZSMPyyuR47OPdiKWlbYnZNyDWuyR175qDnAJLiCo5fBBqPb3RiXgWlkOQ==}
     dependencies:
       semver: 7.5.4
+    dev: true
+
+  /bun-types@1.0.25:
+    resolution: {integrity: sha512-9lxeUR/OJsvlZH4GOWteiAdx7ikrSxCUX7Rr0JJux+DrR3LejouVLxIZnTeQ3UPAZovvSgKivWeHPJ2wlo7/Kg==}
+    dependencies:
+      '@types/node': 20.11.10
+      '@types/ws': 8.5.10
+      undici-types: 5.26.5
     dev: true
 
   /bundle-name@3.0.0:

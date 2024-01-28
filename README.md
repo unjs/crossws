@@ -78,6 +78,7 @@ const { websocket } = bunAdapter({ onMessage: console.log });
 
 Bun.serve({
   port: 3000,
+  websocket,
   fetch(req, server) {
     if (server.upgrade(req)) {
       return;
@@ -87,7 +88,6 @@ Bun.serve({
       { headers: { "content-type": "text/html" } },
     );
   },
-  websocket,
 });
 ```
 

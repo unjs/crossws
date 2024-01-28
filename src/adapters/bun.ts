@@ -1,8 +1,9 @@
 // https://bun.sh/docs/api/websockets
 
-import type { BunWSOptions, BunServerWebSocket } from "../../types/bun";
+/// <reference types="bun-types" />
+
 import { WebSocketMessage } from "../message";
-import { WebSocketError } from "../error";
+// import { WebSocketError } from "../error";
 import { WebSocketPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter";
 
@@ -10,8 +11,15 @@ export const WebSocket = globalThis.WebSocket;
 
 export interface AdapterOptions {}
 
+type WebSocketHandler<T = unknown> = Extract<
+  Parameters<typeof Bun.serve<T>>[0],
+  { websocket: any }
+>["websocket"];
+
+type ServerWebSocket = Parameters<WebSocketHandler["message"]>[0];
+
 export interface Adapter {
-  websocket: BunWSOptions;
+  websocket: WebSocketHandler;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
@@ -33,11 +41,12 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
           const peer = new BunWebSocketPeer(ws);
           handler.onClose?.(peer, 0, "");
         },
-        error: (ws, error) => {
-          handler.onEvent?.("bun:error", ws, error);
-          const peer = new BunWebSocketPeer(ws);
-          handler.onError?.(peer, new WebSocketError(error));
-        },
+        // TODO
+        // error: (ws, error) => {
+        //   handler.onEvent?.("bun:error", ws, error);
+        //   const peer = new BunWebSocketPeer(ws);
+        //   handler.onError?.(peer, new WebSocketError(error));
+        // },
         drain: (ws) => {
           handler.onEvent?.("bun:drain", ws);
         },
@@ -47,7 +56,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 );
 
 class BunWebSocketPeer extends WebSocketPeer {
-  constructor(private _ws: BunServerWebSocket) {
+  constructor(private _ws: ServerWebSocket) {
     super();
   }
 

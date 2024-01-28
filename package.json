@@ -59,6 +59,7 @@
     "@types/web": "^0.0.135",
     "@types/ws": "^8.5.10",
     "@vitest/coverage-v8": "^1.2.2",
+    "bun-types": "^1.0.25",
     "changelogen": "^0.5.5",
     "eslint": "^8.56.0",
     "eslint-config-unjs": "^0.2.1",
