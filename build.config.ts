@@ -4,4 +4,5 @@ export default defineBuildConfig({
   rollup: {
     inlineDependencies: true,
   },
+  externals: ["@cloudflare/workers-types"],
 });

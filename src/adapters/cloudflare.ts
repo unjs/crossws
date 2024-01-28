@@ -1,6 +1,6 @@
 // https://developers.cloudflare.com/workers/examples/websockets/
 
-/// <reference types="@cloudflare/workers-types" />
+import type * as _cf from "@cloudflare/workers-types";
 
 import { WebSocketPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
@@ -9,18 +9,25 @@ import { WebSocketError } from "../error";
 
 type Env = Record<string, any>;
 
+declare const WebSocketPair: typeof _cf.WebSocketPair;
+declare const Response: typeof _cf.Response;
+
 export interface AdapterOptions {}
 
 export interface Adapter {
-  handleUpgrade(req: Request, env: Env, context: ExecutionContext): Response;
+  handleUpgrade(
+    req: _cf.Request,
+    env: Env,
+    context: _cf.ExecutionContext,
+  ): _cf.Response;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   (handler, opts = {}) => {
     const handleUpgrade = (
-      req: Request,
+      req: _cf.Request,
       env: Env,
-      context: ExecutionContext,
+      context: _cf.ExecutionContext,
     ) => {
       const pair = new WebSocketPair();
       const client = pair[0];
@@ -60,8 +67,8 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 
 class CloudflareWebSocketPeer extends WebSocketPeer {
   constructor(
-    private _client: WebSocket,
-    private _server: WebSocket,
+    private _client: _cf.WebSocket,
+    private _server: _cf.WebSocket,
   ) {
     super();
   }

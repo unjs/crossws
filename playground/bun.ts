@@ -1,7 +1,5 @@
 // You can run this demo using `bun --bun ./bun.ts` or `npm run play:bun` in repo
 
-/// <reference types="bun-types" />
-
 import bunAdapter from "../src/adapters/bun";
 import { createDemo, getIndexHTMLURL } from "./_common";
 

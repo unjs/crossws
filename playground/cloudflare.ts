@@ -1,6 +1,6 @@
 // You can run this demo using `npm run play:cf` in repo
 
-/// <reference types="@cloudflare/workers-types" />
+import type { Request, ExecutionContext } from "@cloudflare/workers-types";
 
 import cloudflareAdapter from "../src/adapters/cloudflare";
 

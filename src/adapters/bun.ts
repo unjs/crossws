@@ -1,6 +1,7 @@
 // https://bun.sh/docs/api/websockets
 
-/// <reference types="bun-types" />
+// @ts-nocheck
+import type * as _bun from "bun-types";
 
 import { WebSocketMessage } from "../message";
 // import { WebSocketError } from "../error";

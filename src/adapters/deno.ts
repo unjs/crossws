@@ -3,7 +3,7 @@
 // https://examples.deno.land/http-server-websocket
 
 // @ts-nocheck
-import type * as _DENO_TYPES_ from "../../types/lib.deno.d.ts";
+import type * as _deno from "../../types/lib.deno.d.ts";
 
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
