@@ -13,7 +13,7 @@ import type {
   WebSocketServer,
   WebSocket as WebSocketT,
 } from "../../types/ws";
-import { WebSocketPeer } from "../peer";
+import { WebSocketPeerBase } from "../peer";
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
 import { defineWebSocketAdapter } from "../adapter";
@@ -39,58 +39,58 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       }) as WebSocketServer);
 
     // Unmanaged server-level events
-    wss.on("error", (error) => {
-      handler.onEvent?.("node:server-error", error);
-    });
-    wss.on("headers", (headers, request) => {
-      handler.onEvent?.("node:server-headers", headers, request);
-    });
-    wss.on("listening", () => {
-      handler.onEvent?.("node:server-listening");
-    });
-    wss.on("close", () => {
-      handler.onEvent?.("node:server-close");
-    });
+    // wss.on("error", (error) => {
+    //   handler.onEvent?.("node:server-error", error);
+    // });
+    // wss.on("headers", (headers, request) => {
+    //   handler.onEvent?.("node:server-headers", headers, request);
+    // });
+    // wss.on("listening", () => {
+    //   handler.onEvent?.("node:server-listening");
+    // });
+    // wss.on("close", () => {
+    //   handler.onEvent?.("node:server-close");
+    // });
 
     wss.on("connection", (ws, req) => {
-      const peer = new NodeWebSocketPeer(ws, req);
+      const peer = new NodeWebSocketPeer({ node: { ws, req, server: wss } });
 
       // Managed socket-level events
       ws.on("message", (data: RawData, isBinary: boolean) => {
-        handler.onEvent?.("node:message", ws, data, isBinary);
+        handler.onEvent?.("node:message", peer, data, isBinary);
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
         handler.onMessage?.(peer, new WebSocketMessage(data, isBinary));
       });
       ws.on("error", (error: Error) => {
-        handler.onEvent?.("node:error", ws, error);
+        handler.onEvent?.("node:error", peer, error);
         handler.onError?.(peer, new WebSocketError(error));
       });
       ws.on("close", (code: number, reason: Buffer) => {
-        handler.onEvent?.("node:close", ws, code, reason);
+        handler.onEvent?.("node:close", peer, code, reason);
         handler.onClose?.(peer, code, reason?.toString());
       });
       ws.on("open", () => {
-        handler.onEvent?.("node:open", ws);
+        handler.onEvent?.("node:open", peer);
         handler.onOpen?.(peer);
       });
 
       // Unmanaged socket-level events
       ws.on("ping", (data: Buffer) => {
-        handler.onEvent?.("node:ping", ws, data);
+        handler.onEvent?.("node:ping", peer, data);
       });
       ws.on("pong", (data: Buffer) => {
-        handler.onEvent?.("node:pong", ws, data);
+        handler.onEvent?.("node:pong", peer, data);
       });
       ws.on(
         "unexpected-response",
-        (request: ClientRequest, response: IncomingMessage) => {
-          handler.onEvent?.("node:unexpected-response", ws, request, response);
+        (req: ClientRequest, res: IncomingMessage) => {
+          handler.onEvent?.("node:unexpected-response", peer, req, res);
         },
       );
-      ws.on("upgrade", (request: IncomingMessage) => {
-        handler.onEvent?.("node:upgrade", ws, request);
+      ws.on("upgrade", (rew: IncomingMessage) => {
+        handler.onEvent?.("node:upgrade", peer, req);
       });
     });
 
@@ -104,16 +104,15 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class NodeWebSocketPeer extends WebSocketPeer {
-  constructor(
-    private _ws: WebSocketT,
-    private _req: IncomingMessage,
-  ) {
-    super();
-  }
-
+class NodeWebSocketPeer extends WebSocketPeerBase<{
+  node: {
+    server: WebSocketServer;
+    req: IncomingMessage;
+    ws: WebSocketT;
+  };
+}> {
   get id() {
-    const socket = this._req?.socket;
+    const socket = this.ctx.node.req.socket;
     if (!socket) {
       return undefined;
     }
@@ -125,11 +124,11 @@ class NodeWebSocketPeer extends WebSocketPeer {
   }
 
   get readyState() {
-    return this._ws.readyState;
+    return this.ctx.node.ws.readyState;
   }
 
   send(message: string, compress?: boolean) {
-    this._ws.send(message, { compress });
+    this.ctx.node.ws.send(message, { compress });
     return 0;
   }
 }

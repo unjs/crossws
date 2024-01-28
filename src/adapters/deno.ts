@@ -2,44 +2,40 @@
 // https://deno.land/api?s=Deno.upgradeWebSocket
 // https://examples.deno.land/http-server-websocket
 
-// @ts-nocheck
-import type * as _deno from "../../types/lib.deno.d.ts";
+import "../../types/lib.deno.d.ts";
 
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
-import { WebSocketPeer } from "../peer";
+import { WebSocketPeerBase } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
-
-export const WebSocket = globalThis.WebSocket;
 
 export interface AdapterOptions {}
 
 export interface Adapter {
-  handleUpgrade(req: Deno.Request): Response;
+  handleUpgrade(req: Request): Response;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   (handler, opts = {}) => {
-    const handleUpgrade = (req: Request) => {
-      const upgrade = Deno.upgradeWebSocket(req);
+    const handleUpgrade = (request: Request) => {
+      const upgrade = Deno.upgradeWebSocket(request);
+      const peer = new DenoWebSocketPeer({
+        deno: { ws: upgrade.socket, request },
+      });
       upgrade.socket.addEventListener("open", () => {
-        handler.onEvent?.("deno:open", upgrade.socket);
-        const peer = new DenoWebSocketPeer(upgrade.socket);
+        handler.onEvent?.("deno:open", peer);
         handler.onOpen?.(peer);
       });
       upgrade.socket.addEventListener("message", (event) => {
-        handler.onEvent?.("deno:message", upgrade.socket, event);
-        const peer = new DenoWebSocketPeer(upgrade.socket);
+        handler.onEvent?.("deno:message", peer, event);
         handler.onMessage?.(peer, new WebSocketMessage(event.data));
       });
       upgrade.socket.addEventListener("close", () => {
-        handler.onEvent?.("deno:close", upgrade.socket);
-        const peer = new DenoWebSocketPeer(upgrade.socket);
+        handler.onEvent?.("deno:close", peer);
         handler.onClose?.(peer, 0, "");
       });
       upgrade.socket.addEventListener("error", (error) => {
-        handler.onEvent?.("deno:error", upgrade.socket, error);
-        const peer = new DenoWebSocketPeer(upgrade.socket);
+        handler.onEvent?.("deno:error", peer, error);
         handler.onError?.(peer, new WebSocketError(error));
       });
       return upgrade.response;
@@ -51,21 +47,19 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class DenoWebSocketPeer extends WebSocketPeer {
-  constructor(private _ws: DenoWebSocketPeer) {
-    super();
-  }
-
+class DenoWebSocketPeer extends WebSocketPeerBase<{
+  deno: { ws: any; request: Request };
+}> {
   get id() {
-    return this._ws.remoteAddress;
+    return this.ctx.deno.ws.remoteAddress;
   }
 
   get readyState() {
-    return this._ws.readyState as any;
+    return this.ctx.deno.ws.readyState as -1 | 0 | 1 | 2 | 3;
   }
 
   send(message: string | ArrayBuffer) {
-    this._ws.send(message);
+    this.ctx.deno.ws.send(message);
     return 0;
   }
 }

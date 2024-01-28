@@ -8,7 +8,13 @@ const ReadyStateMap = {
   3: "closed",
 } as const;
 
-export abstract class WebSocketPeer {
+export interface WebSocketContext {}
+
+export abstract class WebSocketPeerBase<
+  T extends WebSocketContext = WebSocketContext,
+> {
+  constructor(public ctx: T) {}
+
   get id(): string | undefined {
     return undefined;
   }
