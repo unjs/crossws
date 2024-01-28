@@ -18,7 +18,7 @@ Cross-platform WebSocket Servers:
 
 📦 No external dependencies, includes [ws](https://github.com/websockets/ws) types and Node.js support
 
-🔗 Seamlessly integrates with [Bun](https://bun.sh/) and [Deno](https://deno.com/)
+🔗 Seamlessly integrates with, [Node.js](https://nodejs.org/en), [Bun](https://bun.sh/), [Deno](https://deno.com/) and [Cloudflare Workers](https://workers.cloudflare.com/)!
 
 💡 Extremely lightweight and tree-shakable packaging with ESM and CJS support
 
@@ -114,6 +114,30 @@ Deno.serve({ port: 3000 }, (req) => {
 ```
 
 See [playground/deno.ts](./playground/deno.ts) for demo and [src/adapters/deno.ts](./src/adapters/deno.ts) for implementation.
+
+### Integration with **Cloudflare Workers**
+
+To integrate CrossWS with your Cloudflare Workers, you need to check for the `upgrade` header
+
+```ts
+import cloudflareAdapter from "crossws/adapters/cloudflare";
+
+const { handleUpgrade } = cloudflareAdapter({ onMessage: console.log });
+
+export default {
+  async fetch(request, env, context) {
+    if (request.headers.get("upgrade") === "websocket") {
+      return handleUpgrade(request, env, context);
+    }
+    return new Response(
+      `<script>new WebSocket("ws://localhost:3000").addEventListener("open", (e) => e.target.send("Hello from client!"));</script>`,
+      { headers: { "content-type": "text/html" } },
+    );
+  },
+};
+```
+
+See [playground/cloudflare.ts](./playground/cloudflare.ts) for demo and [src/adapters/cloudflare.ts](./src/adapters/cloudflare.ts) for implementation.
 
 ### Integration with other runtimes
 

@@ -5,7 +5,7 @@
 <body>
   <div id="logs"></div>
   <script type="module">
-    const url = `ws://${location.host}`;
+    const url = `ws://${location.host}/_ws`;
     const logsEl = document.querySelector("#logs");
     const log = (...args) => {
       console.log("[ws]", ...args);
