@@ -4,13 +4,13 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 
 import nodeAdapter from "../src/adapters/node";
-import { createDemo, indexHTMLURL } from "./_common";
+import { createDemo, getIndexHTMLURL } from "./_common";
 
 const adapter = createDemo(nodeAdapter);
 
 const server = createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/html" });
-  const indexHTML = readFileSync(indexHTMLURL, "utf8");
+  const indexHTML = readFileSync(getIndexHTMLURL(), "utf8");
   res.end(indexHTML);
 });
 

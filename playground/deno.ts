@@ -5,7 +5,7 @@ import denoAdapter from "../dist/adapters/deno.mjs";
 // @ts-ignore
 import type * as _Deno from "../types/lib.deno.d.ts";
 
-import { createDemo, indexHTMLURL } from "./_common.ts";
+import { createDemo, getIndexHTMLURL } from "./_common.ts";
 
 const adapter = createDemo(denoAdapter);
 
@@ -14,7 +14,7 @@ Deno.serve({ port: 3001 }, (req) => {
     return adapter.handleUpgrade(req);
   }
 
-  return new Response(Deno.readFileSync(indexHTMLURL), {
+  return new Response(Deno.readFileSync(getIndexHTMLURL()), {
     headers: { "Content-Type": "text/html" },
   });
 });

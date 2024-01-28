@@ -1,0 +1,6 @@
+# https://developers.cloudflare.com/workers/wrangler/configuration/
+
+compatibility_date = "2024-01-01"
+workers_dev = false
+
+main = "playground/cloudflare.ts"

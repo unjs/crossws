@@ -2,6 +2,7 @@
   "extends": ["eslint-config-unjs"],
   "rules": {
     "@typescript-eslint/no-unused-vars": 0,
-    "no-useless-constructor": 0
+    "no-useless-constructor": 0,
+    "unicorn/consistent-function-scoping": 0
   }
 }

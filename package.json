@@ -22,6 +22,11 @@
       "import": "./dist/adapters/deno.mjs",
       "require": "./dist/adapters/deno.cjs"
     },
+    "./adapters/cloudflare": {
+      "types": "./dist/adapters/cloudflare.d.ts",
+      "import": "./dist/adapters/cloudflare.mjs",
+      "require": "./dist/adapters/cloudflare.cjs"
+    },
     "./adapters/node": {
       "types": "./dist/adapters/node.d.ts",
       "import": "./dist/adapters/node.mjs",
@@ -40,6 +45,7 @@
     "play:node": "jiti playground/node.ts",
     "play:bun": "bun playground/bun.ts",
     "play:deno": "deno run -A playground/deno.ts",
+    "play:cf": "wrangler dev",
     "lint": "eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src test",
     "lint:fix": "eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src test -w",
     "prepack": "pnpm run build",
@@ -48,6 +54,7 @@
     "test:types": "tsc --noEmit --skipLibCheck"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240117.0",
     "@types/node": "^20.11.8",
     "@types/web": "^0.0.135",
     "@types/ws": "^8.5.10",
@@ -61,6 +68,7 @@
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
     "unbuild": "^2.0.0",
     "vitest": "^1.2.2",
+    "wrangler": "^3.25.0",
     "ws": "^8.16.0"
   },
   "packageManager": "pnpm@8.15.0"

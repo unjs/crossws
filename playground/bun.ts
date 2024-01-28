@@ -1,7 +1,7 @@
 // You can run this demo using `bun --bun ./bun.ts` or `npm run play:bun` in repo
 
 import bunAdapter from "../src/adapters/bun";
-import { createDemo, indexHTMLURL } from "./_common";
+import { createDemo, getIndexHTMLURL } from "./_common";
 
 const adapter = createDemo(bunAdapter);
 
@@ -11,7 +11,7 @@ Bun.serve({
     if (server.upgrade(req)) {
       return;
     }
-    return new Response(Bun.file(indexHTMLURL), {
+    return new Response(Bun.file(getIndexHTMLURL()), {
       headers: { "Content-Type": "text/html" },
     });
   },
