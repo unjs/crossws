@@ -14,21 +14,21 @@
     },
     "./websocket": {
       "types": {
-        "import": "./dist/websocket/native.d.mts",
-        "require": "./dist/websocket/native.d.cts"
+        "import": "./dist/websocket/index.d.mts",
+        "require": "./dist/websocket/index.d.cts"
       },
-      "browser": "./dist/websocket/native.mjs",
-      "worker": "./dist/websocket/native.mjs",
-      "bun": "./dist/websocket/native.mjs",
-      "deno": "./dist/websocket/native.mjs",
-      "edge-light": "./dist/websocket/native.mjs",
-      "workerd": "./dist/websocket/native.mjs",
+      "browser": "./dist/websocket/index.mjs",
+      "worker": "./dist/websocket/index.mjs",
+      "bun": "./dist/websocket/index.mjs",
+      "deno": "./dist/websocket/index.mjs",
+      "edge-light": "./dist/websocket/index.mjs",
+      "workerd": "./dist/websocket/index.mjs",
       "node": {
         "import": "./dist/websocket/node.mjs",
         "require": "./dist/websocket/node.cjs"
       },
-      "import": "./dist/websocket/native.mjs",
-      "require": "./dist/websocket/native.cjs"
+      "import": "./dist/websocket/index.mjs",
+      "require": "./dist/websocket/index.cjs"
     },
     "./adapters/bun": {
       "types": "./dist/adapters/bun.d.ts",
@@ -56,6 +56,7 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "adapters",
     "*.d.ts"
   ],
   "scripts": {
