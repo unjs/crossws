@@ -1,11 +1,7 @@
 # ⛨ CrossWS
 
 [![npm version][npm-version-src]][npm-version-href]
-[![bundle][bundle-src]][bundle-href]
-
-<!-- [![npm downloads][npm-downloads-src]][npm-downloads-href] -->
-
-<!-- [![Codecov][codecov-src]][codecov-href] -->
+[![npm downloads][npm-downloads-src]][npm-downloads-href]
 
 👉 Elegant, typed, and simple interface to implement platform-agnostic WebSocket servers
 
@@ -280,7 +276,3 @@ Published under [MIT License](./LICENSE).
 [npm-version-href]: https://npmjs.com/package/crossws
 [npm-downloads-src]: https://img.shields.io/npm/dm/crossws?style=flat&colorA=18181B&colorB=F0DB4F
 [npm-downloads-href]: https://npmjs.com/package/crossws
-[codecov-src]: https://img.shields.io/codecov/c/gh/unjs/crossws/main?style=flat&colorA=18181B&colorB=F0DB4F
-[codecov-href]: https://codecov.io/gh/unjs/crossws
-[bundle-src]: https://img.shields.io/bundlephobia/minzip/crossws?style=flat&colorA=18181B&colorB=F0DB4F
-[bundle-href]: https://bundlephobia.com/result?p=crossws
