@@ -4141,7 +4141,7 @@ declare namespace Deno {
    *
    * @category Runtime Environment
    */
-  export function addSignalListener(signal: Signal, handler: () => void): void;
+  export function addSignalListener(signal: Signal, hooks: () => void): void;
 
   /** Removes the given signal listener that has been registered with
    * {@linkcode Deno.addSignalListener}.
@@ -4159,10 +4159,7 @@ declare namespace Deno {
    *
    * @category Runtime Environment
    */
-  export function removeSignalListener(
-    signal: Signal,
-    handler: () => void,
-  ): void;
+  export function removeSignalListener(signal: Signal, hooks: () => void): void;
 
   /**
    * @deprecated Use {@linkcode Deno.Command} instead.
@@ -4465,7 +4462,7 @@ declare namespace Deno {
      *
      * @default {100} */
     iterableLimit?: number;
-    /** Show a Proxy's target and handler.
+    /** Show a Proxy's target and hooks.
      *
      * @default {false} */
     showProxy?: boolean;
@@ -5873,22 +5870,22 @@ declare namespace Deno {
    *
    * @category HTTP Server
    */
-  export interface ServeHandlerInfo {
+  export interface ServeHooksInfo {
     /** The remote address of the connection. */
     remoteAddr: Deno.NetAddr;
   }
 
-  /** A handler for HTTP requests. Consumes a request and returns a response.
+  /** A hooks for HTTP requests. Consumes a request and returns a response.
    *
-   * If a handler throws, the server calling the handler will assume the impact
+   * If a hooks throws, the server calling the hooks will assume the impact
    * of the error is isolated to the individual request. It will catch the error
    * and if necessary will close the underlying connection.
    *
    * @category HTTP Server
    */
-  export type ServeHandler = (
+  export type ServeHooks = (
     request: Request,
-    info: ServeHandlerInfo,
+    info: ServeHooksInfo,
   ) => Response | Promise<Response>;
 
   /** Options which can be set when calling {@linkcode Deno.serve}.
@@ -5917,7 +5914,7 @@ declare namespace Deno {
     /** Sets `SO_REUSEPORT` on POSIX systems. */
     reusePort?: boolean;
 
-    /** The handler to invoke when route handlers throw an error. */
+    /** The hooks to invoke when route hooks throw an error. */
     onError?: (error: unknown) => Response | Promise<Response>;
 
     /** The callback which is called when the server starts listening. */
@@ -5940,8 +5937,8 @@ declare namespace Deno {
    * @category HTTP Server
    */
   export interface ServeInit {
-    /** The handler to invoke to process each incoming request. */
-    handler: ServeHandler;
+    /** The hooks to invoke to process each incoming request. */
+    hooks: ServeHooks;
   }
 
   /** An instance of the server created using `Deno.serve()` API.
@@ -5972,7 +5969,7 @@ declare namespace Deno {
    */
   export type Server = HttpServer;
 
-  /** Serves HTTP requests with the given handler.
+  /** Serves HTTP requests with the given hooks.
    *
    * The below example serves with the port `8000` on hostname `"127.0.0.1"`.
    *
@@ -5982,8 +5979,8 @@ declare namespace Deno {
    *
    * @category HTTP Server
    */
-  export function serve(handler: ServeHandler): HttpServer;
-  /** Serves HTTP requests with the given option bag and handler.
+  export function serve(hooks: ServeHooks): HttpServer;
+  /** Serves HTTP requests with the given option bag and hooks.
    *
    * You can specify an object with a port and hostname option, which is the
    * address to listen on. The default is port `8000` on hostname `"127.0.0.1"`.
@@ -6041,7 +6038,7 @@ declare namespace Deno {
    */
   export function serve(
     options: ServeOptions | ServeTlsOptions,
-    handler: ServeHandler,
+    hooks: ServeHooks,
   ): HttpServer;
   /** Serves HTTP requests with the given option bag.
    *
@@ -6054,7 +6051,7 @@ declare namespace Deno {
    * const server = Deno.serve({
    *   port: 3000,
    *   hostname: "0.0.0.0",
-   *   handler: (_req) => new Response("Hello, world"),
+   *   hooks: (_req) => new Response("Hello, world"),
    *   signal: ac.signal,
    *   onListen({ port, hostname }) {
    *     console.log(`Server started at http://${hostname}:${port}`);
@@ -8053,7 +8050,7 @@ declare interface Request extends Body {
   /**
    * Returns the signal associated with request, which is an AbortSignal object
    * indicating whether or not request has been aborted, and its abort event
-   * handler.
+   * hooks.
    */
   readonly signal: AbortSignal;
   /**
@@ -9547,7 +9544,7 @@ declare function queueMicrotask(func: VoidFunction): void;
 
 /** Dispatches an event in the global scope, synchronously invoking any
  * registered event listeners for this event in the appropriate order. Returns
- * false if event is cancelable and at least one of the event handlers which
+ * false if event is cancelable and at least one of the event hooks which
  * handled this event called Event.preventDefault(). Otherwise it returns true.
  *
  * ```ts

@@ -1,7 +1,7 @@
-import type { WebSocketHandler } from "./handler";
+import type { WebSocketHooks } from "./hooks";
 
 export type WebSocketAdapter<RT = any, OT = any> = (
-  handler: WebSocketHandler,
+  hooks: Partial<WebSocketHooks>,
   opts: OT,
 ) => RT;
 

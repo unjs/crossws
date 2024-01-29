@@ -14,19 +14,19 @@ export interface AdapterOptions {}
 
 type ContextData = { _peer?: WebSocketPeer };
 
-type WebSocketHandler = Extract<
+type WebSocketHooks = Extract<
   Parameters<typeof Bun.serve<ContextData>>[0],
   { websocket: any }
 >["websocket"];
 
-type ServerWebSocket = Parameters<WebSocketHandler["message"]>[0];
+type ServerWebSocket = Parameters<WebSocketHooks["message"]>[0];
 
 export interface Adapter {
-  websocket: WebSocketHandler;
+  websocket: WebSocketHooks;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (handler, opts = {}) => {
+  (hooks, opts = {}) => {
     const getPeer = (ws: ServerWebSocket) => {
       if (ws.data?._peer) {
         return ws.data._peer;
@@ -41,28 +41,36 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       websocket: {
         message: (ws, message) => {
           const peer = getPeer(ws);
-          handler?.onEvent?.("bun:message", peer, ws, message);
-          handler.onMessage?.(peer, new WebSocketMessage(message));
+          hooks["bun:message"]?.(peer, ws, message);
+          hooks.message?.(peer, new WebSocketMessage(message));
         },
         open: (ws) => {
           const peer = getPeer(ws);
-          handler?.onEvent?.("bun:open", peer, ws);
-          handler.onOpen?.(peer);
+          hooks["bun:open"]?.(peer, ws);
+          hooks.open?.(peer);
         },
         close: (ws) => {
           const peer = getPeer(ws);
-          handler?.onEvent?.("bun:close", peer, ws);
-          handler.onClose?.(peer, 0, "");
+          hooks["bun:close"]?.(peer, ws);
+          hooks.close?.(peer, {});
         },
         drain: (ws) => {
           const peer = getPeer(ws);
-          handler?.onEvent?.("bun:drain", peer);
+          hooks["bun:drain"]?.(peer);
         },
         // @ts-expect-error types unavailable but mentioned in docs
         error: (ws, error) => {
           const peer = getPeer(ws);
-          handler?.onEvent?.("bun:error", peer, error);
-          handler.onError?.(peer, new WebSocketError(error));
+          hooks["bun:error"]?.(peer, ws, error);
+          hooks.error?.(peer, new WebSocketError(error));
+        },
+        ping(ws, data) {
+          const peer = getPeer(ws);
+          hooks["bun:ping"]?.(peer, ws, data);
+        },
+        pong(ws, data) {
+          const peer = getPeer(ws);
+          hooks["bun:pong"]?.(peer, ws, data);
         },
       },
     };
@@ -73,7 +81,11 @@ class WebSocketPeer extends WebSocketPeerBase<{
   bun: { ws: ServerWebSocket };
 }> {
   get id() {
-    return this.ctx.bun.ws.remoteAddress;
+    let addr = this.ctx.bun.ws.remoteAddress;
+    if (addr.includes(":")) {
+      addr = `[${addr}]`;
+    }
+    return addr;
   }
 
   get readyState() {

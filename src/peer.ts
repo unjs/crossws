@@ -30,7 +30,7 @@ export abstract class WebSocketPeerBase<
 
   toString() {
     const readyState = ReadyStateMap[this.readyState];
-    return `[WebSocketPeer] ${this.id || "-"} (${readyState})`;
+    return `<WebSocketPeer${this.id ? ` ${this.id}` : ""} (${readyState})>`;
   }
 
   [Symbol.for("nodejs.util.inspect.custom")]() {

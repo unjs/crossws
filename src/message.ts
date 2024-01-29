@@ -9,7 +9,7 @@ export class WebSocketMessage {
   }
 
   toString() {
-    return `[WebSocketMessage] ${this.text()}`;
+    return `<WebSocketMessage: ${this.text()}>`;
   }
 
   [Symbol.for("nodejs.util.inspect.custom")]() {

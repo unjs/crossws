@@ -14,7 +14,7 @@ Cross-platform WebSocket Servers:
 
 👉 Elegant, typed, and simple interface to implement platform-agnostic WebSocket servers
 
-🚀 High-performance server handlers, avoiding heavy per-connection events API ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
+🚀 High-performance server hooks, avoiding heavy per-connection events API ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
 
 📦 No external dependencies, includes [ws](https://github.com/websockets/ws) types and Node.js support
 
@@ -42,7 +42,7 @@ bun install crossws
 
 ## Integration
 
-CrossWS allows integrating your WebSocket handlers with different runtimes and platforms using built-in adapters. Each runtime has a specific method of integrating WebSocket. Once integrated, your custom handlers (such as `onMessage`) will work consistently even if you change the runtime!
+CrossWS allows integrating your WebSocket hooks with different runtimes and platforms using built-in adapters. Each runtime has a specific method of integrating WebSocket. Once integrated, your custom hooks (such as `onMessage`) will work consistently even if you change the runtime!
 
 ### Integration with **Node.js**
 
@@ -58,7 +58,7 @@ const server = createServer((req, res) => {
   );
 }).listen(3000);
 
-// Initialize WebSocket Handler
+// Initialize WebSocket Hooks
 import nodeWSAdapter from "crossws/adapters/node";
 
 const { handleUpgrade } = nodeWSAdapter({ onMessage: console.log });
@@ -145,18 +145,18 @@ You can define your custom adapters using `defineWebSocketAdapter` wrapper.
 
 See other adapter implementations in [./src/adapters](./src/adapters/) to get an idea of how adapters can be implemented and feel free to directly make a Pull Request to support your environment in CrossWS!
 
-## Handler API
+## Hooks API
 
 Previously you saw in the adapter examples that we pass `onMessage` option.
 
-The first object passed to adapters is a list of global handlers that will get called during the lifecycle of a WebSocket connection. You can use `defineWebSocketHandler` utility to make a typed WebSocket handler object and pass it to the actual adapter when needed.
+The first object passed to adapters is a list of global hooks that will get called during the lifecycle of a WebSocket connection. You can use `defineWebSocketHooks` utility to make a typed WebSocket hooks object and pass it to the actual adapter when needed.
 
 **Note: API is subject to change! Feedbacks Welcome!**
 
 ```ts
-import { defineWebSocketHandler } from "crossws";
+import { defineWebSocketHooks } from "crossws";
 
-const websocketHandler = defineWebSocketHandler({
+const websocketHooks = defineWebSocketHooks({
   onMessage: (peer, message) => {
     console.log("message", peer, message);
     if (message.text().includes("ping")) {
@@ -180,13 +180,13 @@ const websocketHandler = defineWebSocketHandler({
 
 ### `WebSocketPeer`
 
-Websocket handler methods accept a peer instance as the first argument. peer is a wrapper over platform natives WebSocket connection instance and allows to send messages.
+Websocket hooks methods accept a peer instance as the first argument. peer is a wrapper over platform natives WebSocket connection instance and allows to send messages.
 
 **Tip:** You can safely log a peer instance to the console using `console.log` it will be automatically stringified with useful information including the remote address and connection status!
 
 ### `WebSocketMessage`
 
-The second argument to `onMessage` event handler is a message object. You can access raw data using `message.rawData` or stringified message using `message.text()`.
+The second argument to `onMessage` event hooks is a message object. You can access raw data using `message.rawData` or stringified message using `message.text()`.
 
 **Tip:** You can safely log `message` object to the console using `console.log` it will be automatically stringified!
 

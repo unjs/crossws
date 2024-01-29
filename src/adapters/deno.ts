@@ -16,27 +16,27 @@ export interface Adapter {
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (handler, opts = {}) => {
+  (hooks, opts = {}) => {
     const handleUpgrade = (request: Request) => {
       const upgrade = Deno.upgradeWebSocket(request);
       const peer = new DenoWebSocketPeer({
         deno: { ws: upgrade.socket, request },
       });
       upgrade.socket.addEventListener("open", () => {
-        handler.onEvent?.("deno:open", peer);
-        handler.onOpen?.(peer);
+        hooks["deno:open"]?.(peer);
+        hooks.open?.(peer);
       });
       upgrade.socket.addEventListener("message", (event) => {
-        handler.onEvent?.("deno:message", peer, event);
-        handler.onMessage?.(peer, new WebSocketMessage(event.data));
+        hooks["deno:message"]?.(peer, event);
+        hooks.message?.(peer, new WebSocketMessage(event.data));
       });
       upgrade.socket.addEventListener("close", () => {
-        handler.onEvent?.("deno:close", peer);
-        handler.onClose?.(peer, 0, "");
+        hooks["deno:close"]?.(peer);
+        hooks.close?.(peer, {});
       });
       upgrade.socket.addEventListener("error", (error) => {
-        handler.onEvent?.("deno:error", peer, error);
-        handler.onError?.(peer, new WebSocketError(error));
+        hooks["deno:error"]?.(peer, error);
+        hooks.error?.(peer, new WebSocketError(error));
       });
       return upgrade.response;
     };

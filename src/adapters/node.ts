@@ -30,7 +30,7 @@ export interface Adapter {
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (handler, opts = {}) => {
+  (hooks, opts = {}) => {
     const wss: WebSocketServer =
       opts.wss ||
       (new _WebSocketServer({
@@ -40,57 +40,60 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 
     // Unmanaged server-level events
     // wss.on("error", (error) => {
-    //   handler.onEvent?.("node:server-error", error);
+    //   hooks["node:server-error"]?.( error);
     // });
     // wss.on("headers", (headers, request) => {
-    //   handler.onEvent?.("node:server-headers", headers, request);
+    //   hooks["node:server-headers"]?.( headers, request);
     // });
     // wss.on("listening", () => {
-    //   handler.onEvent?.("node:server-listening");
+    //   hooks.onEvent?.("node:server-listening");
     // });
     // wss.on("close", () => {
-    //   handler.onEvent?.("node:server-close");
+    //   hooks.onEvent?.("node:server-close");
     // });
 
     wss.on("connection", (ws, req) => {
       const peer = new NodeWebSocketPeer({ node: { ws, req, server: wss } });
+      hooks.open?.(peer);
 
       // Managed socket-level events
       ws.on("message", (data: RawData, isBinary: boolean) => {
-        handler.onEvent?.("node:message", peer, data, isBinary);
+        hooks["node:message"]?.(peer, data, isBinary);
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
-        handler.onMessage?.(peer, new WebSocketMessage(data, isBinary));
+        hooks.message?.(peer, new WebSocketMessage(data, isBinary));
       });
       ws.on("error", (error: Error) => {
-        handler.onEvent?.("node:error", peer, error);
-        handler.onError?.(peer, new WebSocketError(error));
+        hooks["node:error"]?.(peer, error);
+        hooks.error?.(peer, new WebSocketError(error));
       });
       ws.on("close", (code: number, reason: Buffer) => {
-        handler.onEvent?.("node:close", peer, code, reason);
-        handler.onClose?.(peer, code, reason?.toString());
+        hooks["node:close"]?.(peer, code, reason);
+        hooks.close?.(peer, {
+          code,
+          reason: reason?.toString(),
+        });
       });
       ws.on("open", () => {
-        handler.onEvent?.("node:open", peer);
-        handler.onOpen?.(peer);
+        hooks["node:open"]?.(peer);
       });
 
       // Unmanaged socket-level events
       ws.on("ping", (data: Buffer) => {
-        handler.onEvent?.("node:ping", peer, data);
+        hooks["node:ping"]?.(peer, data);
       });
       ws.on("pong", (data: Buffer) => {
-        handler.onEvent?.("node:pong", peer, data);
+        hooks["node:pong"]?.(peer, data);
       });
       ws.on(
         "unexpected-response",
         (req: ClientRequest, res: IncomingMessage) => {
-          handler.onEvent?.("node:unexpected-response", peer, req, res);
+          hooks["node:unexpected-response"]?.(peer, req, res);
         },
       );
-      ws.on("upgrade", (rew: IncomingMessage) => {
-        handler.onEvent?.("node:upgrade", peer, req);
+      ws.on("upgrade", (req: IncomingMessage) => {
+        hooks["node:upgrade"]?.(peer, req);
       });
     });
 

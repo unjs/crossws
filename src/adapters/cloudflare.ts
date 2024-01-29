@@ -23,7 +23,7 @@ export interface Adapter {
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (handler, opts = {}) => {
+  (hooks, opts = {}) => {
     const handleUpgrade = (
       request: _cf.Request,
       env: Env,
@@ -39,23 +39,22 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 
       server.accept();
 
-      // open event is not fired by cloudflare!
-      handler.onEvent?.("cloudflare:accept", peer);
-      handler.onOpen?.(peer);
+      hooks["cloudflare:accept"]?.(peer);
+      hooks.open?.(peer);
 
       server.addEventListener("message", (event) => {
-        handler?.onEvent?.("cloudflare:message", peer, event);
-        handler.onMessage?.(peer, new WebSocketMessage(event.data));
+        hooks["cloudflare:message"]?.(peer, event);
+        hooks.message?.(peer, new WebSocketMessage(event.data));
       });
 
       server.addEventListener("error", (event) => {
-        handler?.onEvent?.("cloudflare:error", peer, event);
-        handler.onError?.(peer, new WebSocketError(event.error));
+        hooks["cloudflare:error"]?.(peer, event);
+        hooks.error?.(peer, new WebSocketError(event.error));
       });
 
       server.addEventListener("close", (event) => {
-        handler?.onEvent?.("cloudflare:close", peer, event);
-        handler.onClose?.(peer, event.code, event.reason);
+        hooks["cloudflare:close"]?.(peer, event);
+        hooks.close?.(peer, { code: event.code, reason: event.reason });
       });
 
       // eslint-disable-next-line unicorn/no-null
