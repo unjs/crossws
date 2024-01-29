@@ -8,6 +8,9 @@ devDependencies:
   '@cloudflare/workers-types':
     specifier: ^4.20240117.0
     version: 4.20240117.0
+  '@types/bun':
+    specifier: ^1.0.4
+    version: 1.0.4
   '@types/node':
     specifier: ^20.11.10
     version: 20.11.10
@@ -17,9 +20,6 @@ devDependencies:
   '@types/ws':
     specifier: ^8.5.10
     version: 8.5.10
-  bun-types:
-    specifier: ^1.0.25
-    version: 1.0.25
   changelogen:
     specifier: ^0.5.5
     version: 0.5.5
@@ -965,6 +965,12 @@ packages:
   /@trysound/sax@0.2.0:
     resolution: {integrity: sha512-L7z9BgrNEcYyUYtF+HaEfiS5ebkh9jXqbszz7pC0hRBPaatV0XjSD3+eHrpqFemQfgwiFF0QPIarnIihIDn7OA==}
     engines: {node: '>=10.13.0'}
+    dev: true
+
+  /@types/bun@1.0.4:
+    resolution: {integrity: sha512-2DO7sqwtpko3d3XP2kLpJsOkV12sSRt8cFR955JVB60m1DiXE56T+gJq+DcCczQ5khxgCDQKkyBRlgg5VH33Dw==}
+    dependencies:
+      bun-types: 1.0.25
     dev: true
 
   /@types/estree@1.0.5:

@@ -6,7 +6,7 @@ export default defineBuildConfig({
   rollup: {
     inlineDependencies: true,
   },
-  externals: ["@cloudflare/workers-types", "bun-types"],
+  externals: ["@cloudflare/workers-types", "bun"],
   hooks: {
     async "build:done"(ctx) {
       const entries = Object.keys(ctx.pkg.exports || {})

@@ -74,10 +74,10 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
+    "@types/bun": "^1.0.4",
     "@types/node": "^20.11.10",
     "@types/web": "^0.0.135",
     "@types/ws": "^8.5.10",
-    "bun-types": "^1.0.25",
     "changelogen": "^0.5.5",
     "consola": "^3.2.3",
     "eslint": "^8.56.0",

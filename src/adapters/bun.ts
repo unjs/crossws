@@ -1,7 +1,6 @@
 // https://bun.sh/docs/api/websockets
 
-// @ts-expect-error
-import type {} from "bun-types";
+import type { WebSocketHandler, ServerWebSocket } from "bun";
 
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
@@ -12,20 +11,13 @@ export interface AdapterOptions {}
 
 type ContextData = { _peer?: WebSocketPeer };
 
-type WebSocketHooks = Extract<
-  Parameters<typeof Bun.serve<ContextData>>[0],
-  { websocket: any }
->["websocket"];
-
-type ServerWebSocket = Parameters<WebSocketHooks["message"]>[0];
-
 export interface Adapter {
-  websocket: WebSocketHooks;
+  websocket: WebSocketHandler<ContextData>;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   (hooks, opts = {}) => {
-    const getPeer = (ws: ServerWebSocket) => {
+    const getPeer = (ws: ServerWebSocket<ContextData>) => {
       if (ws.data?._peer) {
         return ws.data._peer;
       }
@@ -76,7 +68,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 );
 
 class WebSocketPeer extends WebSocketPeerBase<{
-  bun: { ws: ServerWebSocket };
+  bun: { ws: ServerWebSocket<ContextData> };
 }> {
   get id() {
     let addr = this.ctx.bun.ws.remoteAddress;
