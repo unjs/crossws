@@ -120,13 +120,13 @@ import WebSocket from "crossws/websocket";
 
 CrossWS allows integrating your WebSocket hooks with different runtimes and platforms using built-in adapters. Each runtime has a specific method of integrating WebSocket. Once integrated, your custom hooks (such as `message` and `close`) will work consistently even if you change the runtime!
 
-### Integration with **Node.js**
+### Integration with **Node.js** (ws)
 
 To integrate CrossWS with your Node.js HTTP server, you need to connect the `upgrade` event to the `handleUpgrade` method returned from the adapter. Behind the scenes, CrossWS uses an embedded version of [ws](https://github.com/websockets/ws).
 
 ```ts
-// Initialize Server
 import { createServer } from "node:http";
+import wsAdapter from "crossws/adapters/node";
 
 const server = createServer((req, res) => {
   res.end(
@@ -134,14 +134,11 @@ const server = createServer((req, res) => {
   );
 }).listen(3000);
 
-// Initialize WebSocket Hooks
-import nodeWSAdapter from "crossws/adapters/node";
-
-const { handleUpgrade } = nodeWSAdapter({ message: console.log });
+const { handleUpgrade } = wsAdapter({ message: console.log });
 server.on("upgrade", handleUpgrade);
 ```
 
-**Node-specific hooks:**
+**Adapter hooks:**
 
 - `node:open (peer)`
 - `node:message (peer, data, isBinary)`
@@ -152,7 +149,7 @@ server.on("upgrade", handleUpgrade);
 - `node:unexpected-response (peer, req, res)`
 - `node:upgrade (peer, req)`
 
-See [playground/node.ts](./playground/node.ts) for demo and [src/adapters/node.ts](./src/adapters/node.ts) for implementation.
+See [`playground/node.ts`](./playground/node.ts) for demo and [`src/adapters/node.ts`](./src/adapters/node.ts) for implementation.
 
 ### Integration with **Node.js** (uWebSockets)
 
@@ -160,11 +157,9 @@ You can alternatively use [uWebSockets.js](https://github.com/uNetworking/uWebSo
 
 ```ts
 import { App } from "uWebSockets.js";
+import wsAdapter from "crossws/adapters/node-uws";
 
-import nodeUwsAdapter from "crossws/adapters/node-uws";
-import { createDemo, getIndexHTMLURL } from "./_common";
-
-const { websocket } = nodeWSAdapter({ message: console.log });
+const { websocket } = wsAdapter({ message: console.log });
 
 const server = App().ws("/*", websocket);
 
@@ -180,7 +175,7 @@ server.listen(3001, () => {
 });
 ```
 
-**Adapter specific hooks:**
+**Adapter hooks:**
 
 - `uws:open(ws)`
 - `uws:message(ws, message, isBinary)`
@@ -191,16 +186,16 @@ server.listen(3001, () => {
 - `uws:upgrade (res, req, context)`
 - `subscription(ws, topic, newCount, oldCount)`
 
-See [playground/node-uws.ts](./playground/node-uws.ts) for demo and [src/adapters/node-uws.ts](./src/adapters/node-uws.ts) for implementation.
+See [`playground/node-uws.ts`](./playground/node-uws.ts) for demo and [`src/adapters/node-uws.ts`](./src/adapters/node-uws.ts) for implementation.
 
 ### Integration with **Bun**
 
 To integrate CrossWS with your Bun server, you need to check for `server.upgrade` and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
 
 ```ts
-import bunAdapter from "./dist/adapters/bun";
+import wsAdapter from "./dist/adapters/bun";
 
-const { websocket } = bunAdapter({ message: console.log });
+const { websocket } = wsAdapter({ message: console.log });
 
 Bun.serve({
   port: 3000,
@@ -217,7 +212,7 @@ Bun.serve({
 });
 ```
 
-**Bun-specific hooks:**
+**Adapter hooks:**
 
 - `bun:message (peer, ws,message)`
 - `bun:open (peer, ws)`
@@ -227,20 +222,20 @@ Bun.serve({
 - `bun:ping (peer, ws, data)`
 - `bun:pong (peer, ws, data)`
 
-See [playground/bun.ts](./playground/bun.ts) for demo and [src/adapters/bun.ts](./src/adapters/bun.ts) for implementation.
+See [`playground/bun.ts`](./playground/bun.ts) for demo and [`src/adapters/bun.ts]`(./src/adapters/bun.ts) for implementation.
 
 ### Integration with **Deno**
 
 To integrate CrossWS with your Deno server, you need to check for the `upgrade` header and then call `handleUpgrade` method from the adapter passing the incoming request object. The returned value is the server upgrade response.
 
 ```ts
-import denoAdapter from "crossws/adapters/deno";
+import wsAdapter from "crossws/adapters/deno";
 
-const { handleUpgrade } = denoAdapter({ message: console.log });
+const { handleUpgrade } = wsAdapter({ message: console.log });
 
-Deno.serve({ port: 3000 }, (req) => {
-  if (req.headers.get("upgrade") === "websocket") {
-    return handleUpgrade(req);
+Deno.serve({ port: 3000 }, (request) => {
+  if (request.headers.get("upgrade") === "websocket") {
+    return handleUpgrade(request);
   }
   return new Response(
     `<script>new WebSocket("ws://localhost:3000").addEventListener("open", (e) => e.target.send("Hello from client!"));</script>`,
@@ -249,23 +244,23 @@ Deno.serve({ port: 3000 }, (req) => {
 });
 ```
 
-**Deno-specific hooks:**
+**Adapter hooks:**
 
 - `deno:open (peer)`
 - `deno:message (peer, event)`
 - `deno:close (peer)`
 - `deno:error (peer, error)`
 
-See [playground/deno.ts](./playground/deno.ts) for demo and [src/adapters/deno.ts](./src/adapters/deno.ts) for implementation.
+See [`playground/deno.ts`](./playground/deno.ts) for demo and [`src/adapters/deno.ts`](./src/adapters/deno.ts) for implementation.
 
 ### Integration with **Cloudflare Workers**
 
 To integrate CrossWS with your Cloudflare Workers, you need to check for the `upgrade` header
 
 ```ts
-import cloudflareAdapter from "crossws/adapters/cloudflare";
+import wsAdapter from "crossws/adapters/cloudflare";
 
-const { handleUpgrade } = cloudflareAdapter({ message: console.log });
+const { handleUpgrade } = wsAdapter({ message: console.log });
 
 export default {
   async fetch(request, env, context) {
@@ -280,14 +275,14 @@ export default {
 };
 ```
 
-**Cloudflare-specific hooks:**
+**Adapter hooks:**
 
 - `cloudflare:accept(peer)`
 - `cloudflare:message(peer, event)`
 - `cloudflare:error(peer, event)`
 - `cloudflare:close(peer, event)`
 
-See [playground/cloudflare.ts](./playground/cloudflare.ts) for demo and [src/adapters/cloudflare.ts](./src/adapters/cloudflare.ts) for implementation.
+See [`playground/cloudflare.ts`](./playground/cloudflare.ts) for demo and [`src/adapters/cloudflare.ts`](./src/adapters/cloudflare.ts) for implementation.
 
 ### Integration with other runtimes
 
