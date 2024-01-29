@@ -1,0 +1,14 @@
+{
+  "name": "crossws-examples-h3",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "listhen --ws ./app.ts",
+    "dev": "listhen --ws -w ./app.ts"
+  },
+  "dependencies": {
+    "crossws": "latest",
+    "h3": "latest",
+    "listhen": "latest"
+  }
+}

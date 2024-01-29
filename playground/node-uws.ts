@@ -1,21 +1,17 @@
 // You can run this demo using `npm run play:node-uws` in repo
 
-import { readFileSync } from "node:fs";
-
 import { App } from "uWebSockets.js";
-
 import nodeAdapter from "../src/adapters/node-uws.ts";
-import { createDemo, getIndexHTMLURL } from "./_common";
+import { createDemo, getIndexHTML } from "./_common";
 
 const adapter = createDemo(nodeAdapter);
 
 const app = App().ws("/*", adapter.websocket);
 
-app.get("/*", (res, req) => {
+app.get("/*", async (res, req) => {
   res.writeStatus("200 OK");
   res.writeHeader("Content-Type", "text/html");
-  const indexHTML = readFileSync(getIndexHTMLURL(), "utf8");
-  res.end(indexHTML);
+  res.end(await getIndexHTML({ name: "node-uws" }));
 });
 
 app.listen(3001, () => {

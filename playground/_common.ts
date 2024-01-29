@@ -1,10 +1,7 @@
 import type { WebSocketHooks, WebSocketAdapter } from "../src";
 
-export const getIndexHTMLURL = () =>
-  new URL("public/index.html", import.meta.url);
-
-export const importIndexHTML = () =>
-  import("./public/index.html" as string).then((r) => r.default);
+export const getIndexHTML = (params) =>
+  import("../examples/h3/index.html.ts").then((r) => r.html(params));
 
 export function createDemo<T extends WebSocketAdapter>(
   adapter: T,
