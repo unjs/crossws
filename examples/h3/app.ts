@@ -11,7 +11,9 @@ router.get(
   ),
 );
 
-// Listhen automatically sets up ws integration!
+// Listhen automatically sets up integration!
+// Learn more: https://crossws.unjs.io
+
 export const websocket = defineWebSocketHooks({
   open(peer) {
     console.log("[ws] open", peer);

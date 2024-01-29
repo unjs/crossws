@@ -10,6 +10,10 @@ hero:
       icon: "i-heroicons-rocket-launch"
       to: "/getting-started"
       size: lg
+    - label: "Play Online"
+      icon: "i-heroicons-play"
+      to: "https://stackblitz.com/github/unjs/crossws/tree/main/examples/h3?file=app.ts"
+      size: lg
     - label: "Contribute on GitHub"
       icon: "i-simple-icons-github"
       color: "white"
