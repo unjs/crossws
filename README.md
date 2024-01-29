@@ -7,9 +7,6 @@
 
 <!-- [![Codecov][codecov-src]][codecov-href] -->
 
-> [!WARNING]
-> This project and API are under development. Please don't rely on it for production.
-
 👉 Elegant, typed, and simple interface to implement platform-agnostic WebSocket servers
 
 🧩 Seamlessly integrates with, [Node.js](https://nodejs.org/en), [Bun](https://bun.sh/), [Deno](https://deno.com/) and [Cloudflare Workers](https://workers.cloudflare.com/)!
@@ -21,6 +18,9 @@
 💡 Extremely lightweight and tree-shakable packaging with ESM and CJS support
 
 🔍 Developer-friendly object logging
+
+> [!WARNING]
+> This project and API are under development.
 
 ## Install
 
@@ -40,10 +40,10 @@ bun install crossws
 
 ## Unified Hooks
 
-CrossWS provides a cross-platfrom API to define WebSocket servers. An implementation with theese hooks works across runtimes without needing you to go into details of any of them (while you always have power to control low-level hooks). You can only define the life-cyle hooks that you only need and only those will be called run runtime.
+CrossWS provides a cross-platform API to define WebSocket servers. An implementation with these hooks works across runtimes without needing you to go into details of any of them (while you always have the power to control low-level hooks). You can only define the life-cycle hooks that you only need and only those will be called run runtime.
 
 > [!NOTE]
-> For type support and IDE auto-completion, you can use `defineWebSocketHooks` utility or `WebSocketHooks` type export from main.
+> For type support and IDE auto-completion, you can use `defineWebSocketHooks` utility or `WebSocketHooks` type export from the main.
 
 ```ts
 import { defineWebSocketHooks } from "crossws";
@@ -74,10 +74,7 @@ const websocketHooks = defineWebSocketHooks({
 
 ### Peer Object
 
-Websocket hooks methods accept a peer instance as the first argument. peer, keep the state of connected client.
-
-> [!TIP]
-> You can safely log a peer instance to the console using `console.log` it will be automatically stringified with useful information including the remote address and connection status!
+Websocket hooks always accept a peer instance as the first argument. `peer`, keeps the state of the connected client.
 
 **Properties:**
 
@@ -89,21 +86,24 @@ Websocket hooks methods accept a peer instance as the first argument. peer, keep
 
 - `send(message, compress)`: Send a message to the connected client
 
-### Meesage Object
-
-on `message` hook, you also recieve a message object.
-
 > [!TIP]
-> You can safely log `message` object to the console using `console.log` it will be automatically stringified!
+> You can safely log a peer instance to the console using `console.log` it will be automatically stringified with useful information including the remote address and connection status!
+
+### Message Object
+
+on `message` hook, you receive a message object containing an incoming message from the client.
 
 **Properties:**
 
 - `message.rawData`: Raw message data
-- `message.isBinary`: Indicated if message is binary (can be undefined)
+- `message.isBinary`: Indicates if the message is binary (might be `undefined`)
 
 **Methods:**
 
-- `message.text()`: Get stringified version of message
+- `message.text()`: Get stringified version of the message
+
+> [!TIP]
+> You can safely log `message` object to the console using `console.log` it will be automatically stringified!
 
 ## Error handling
 
@@ -111,14 +111,14 @@ You can catch errors using `error` hook. The second argument is error wrapped in
 
 ## Universal WebSocket client
 
-CrossWS also exposes a universal way to use [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) API in order to connect to the server. For all runtimes, except Node.js, native implemention is used and for Node.js, a bundled verison of [`ws.WebSocket`](https://www.npmjs.com/package/ws) is bundled.
-
-> [!NOTE]
-> Using export conditions, the correct version will be always used so you don't have to worry about picking the right build!
+CrossWS also exposes a universal way to use [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) API in order to connect to the server. For all runtimes, except Node.js, native implementation is used, and for Node.js, a bundled version of [`ws.WebSocket`](https://www.npmjs.com/package/ws) is bundled.
 
 ```js
 import WebSocket from "crossws/websocket";
 ```
+
+> [!NOTE]
+> Using export conditions, the correct version will be always used so you don't have to worry about picking the right build!
 
 ## Integrations
 
@@ -141,7 +141,7 @@ const server = createServer((req, res) => {
 // Initialize WebSocket Hooks
 import nodeWSAdapter from "crossws/adapters/node";
 
-const { handleUpgrade } = nodeWSAdapter({ onMessage: console.log });
+const { handleUpgrade } = nodeWSAdapter({ message: console.log });
 server.on("upgrade", handleUpgrade);
 ```
 
@@ -165,7 +165,7 @@ To integrate CrossWS with your Bun server, you need to check for `server.upgrade
 ```ts
 import bunAdapter from "./dist/adapters/bun";
 
-const { websocket } = bunAdapter({ onMessage: console.log });
+const { websocket } = bunAdapter({ message: console.log });
 
 Bun.serve({
   port: 3000,
@@ -201,7 +201,7 @@ To integrate CrossWS with your Deno server, you need to check for the `upgrade` 
 ```ts
 import denoAdapter from "crossws/adapters/deno";
 
-const { handleUpgrade } = denoAdapter({ onMessage: console.log });
+const { handleUpgrade } = denoAdapter({ message: console.log });
 
 Deno.serve({ port: 3000 }, (req) => {
   if (req.headers.get("upgrade") === "websocket") {
@@ -230,7 +230,7 @@ To integrate CrossWS with your Cloudflare Workers, you need to check for the `up
 ```ts
 import cloudflareAdapter from "crossws/adapters/cloudflare";
 
-const { handleUpgrade } = cloudflareAdapter({ onMessage: console.log });
+const { handleUpgrade } = cloudflareAdapter({ message: console.log });
 
 export default {
   async fetch(request, env, context) {
