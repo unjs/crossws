@@ -4,10 +4,13 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-devDependencies:
-  unjs-docs:
-    specifier: latest
-    version: 0.1.8(@nuxt/devtools@1.0.8)(@vue/compiler-core@3.4.15)(postcss@8.4.33)(vite@5.0.12)(webpack@5.90.0)
+importers:
+
+  .:
+    devDependencies:
+      unjs-docs:
+        specifier: latest
+        version: 0.1.8(@nuxt/devtools@1.0.8)(@vue/compiler-core@3.4.15)(postcss@8.4.33)(vite@5.0.12)(webpack@5.90.0)
 
 packages:
 
@@ -3511,7 +3514,7 @@ packages:
     hasBin: true
     dependencies:
       caniuse-lite: 1.0.30001581
-      electron-to-chromium: 1.4.648
+      electron-to-chromium: 1.4.649
       node-releases: 2.0.14
       update-browserslist-db: 1.0.13(browserslist@4.22.3)
     dev: true
@@ -4284,8 +4287,8 @@ packages:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
     dev: true
 
-  /electron-to-chromium@1.4.648:
-    resolution: {integrity: sha512-EmFMarXeqJp9cUKu/QEciEApn0S/xRcpZWuAm32U7NgoZCimjsilKXHRO9saeEW55eHZagIDg6XTUOv32w9pjg==}
+  /electron-to-chromium@1.4.649:
+    resolution: {integrity: sha512-dq/owIaALxZGqWm5RXpKQ4baX6aDC19e2Z16c8SXYN+I71PyEKjbVqQUgm7kcuk8CRqljTKXbolo0XXDjxnh2w==}
     dev: true
 
   /emoji-regex@10.3.0:
