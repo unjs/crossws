@@ -12,6 +12,24 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./websocket": {
+      "types": {
+        "import": "./dist/websocket/native.d.mts",
+        "require": "./dist/websocket/native.d.cts"
+      },
+      "browser": "./dist/websocket/native.mjs",
+      "worker": "./dist/websocket/native.mjs",
+      "bun": "./dist/websocket/native.mjs",
+      "deno": "./dist/websocket/native.mjs",
+      "edge-light": "./dist/websocket/native.mjs",
+      "workerd": "./dist/websocket/native.mjs",
+      "node": {
+        "import": "./dist/websocket/node.mjs",
+        "require": "./dist/websocket/node.cjs"
+      },
+      "import": "./dist/websocket/native.mjs",
+      "require": "./dist/websocket/native.cjs"
+    },
     "./adapters/bun": {
       "types": "./dist/adapters/bun.d.ts",
       "import": "./dist/adapters/bun.mjs",
@@ -37,7 +55,8 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "*.d.ts"
   ],
   "scripts": {
     "build": "unbuild",

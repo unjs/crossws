@@ -3,10 +3,7 @@
 
 import type { ClientRequest, IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
-import {
-  WebSocketServer as _WebSocketServer,
-  WebSocket as _WebSocket,
-} from "ws";
+import { WebSocketServer as _WebSocketServer } from "ws";
 import type {
   ServerOptions,
   RawData,
@@ -17,8 +14,6 @@ import { WebSocketPeerBase } from "../peer";
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
 import { defineWebSocketAdapter } from "../adapter";
-
-export const WebSocket = _WebSocket as unknown as WebSocketT;
 
 export interface AdapterOptions {
   wss?: WebSocketServer;

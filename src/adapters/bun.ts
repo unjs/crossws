@@ -8,8 +8,6 @@ import { WebSocketError } from "../error";
 import { WebSocketPeerBase } from "../peer";
 import { defineWebSocketAdapter } from "../adapter";
 
-export const WebSocket = globalThis.WebSocket;
-
 export interface AdapterOptions {}
 
 type ContextData = { _peer?: WebSocketPeer };
