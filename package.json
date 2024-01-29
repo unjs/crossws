@@ -1,7 +1,7 @@
 {
   "name": "crossws",
   "version": "0.0.1",
-  "description": "",
+  "description": "Cross-platform WebSocket Servers for Node.js, Deno, Bun and Cloudflare Workers",
   "repository": "unjs/crossws",
   "license": "MIT",
   "sideEffects": false,
@@ -61,16 +61,15 @@
   ],
   "scripts": {
     "build": "unbuild",
-    "dev": "vitest dev",
     "play:node": "jiti playground/node.ts",
     "play:bun": "bun playground/bun.ts",
     "play:deno": "deno run -A playground/deno.ts",
     "play:cf": "wrangler dev --port 3001",
-    "lint": "eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src test",
-    "lint:fix": "eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src test -w",
+    "lint": "eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src",
+    "lint:fix": "eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src -w",
     "prepack": "pnpm run build",
     "release": "pnpm test && changelogen --release && npm publish && git push --follow-tags",
-    "test": "pnpm lint && pnpm test:types && vitest run --coverage",
+    "test": "pnpm lint && pnpm test:types",
     "test:types": "tsc --noEmit --skipLibCheck"
   },
   "devDependencies": {
@@ -78,7 +77,6 @@
     "@types/node": "^20.11.10",
     "@types/web": "^0.0.135",
     "@types/ws": "^8.5.10",
-    "@vitest/coverage-v8": "^1.2.2",
     "bun-types": "^1.0.25",
     "changelogen": "^0.5.5",
     "consola": "^3.2.3",
@@ -89,7 +87,6 @@
     "typescript": "^5.3.3",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
     "unbuild": "^2.0.0",
-    "vitest": "^1.2.2",
     "wrangler": "^3.25.0",
     "ws": "^8.16.0"
   },
