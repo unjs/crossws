@@ -5,7 +5,10 @@ export class WebSocketMessage {
   ) {}
 
   text(): string {
-    return this.rawData.toString();
+    if (typeof this.rawData === "string") {
+      return this.rawData;
+    }
+    return new TextDecoder().decode(this.rawData);
   }
 
   toString() {

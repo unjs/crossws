@@ -8,5 +8,5 @@ dist
 *.env*
 .wrangler
 
-adapters
+/adapters
 websocket.d.ts

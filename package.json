@@ -62,6 +62,7 @@
   "scripts": {
     "build": "unbuild",
     "play:node": "jiti playground/node.ts",
+    "play:uws": "jiti playground/node-uws.ts",
     "play:bun": "bun playground/bun.ts",
     "play:deno": "deno run -A playground/deno.ts",
     "play:cf": "wrangler dev --port 3001",

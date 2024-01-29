@@ -47,7 +47,7 @@ export interface WebSocketHooks {
   "deno:close": WSHook<[]>;
   "deno:error": WSHook<[error: any]>;
 
-  // Node
+  // ws (Node)
   "node:open": WSHook<[]>;
   "node:message": WSHook<[data: any, isBinary: boolean]>;
   "node:close": WSHook<[code: number, reason: Buffer]>;
@@ -56,4 +56,16 @@ export interface WebSocketHooks {
   "node:pong": WSHook<[data: Buffer]>;
   "node:unexpected-response": WSHook<[req: any, res: any]>;
   "node:upgrade": WSHook<[req: any]>;
+
+  // uws (Node)
+  "uws:open": WSHook<[ws: any]>;
+  "uws:message": WSHook<[ws: any, message: any, isBinary: boolean]>;
+  "uws:close": WSHook<[ws: any, code: number, message: any]>;
+  "uws:ping": WSHook<[ws: any, message: any]>;
+  "uws:pong": WSHook<[ws: any, message: any]>;
+  "uws:drain": WSHook<[ws: any]>;
+  "uws:upgrade": WSHook<[res: any, req: any, context: any]>;
+  "uws:subscription": WSHook<
+    [ws: any, topic: any, newCount: number, oldCount: number]
+  >;
 }

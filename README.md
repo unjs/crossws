@@ -5,7 +5,7 @@
 
 👉 Elegant, typed, and simple interface to implement platform-agnostic WebSocket servers
 
-🧩 Seamlessly integrates with, [Node.js](https://nodejs.org/en), [Bun](https://bun.sh/), [Deno](https://deno.com/) and [Cloudflare Workers](https://workers.cloudflare.com/)!
+🧩 Seamlessly integrates with, [Bun](https://bun.sh/), [Deno](https://deno.com/), [Cloudflare Workers](https://workers.cloudflare.com/) and [Node.js](https://nodejs.org/en) ([ws](https://github.com/websockets/ws) || [uWebSockets](https://github.com/uNetworking/uWebSockets.js)).
 
 🚀 High-performance server hooks, avoiding heavy per-connection events API ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
 
@@ -153,6 +153,45 @@ server.on("upgrade", handleUpgrade);
 - `node:upgrade (peer, req)`
 
 See [playground/node.ts](./playground/node.ts) for demo and [src/adapters/node.ts](./src/adapters/node.ts) for implementation.
+
+### Integration with **Node.js** (uWebSockets)
+
+You can alternatively use [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) server for Node.js WebSockets.
+
+```ts
+import { App } from "uWebSockets.js";
+
+import nodeUwsAdapter from "crossws/adapters/node-uws";
+import { createDemo, getIndexHTMLURL } from "./_common";
+
+const { websocket } = nodeWSAdapter({ message: console.log });
+
+const server = App().ws("/*", websocket);
+
+server.get("/*", (res, req) => {
+  res.writeStatus("200 OK").writeHeader("Content-Type", "text/html");
+  res.end(
+    `<script>new WebSocket("ws://localhost:3000").addEventListener('open', (e) => e.target.send("Hello from client!"));</script>`,
+  );
+});
+
+server.listen(3001, () => {
+  console.log("Listening to port 3001");
+});
+```
+
+**Adapter specific hooks:**
+
+- `uws:open(ws)`
+- `uws:message(ws, message, isBinary)`
+- `uws:close(ws, code, message)`
+- `uws:ping(ws, message)`
+- `uws:pong(ws, message)`
+- `uws:drain(ws)`
+- `uws:upgrade (res, req, context)`
+- `subscription(ws, topic, newCount, oldCount)`
+
+See [playground/node-uws.ts](./playground/node-uws.ts) for demo and [src/adapters/node-uws.ts](./src/adapters/node-uws.ts) for implementation.
 
 ### Integration with **Bun**
 
