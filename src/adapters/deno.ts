@@ -2,8 +2,6 @@
 // https://deno.land/api?s=Deno.upgradeWebSocket
 // https://examples.deno.land/http-server-websocket
 
-import "../../types/lib.deno.d.ts";
-
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
 import { WebSocketPeerBase } from "../peer";
@@ -13,6 +11,10 @@ export interface AdapterOptions {}
 
 export interface Adapter {
   handleUpgrade(req: Request): Response;
+}
+
+declare global {
+  const Deno: typeof import("@deno/types").Deno;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(

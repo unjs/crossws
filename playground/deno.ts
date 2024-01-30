@@ -7,6 +7,10 @@ import type * as _Deno from "../types/lib.deno.d.ts";
 
 import { createDemo, getIndexHTML } from "./_common.ts";
 
+declare global {
+  const Deno: typeof import("@deno/types").Deno;
+}
+
 const adapter = createDemo(denoAdapter);
 
 Deno.serve({ port: 3001 }, async (req) => {

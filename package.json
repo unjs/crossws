@@ -75,6 +75,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
+    "@deno/types": "^0.0.1",
     "@types/bun": "^1.0.4",
     "@types/node": "^20.11.10",
     "@types/web": "^0.0.135",

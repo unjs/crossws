@@ -14,6 +14,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20240117.0
         version: 4.20240117.0
+      '@deno/types':
+        specifier: ^0.0.1
+        version: 0.0.1
       '@types/bun':
         specifier: ^1.0.4
         version: 1.0.4
@@ -350,6 +353,10 @@ packages:
     engines: {node: '>=12'}
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
+    dev: true
+
+  /@deno/types@0.0.1:
+    resolution: {integrity: sha512-KTB6Blr05Iw7k7aMzPWlJX0kv08xXZ5Mu7fxSp0M1HnaOHDRnFC956I4PxYdOtN27+b2723Id2G2oofxLvA35A==}
     dev: true
 
   /@esbuild-plugins/node-globals-polyfill@0.2.3(esbuild@0.17.19):
