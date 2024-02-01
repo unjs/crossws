@@ -6,6 +6,6 @@
     "build": "unjs-docs build"
   },
   "devDependencies": {
-    "unjs-docs": "latest"
+    "unjs-docs": "npm:unjs-docs-nightly@0.2.0-1706808052.78b16ba"
   }
 }

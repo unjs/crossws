@@ -1,0 +1,36 @@
+{
+  "$schema": "https://raw.githubusercontent.com/unjs/docs/main/schema/config.json",
+  "name": "CrossWS",
+  "description": "Cross-platform WebSocket Servers for Node.js, Deno, Bun and Cloudflare Workers.",
+  "shortDescription": "Cross-platform WebSockets.",
+  "github": "unjs/crossws",
+  "themeColor": "#f7932a",
+  "landing": {
+    "heroDescription": "One code for Node.js, Deno, Bun and Cloudflare Workers!",
+    "heroLinks": {
+      "playOnline": {
+        "label": "Play Online",
+        "icon": "i-heroicons-play",
+        "to": "https://stackblitz.com/github/unjs/crossws/tree/main/examples/h3?file=app.ts"
+      }
+    },
+    "features": [
+      {
+        "title": "Runtime Agnostic",
+        "description": "Seamlessly integrates with Bun, Deno, Cloudflare Workrs and Node.js (ws or uWebSockets.js)"
+      },
+      {
+        "title": "Made for Performance",
+        "description": "High-performance server hooks API designed to avoid creating callbacks per client but once."
+      },
+      {
+        "title": "Lightweight",
+        "description": "Zero Dependency with bundled ws for Node.js support. Extremely lightweight and tree-shakable packaging with ESM and CJS support."
+      },
+      {
+        "title": "Developer Friendly",
+        "description": "Typed Hooks API and human friednly logging support."
+      }
+    ]
+  }
+}
