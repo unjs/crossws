@@ -6,6 +6,6 @@
     "build": "unjs-docs build"
   },
   "devDependencies": {
-    "unjs-docs": "latest"
+    "unjs-docs": "^0.2.0"
   }
 }
