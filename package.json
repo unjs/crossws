@@ -75,7 +75,7 @@
     "play:deno": "deno run --unstable-sloppy-imports -A playground/deno.ts",
     "play:node": "jiti playground/node.ts",
     "play:uws": "jiti playground/uws.ts",
-    "release": "pnpm test && changelogen --release && npm publish && git push --follow-tags",
+    "release": "pnpm test && pnpm build && changelogen --release && npm publish && git push --follow-tags",
     "test": "pnpm lint && pnpm test:types",
     "test:types": "tsc --noEmit --skipLibCheck"
   },
