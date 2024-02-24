@@ -88,6 +88,7 @@
     "@types/node": "^20.11.10",
     "@types/web": "^0.0.135",
     "@types/ws": "^8.5.10",
+    "automd": "^0.3.6",
     "changelogen": "^0.5.5",
     "consola": "^3.2.3",
     "eslint": "^8.56.0",
