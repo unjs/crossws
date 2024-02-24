@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.1.3
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.1.2...v0.1.3)
+
+### 🏡 Chore
+
+- Add build script to release ([6681afa](https://github.com/unjs/crossws/commit/6681afa))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+
 ## v0.1.2
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.1.1...v0.1.2)
