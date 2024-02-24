@@ -25,16 +25,25 @@ export function createDemo<T extends WebSocketAdapter>(
         peer.send("pong");
       }
     },
+    upgrade(req) {
+      return {
+        headers: {
+          "x-powered-by": "cross-ws",
+          "set-cookie": "cross-ws=1; SameSite=None; Secure",
+        },
+      };
+    },
   });
 
-  const resolve: CrossWSOptions["resolve"] = (peer) => {
+  const resolve: CrossWSOptions["resolve"] = (info) => {
     return {
-      open: () => {
+      open: (peer) => {
         peer.send(
           JSON.stringify(
             {
-              url: peer.url,
-              headers: peer.headers && Object.fromEntries(peer.headers),
+              url: info.url,
+              headers:
+                info.headers && Object.fromEntries(new Headers(info.headers)),
             },
             undefined,
             2,

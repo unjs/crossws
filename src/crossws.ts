@@ -1,46 +1,63 @@
-import type { WebSocketHooks, AdapterHooks, UserHooks } from "./hooks";
-import { WebSocketPeer } from "./peer";
+import type { WebSocketHooks, UserHooks } from "./hooks";
+import { WSPeer, WSRequest } from "./peer";
 
-export interface CrossWS extends WebSocketHooks {}
+export interface CrossWS extends WebSocketHooks {
+  upgrade: (req: WSRequest) => Promise<{ headers: HeadersInit }>;
+}
 
 export interface CrossWSOptions {
-  resolve?: (
-    peer: WebSocketPeer,
-  ) => UserHooks | void | Promise<UserHooks | void>;
+  resolve?: (info: WSRequest | WSPeer) => UserHooks | Promise<UserHooks>;
 }
 
 export function createCrossWS(
-  _hooks: UserHooks,
+  hooks: UserHooks,
   options: CrossWSOptions,
 ): CrossWS {
   const _callHook = options.resolve
-    ? async (name: keyof UserHooks, peer: WebSocketPeer, ...args: any[]) => {
-        const hooks = await options.resolve?.(peer);
-        // @ts-expect-error
-        return hooks?.[name]?.(peer, ...args);
+    ? <WebSocketHooks["$"]>async function (name, info, ...args): Promise<any> {
+        const hooks = await options.resolve?.(info);
+        const hook = hooks?.[name];
+        return hook?.(info as any, ...(args as [any]));
       }
     : undefined;
 
   return {
-    $(name, peer, ...args) {
-      _hooks.$?.(name, peer, ...args);
-      _callHook?.(name, peer, ...args);
+    async $(name, ...args) {
+      await Promise.all([hooks.$?.(name, ...args), _callHook?.(name, ...args)]);
     },
-    message(peer, message) {
-      _hooks.message?.(peer, message);
-      _callHook?.("message", peer, message);
+    async upgrade(req) {
+      const upgradeResults = await Promise.all([
+        hooks.upgrade?.(req),
+        _callHook?.("upgrade", req),
+      ]);
+      const headers: Record<string, string> = Object.create(null);
+      for (const result of upgradeResults) {
+        if (result?.headers) {
+          Object.assign(headers, result.headers);
+        }
+      }
+      return { headers };
     },
-    open(peer) {
-      _hooks.open?.(peer);
-      _callHook?.("open", peer);
+    async message(peer, message) {
+      await Promise.all([
+        hooks.message?.(peer, message),
+        _callHook?.("message", peer, message),
+      ]);
     },
-    close(peer, { code, reason }) {
-      _hooks.close?.(peer, { code, reason });
-      _callHook?.("close", peer, { code, reason });
+    async open(peer) {
+      await Promise.all([hooks.open?.(peer), _callHook?.("open", peer)]);
     },
-    error(peer, error) {
-      _hooks.error?.(peer, error);
-      _callHook?.("error", peer, error);
+    async close(peer, { code, reason }) {
+      await Promise.all([
+        hooks.close?.(peer, { code, reason }),
+        _callHook?.("close", peer, { code, reason }),
+      ]);
+    },
+    async error(peer, error) {
+      await Promise.all([
+        hooks.error?.(peer, error),
+        _callHook?.("error", peer, error),
+      ]);
     },
   };
 }

@@ -8,7 +8,12 @@ const ReadyStateMap = {
   3: "closed",
 } as const;
 
-export abstract class WebSocketPeer<AdapterContext = any> {
+export interface WSRequest {
+  readonly url: string;
+  readonly headers: HeadersInit;
+}
+
+export abstract class WSPeer<AdapterContext = any> implements WSRequest {
   constructor(public ctx: AdapterContext) {}
 
   get id(): string | undefined {
@@ -19,8 +24,8 @@ export abstract class WebSocketPeer<AdapterContext = any> {
     return "/";
   }
 
-  get headers(): Headers {
-    return new Headers();
+  get headers(): HeadersInit {
+    return {};
   }
 
   get readyState(): ReadyState | -1 {

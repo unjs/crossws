@@ -2,7 +2,7 @@
 
 import type * as _cf from "@cloudflare/workers-types";
 
-import { WebSocketPeer } from "../peer";
+import { WSPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
@@ -20,14 +20,14 @@ export interface Adapter {
     req: _cf.Request,
     env: Env,
     context: _cf.ExecutionContext,
-  ): _cf.Response;
+  ): Promise<_cf.Response>;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   (hooks, options = {}) => {
     const crossws = createCrossWS(hooks, options);
 
-    const handleUpgrade = (
+    const handleUpgrade = async (
       req: _cf.Request,
       env: Env,
       context: _cf.ExecutionContext,
@@ -40,30 +40,32 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
         cloudflare: { client, server, req, env, context },
       });
 
-      server.accept();
+      const { headers } = await crossws.upgrade(peer);
 
+      server.accept();
       crossws.$("cloudflare:accept", peer);
       crossws.open(peer);
 
       server.addEventListener("message", (event) => {
         crossws.$("cloudflare:message", peer, event);
-        hooks.message?.(peer, new WebSocketMessage(event.data));
+        crossws.message(peer, new WebSocketMessage(event.data));
       });
 
       server.addEventListener("error", (event) => {
         crossws.$("cloudflare:error", peer, event);
-        hooks.error?.(peer, new WebSocketError(event.error));
+        crossws.error(peer, new WebSocketError(event.error));
       });
 
       server.addEventListener("close", (event) => {
         crossws.$("cloudflare:close", peer, event);
-        hooks.close?.(peer, { code: event.code, reason: event.reason });
+        crossws.close(peer, { code: event.code, reason: event.reason });
       });
 
       // eslint-disable-next-line unicorn/no-null
       return new Response(null, {
         status: 101,
         webSocket: client,
+        headers,
       });
     };
 
@@ -73,7 +75,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class CloudflarePeer extends WebSocketPeer<{
+class CloudflarePeer extends WSPeer<{
   cloudflare: {
     client: _cf.WebSocket;
     server: _cf.WebSocket;

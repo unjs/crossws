@@ -7,7 +7,7 @@ import type {
   HttpRequest,
   HttpResponse,
 } from "uWebSockets.js";
-import { WebSocketPeer } from "../peer";
+import { WSPeer } from "../peer";
 import { WebSocketMessage } from "../message";
 import { defineWebSocketAdapter } from "../adapter";
 import { CrossWSOptions, createCrossWS } from "../crossws";
@@ -43,12 +43,12 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   (hooks, options = {}) => {
     const crossws = createCrossWS(hooks, options);
 
-    const getPeer = (ws: WebSocket<UserData>) => {
+    const getWSPeer = (ws: WebSocket<UserData>) => {
       const userData = ws.getUserData();
       if (userData._peer) {
-        return userData._peer as WebSocketPeer;
+        return userData._peer as WSPeer;
       }
-      const peer = new UWSPeer({ uws: { ws, userData } });
+      const peer = new UWSWSPeer({ uws: { ws, userData } });
       userData._peer = peer;
       return peer;
     };
@@ -56,51 +56,73 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
     const websocket: WebSocketHandler = {
       ...options.uws,
       close(ws, code, message) {
-        const peer = getPeer(ws);
+        const peer = getWSPeer(ws);
         crossws.$("uws:close", peer, ws, code, message);
-        hooks.close?.(peer, { code, reason: message?.toString() });
+        crossws.close(peer, { code, reason: message?.toString() });
       },
       drain(ws) {
-        const peer = getPeer(ws);
+        const peer = getWSPeer(ws);
         crossws.$("uws:drain", peer, ws);
       },
       message(ws, message, isBinary) {
-        const peer = getPeer(ws);
+        const peer = getWSPeer(ws);
         crossws.$("uws:message", peer, ws, message, isBinary);
         const msg = new WebSocketMessage(message, isBinary);
-        hooks.message?.(peer, msg);
+        crossws.message(peer, msg);
       },
       open(ws) {
-        const peer = getPeer(ws);
+        const peer = getWSPeer(ws);
         crossws.$("uws:open", peer, ws);
         crossws.open(peer);
       },
       ping(ws, message) {
-        const peer = getPeer(ws);
+        const peer = getWSPeer(ws);
         crossws.$("uws:ping", peer, ws, message);
       },
       pong(ws, message) {
-        const peer = getPeer(ws);
+        const peer = getWSPeer(ws);
         crossws.$("uws:pong", peer, ws, message);
       },
       subscription(ws, topic, newCount, oldCount) {
-        const peer = getPeer(ws);
+        const peer = getWSPeer(ws);
         crossws.$("uws:subscription", peer, ws, topic, newCount, oldCount);
       },
-      // error ? TODO
-      upgrade(res, req, context) {
-        /* This immediately calls open handler, you must not use res after this call */
-        res.upgrade(
-          {
-            req,
-            res,
-            context,
+      async upgrade(res, req, context) {
+        let aborted = false;
+        res.onAborted(() => {
+          aborted = true;
+        });
+
+        const { headers } = await crossws.upgrade({
+          get url() {
+            return req.getUrl();
           },
-          req.getHeader("sec-websocket-key"),
-          req.getHeader("sec-websocket-protocol"),
-          req.getHeader("sec-websocket-extensions"),
-          context,
-        );
+          get headers() {
+            return _getHeaders(req);
+          },
+        });
+        res.writeStatus("101 Switching Protocols");
+        for (const [key, value] of new Headers(headers)) {
+          res.writeHeader(key, value);
+        }
+
+        if (aborted) {
+          return;
+        }
+
+        res.cork(() => {
+          res.upgrade(
+            {
+              req,
+              res,
+              context,
+            },
+            req.getHeader("sec-websocket-key"),
+            req.getHeader("sec-websocket-protocol"),
+            req.getHeader("sec-websocket-extensions"),
+            context,
+          );
+        });
       },
     };
 
@@ -110,13 +132,13 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class UWSPeer extends WebSocketPeer<{
+class UWSWSPeer extends WSPeer<{
   uws: {
     ws: WebSocket<UserData>;
     userData: UserData;
   };
 }> {
-  _headers: Headers | undefined;
+  _headers: HeadersInit | undefined;
   _decoder = new TextDecoder();
 
   get id() {
@@ -139,12 +161,7 @@ class UWSPeer extends WebSocketPeer<{
 
   get headers() {
     if (!this._headers) {
-      const headers = new Headers();
-      // eslint-disable-next-line unicorn/no-array-for-each
-      this.ctx.uws.userData.req.forEach((key, value) => {
-        headers.set(key, value);
-      });
-      this._headers = headers;
+      this._headers = _getHeaders(this.ctx.uws.userData.req);
     }
     return this._headers;
   }
@@ -153,4 +170,13 @@ class UWSPeer extends WebSocketPeer<{
     this.ctx.uws.ws.send(message, false, compress);
     return 0;
   }
+}
+
+function _getHeaders(req: HttpRequest): HeadersInit {
+  const headers: [string, string][] = [];
+  // eslint-disable-next-line unicorn/no-array-for-each
+  req.forEach((key, value) => {
+    headers.push([key, value]);
+  });
+  return headers;
 }

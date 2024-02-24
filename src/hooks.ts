@@ -1,40 +1,52 @@
 import { WebSocketError } from "./error";
 import type { WebSocketMessage } from "./message";
-import type { WebSocketPeer } from "./peer";
+import type { WSPeer, WSRequest } from "./peer";
 
-type WSHook<ArgsT extends Array<any> = []> = (
-  peer: WebSocketPeer,
-  ...args: ArgsT
-) => void | Promise<void>;
+type MaybePromise<T> = T | Promise<T>;
 
-// type WSGlobalHook<ArgsT extends Array<any> = []> = (
-//   ...args: ArgsT
-// ) => void | Promise<void>;
-
-export type UserHooks = Partial<WebSocketHooks & AdapterHooks>;
+export type _UserHooks = WebSocketHooks & AdapterHooks;
+export type UserHooks = Partial<_UserHooks>;
 
 export function defineWebSocketHooks<T extends UserHooks = UserHooks>(
   hooks: T,
-): Partial<WebSocketHooks> {
+): T {
   return hooks;
 }
 
+type UserHookName = Exclude<keyof _UserHooks, "$">;
+
+type CatchAllHandler = <Name extends UserHookName>(
+  name: Name,
+  ...args: Parameters<_UserHooks[Name]>
+) => MaybePromise<void>;
+
 export interface WebSocketHooks {
   /** Catch-all handler */
-  $: (name: keyof UserHooks, peer: WebSocketPeer, ...args: any[]) => void;
+  $: CatchAllHandler;
+
+  /** Upgrading */
+  upgrade: (req: WSRequest) => MaybePromise<void | { headers?: HeadersInit }>;
 
   /** A message is received */
-  message: WSHook<[WebSocketMessage]>;
+  message: (peer: WSPeer, message: WebSocketMessage) => MaybePromise<void>;
 
   /** A socket is opened */
-  open: WSHook<[]>;
+  open: (peer: WSPeer) => MaybePromise<void>;
 
   /** A socket is closed */
-  close: WSHook<[{ code?: number; reason?: string }]>;
+  close: (
+    peer: WSPeer,
+    details: { code?: number; reason?: string },
+  ) => MaybePromise<void>;
 
   /** An error occurs */
-  error: WSHook<[WebSocketError]>;
+  error: (peer: WSPeer, error: WebSocketError) => MaybePromise<void>;
 }
+
+type WSHook<ArgsT extends Array<any> = []> = (
+  peer: WSPeer,
+  ...args: ArgsT
+) => MaybePromise<void>;
 
 export interface AdapterHooks {
   // Bun
@@ -67,10 +79,6 @@ export interface AdapterHooks {
   "node:pong": WSHook<[data: Buffer]>;
   "node:unexpected-response": WSHook<[req: any, res: any]>;
   "node:upgrade": WSHook<[req: any]>;
-  // "node:server-error": WSGlobalHook<[error: any]>;
-  // "node:server-listening": WSGlobalHook<[]>;
-  // "node:server-close": WSGlobalHook<[]>;
-  // "node:server-headers": WSGlobalHook<[headers: any, request: any]>;
 
   // uws (Node)
   "uws:open": WSHook<[ws: any]>;

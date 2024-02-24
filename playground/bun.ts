@@ -3,13 +3,13 @@
 import bunAdapter from "../src/adapters/bun";
 import { createDemo, getIndexHTML } from "./_shared";
 
-const adapter = createDemo(bunAdapter);
+const { websocket, handleUpgrade } = createDemo(bunAdapter);
 
 Bun.serve({
   port: 3001,
-  websocket: adapter.websocket,
+  websocket,
   async fetch(req, server) {
-    if (server.upgrade(req, { data: { req, server } })) {
+    if (await handleUpgrade(req, server)) {
       return;
     }
     return new Response(await getIndexHTML({ name: "bun" }), {
