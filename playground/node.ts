@@ -8,7 +8,7 @@ const adapter = createDemo(nodeAdapter);
 
 const server = createServer(async (req, res) => {
   res.writeHead(200, { "Content-Type": "text/html" });
-  res.end(await getIndexHTML({ name: "node-ws" }));
+  res.end(await getIndexHTML());
 });
 
 server.on("upgrade", adapter.handleUpgrade);

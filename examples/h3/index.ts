@@ -1,4 +1,4 @@
-import { createApp, createRouter } from "h3";
+import { createApp } from "h3";
 import { defineWebSocketHooks } from "crossws";
 
 export const app = createApp();

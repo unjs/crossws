@@ -4,8 +4,10 @@ import {
   defineWebSocketHooks,
 } from "../src/index.ts";
 
-export const getIndexHTML = (params) =>
-  import("../examples/h3/index.html.ts").then((r) => r.html(params));
+export const getIndexHTML = () =>
+  fetch(
+    "https://raw.githubusercontent.com/unjs/crossws/main/examples/h3/public/index.html",
+  ).then((res) => res.text());
 
 export function createDemo<T extends WebSocketAdapter>(
   adapter: T,
