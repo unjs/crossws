@@ -11,10 +11,11 @@ import type {
   WebSocket as WebSocketT,
 } from "../../types/ws";
 import { WSPeer } from "../peer";
-import { WebSocketMessage } from "../message";
+import { WSMessage } from "../message";
 import { WebSocketError } from "../error";
 import { defineWebSocketAdapter } from "../adapter";
 import { CrossWSOptions, createCrossWS } from "../crossws";
+import { toBufferLike } from "../_utils";
 
 export interface AdapterOptions extends CrossWSOptions {
   wss?: WebSocketServer;
@@ -46,7 +47,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
-        crossws.message(peer, new WebSocketMessage(data, isBinary));
+        crossws.message(peer, new WSMessage(data, isBinary));
       });
       ws.on("error", (error: Error) => {
         crossws.$("node:error", peer, error);
@@ -137,8 +138,12 @@ class NodeWSPeer extends WSPeer<{
     return this.ctx.node.ws.readyState;
   }
 
-  send(message: string, compress?: boolean) {
-    this.ctx.node.ws.send(message, { compress });
+  send(message: any, options?: { compress?: boolean; binary?: boolean }) {
+    this.ctx.node.ws.send(toBufferLike(message), {
+      compress: options?.compress,
+      binary: options?.binary,
+      ...options,
+    });
     return 0;
   }
 }

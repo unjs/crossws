@@ -4,9 +4,10 @@ import type * as _cf from "@cloudflare/workers-types";
 
 import { WSPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
-import { WebSocketMessage } from "../message";
+import { WSMessage } from "../message";
 import { WebSocketError } from "../error";
 import { CrossWSOptions, createCrossWS } from "../crossws";
+import { toBufferLike } from "../_utils";
 
 type Env = Record<string, any>;
 
@@ -48,7 +49,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 
       server.addEventListener("message", (event) => {
         crossws.$("cloudflare:message", peer, event);
-        crossws.message(peer, new WebSocketMessage(event.data));
+        crossws.message(peer, new WSMessage(event.data));
       });
 
       server.addEventListener("error", (event) => {
@@ -100,8 +101,8 @@ class CloudflarePeer extends WSPeer<{
     return this.ctx.cloudflare.client.readyState as -1 | 0 | 1 | 2 | 3;
   }
 
-  send(message: string | ArrayBuffer) {
-    this.ctx.cloudflare.server.send(message);
+  send(message: any) {
+    this.ctx.cloudflare.server.send(toBufferLike(message));
     return 0;
   }
 }

@@ -2,11 +2,11 @@
 
 import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 
-import { WebSocketMessage } from "../message";
-import { WebSocketError } from "../error";
+import { WSMessage } from "../message";
 import { WSPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter";
 import { CrossWSOptions, createCrossWS } from "../crossws";
+import { toBufferLike } from "../_utils";
 
 export interface AdapterOptions extends CrossWSOptions {}
 
@@ -50,7 +50,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
         message: (ws, message) => {
           const peer = getWSPeer(ws);
           crossws.$("bun:message", peer, ws, message);
-          crossws.message(peer, new WebSocketMessage(message));
+          crossws.message(peer, new WSMessage(message));
         },
         open: (ws) => {
           const peer = getWSPeer(ws);
@@ -102,8 +102,23 @@ class BunWSPeer extends WSPeer<{
     return this.ctx.bun.ws.data.req?.headers || new Headers();
   }
 
-  send(message: string | ArrayBuffer) {
-    this.ctx.bun.ws.send(message);
-    return 0;
+  send(message: any, options?: { compress?: boolean }) {
+    return this.ctx.bun.ws.send(toBufferLike(message), options?.compress);
+  }
+
+  publish(topic: string, message: any, options?: { compress?: boolean }) {
+    return this.ctx.bun.ws.publish(
+      topic,
+      toBufferLike(message),
+      options?.compress,
+    );
+  }
+
+  subscribe(topic: string): void {
+    this.ctx.bun.ws.subscribe(topic);
+  }
+
+  unsubscribe(topic: string): void {
+    this.ctx.bun.ws.unsubscribe(topic);
   }
 }

@@ -1,5 +1,5 @@
 import { WebSocketError } from "./error";
-import type { WebSocketMessage } from "./message";
+import type { WSMessage } from "./message";
 import type { WSPeer, WSRequest } from "./peer";
 
 type MaybePromise<T> = T | Promise<T>;
@@ -28,7 +28,7 @@ export interface WebSocketHooks {
   upgrade: (req: WSRequest) => MaybePromise<void | { headers?: HeadersInit }>;
 
   /** A message is received */
-  message: (peer: WSPeer, message: WebSocketMessage) => MaybePromise<void>;
+  message: (peer: WSPeer, message: WSMessage) => MaybePromise<void>;
 
   /** A socket is opened */
   open: (peer: WSPeer) => MaybePromise<void>;

@@ -1,6 +1,8 @@
-export class WebSocketMessage {
+import { toBufferLike } from "./_utils";
+
+export class WSMessage {
   constructor(
-    public readonly rawData: string | ArrayBuffer | Uint8Array,
+    public readonly rawData: any,
     public readonly isBinary?: boolean,
   ) {}
 
@@ -8,14 +10,18 @@ export class WebSocketMessage {
     if (typeof this.rawData === "string") {
       return this.rawData;
     }
-    return new TextDecoder().decode(this.rawData);
+    const buff = toBufferLike(this.rawData);
+    if (typeof buff === "string") {
+      return buff;
+    }
+    return new TextDecoder().decode(buff);
   }
 
   toString() {
-    return `<WebSocketMessage: ${this.text()}>`;
+    return this.text();
   }
 
   [Symbol.for("nodejs.util.inspect.custom")]() {
-    return this.toString();
+    return this.text();
   }
 }

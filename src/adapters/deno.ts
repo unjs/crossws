@@ -2,11 +2,12 @@
 // https://deno.land/api?s=Deno.upgradeWebSocket
 // https://examples.deno.land/http-server-websocket
 
-import { WebSocketMessage } from "../message";
+import { WSMessage } from "../message";
 import { WebSocketError } from "../error";
 import { WSPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
 import { CrossWSOptions, createCrossWS } from "../crossws";
+import { toBufferLike } from "../_utils";
 
 export interface AdapterOptions extends CrossWSOptions {}
 
@@ -17,6 +18,8 @@ export interface Adapter {
 declare global {
   const Deno: typeof import("@deno/types").Deno;
 }
+
+type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   (hooks, options = {}) => {
@@ -43,7 +46,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       });
       upgrade.socket.addEventListener("message", (event) => {
         crossws.$("deno:message", peer, event);
-        crossws.message(peer, new WebSocketMessage(event.data));
+        crossws.message(peer, new WSMessage(event.data));
       });
       upgrade.socket.addEventListener("close", () => {
         crossws.$("deno:close", peer);
@@ -63,9 +66,10 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 );
 
 class DenoWSPeer extends WSPeer<{
-  deno: { ws: any; req: Request };
+  deno: { ws: WebSocketUpgrade["socket"]; req: Request };
 }> {
   get id() {
+    // @ts-expect-error types missing
     return this.ctx.deno.ws.remoteAddress;
   }
 
@@ -81,8 +85,8 @@ class DenoWSPeer extends WSPeer<{
     return this.ctx.deno.req.headers || new Headers();
   }
 
-  send(message: string | ArrayBuffer) {
-    this.ctx.deno.ws.send(message);
+  send(message: any) {
+    this.ctx.deno.ws.send(toBufferLike(message));
     return 0;
   }
 }

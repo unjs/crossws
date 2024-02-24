@@ -18,7 +18,9 @@ export function createDemo<T extends WebSocketAdapter>(
       );
     },
     open(peer) {
-      peer.send(`Hello ${peer}`);
+      peer.send("Welcome to the server!");
+      peer.subscribe("welcome");
+      peer.publish("welcome", `New user joined! ${peer}`);
     },
     message(peer, message) {
       if (message.text() === "ping") {
@@ -38,17 +40,11 @@ export function createDemo<T extends WebSocketAdapter>(
   const resolve: CrossWSOptions["resolve"] = (info) => {
     return {
       open: (peer) => {
-        peer.send(
-          JSON.stringify(
-            {
-              url: info.url,
-              headers:
-                info.headers && Object.fromEntries(new Headers(info.headers)),
-            },
-            undefined,
-            2,
-          ),
-        );
+        peer.send({
+          url: info.url,
+          headers:
+            info.headers && Object.fromEntries(new Headers(info.headers)),
+        });
       },
     };
   };

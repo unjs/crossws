@@ -8,9 +8,10 @@ import type {
   HttpResponse,
 } from "uWebSockets.js";
 import { WSPeer } from "../peer";
-import { WebSocketMessage } from "../message";
+import { WSMessage } from "../message";
 import { defineWebSocketAdapter } from "../adapter";
 import { CrossWSOptions, createCrossWS } from "../crossws";
+import { toBufferLike } from "../_utils";
 
 type UserData = {
   _peer?: any;
@@ -67,7 +68,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       message(ws, message, isBinary) {
         const peer = getWSPeer(ws);
         crossws.$("uws:message", peer, ws, message, isBinary);
-        const msg = new WebSocketMessage(message, isBinary);
+        const msg = new WSMessage(message, isBinary);
         crossws.message(peer, msg);
       },
       open(ws) {
@@ -166,8 +167,24 @@ class UWSWSPeer extends WSPeer<{
     return this._headers;
   }
 
-  send(message: string, compress?: boolean) {
-    this.ctx.uws.ws.send(message, false, compress);
+  send(message: any, options?: { compress?: boolean; binary?: boolean }) {
+    return this.ctx.uws.ws.send(
+      toBufferLike(message),
+      options?.binary,
+      options?.compress,
+    );
+  }
+
+  subscribe(topic: string): void {
+    this.ctx.uws.ws.subscribe(topic);
+  }
+
+  publish(
+    topic: string,
+    message: string,
+    options?: { compress?: boolean; binary?: boolean },
+  ) {
+    this.ctx.uws.ws.publish(topic, message, options?.binary, options?.compress);
     return 0;
   }
 }
