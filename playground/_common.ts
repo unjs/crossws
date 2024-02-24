@@ -9,7 +9,17 @@ export function createDemo<T extends WebSocketAdapter>(
 ): ReturnType<T> {
   const hooks = createWebSocketDebugHooks({
     open(peer) {
-      peer.send("Hello!");
+      peer.send(`Hello!`);
+      peer.send(
+        JSON.stringify(
+          {
+            url: peer.url,
+            headers: peer.headers && Object.fromEntries(peer.headers),
+          },
+          undefined,
+          2,
+        ),
+      );
     },
     message(peer, message) {
       if (message.text() === "ping") {

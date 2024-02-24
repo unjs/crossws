@@ -22,10 +22,10 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   (hooks, options = {}) => {
     const crossws = createCrossWS(hooks, options);
 
-    const handleUpgrade = (request: Request) => {
-      const upgrade = Deno.upgradeWebSocket(request);
+    const handleUpgrade = (req: Request) => {
+      const upgrade = Deno.upgradeWebSocket(req);
       const peer = new DenoWebSocketPeer({
-        deno: { ws: upgrade.socket, request },
+        deno: { ws: upgrade.socket, req },
       });
       upgrade.socket.addEventListener("open", () => {
         crossws.$("deno:open", peer);
@@ -53,7 +53,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 );
 
 class DenoWebSocketPeer extends WebSocketPeerBase<{
-  deno: { ws: any; request: Request };
+  deno: { ws: any; req: Request };
 }> {
   get id() {
     return this.ctx.deno.ws.remoteAddress;
@@ -61,6 +61,14 @@ class DenoWebSocketPeer extends WebSocketPeerBase<{
 
   get readyState() {
     return this.ctx.deno.ws.readyState as -1 | 0 | 1 | 2 | 3;
+  }
+
+  get url() {
+    return this.ctx.deno.req.url;
+  }
+
+  get headers() {
+    return this.ctx.deno.req.headers || new Headers();
   }
 
   send(message: string | ArrayBuffer) {

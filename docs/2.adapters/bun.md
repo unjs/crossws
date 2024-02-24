@@ -6,18 +6,18 @@ icon: simple-icons:bun
 
 > Integrate CrossWS with Bun.
 
-To integrate CrossWS with your Bun server, you need to check for `server.upgrade` and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
+To integrate CrossWS with your Bun server, you need to handle upgrade with `handleUpgrade` util and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
 
 ```ts
 import wsAdapter from "./dist/adapters/bun";
 
-const { websocket } = wsAdapter({ message: console.log });
+const { websocket, handleUpgrade } = wsAdapter({ message: console.log });
 
 Bun.serve({
   port: 3000,
   websocket,
   fetch(req, server) {
-    if (server.upgrade(req)) {
+    if (handleUpgrade(req, server)) {
       return;
     }
     return new Response(

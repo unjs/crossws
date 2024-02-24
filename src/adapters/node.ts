@@ -112,6 +112,8 @@ class NodeWebSocketPeer extends WebSocketPeerBase<{
     ws: WebSocketT;
   };
 }> {
+  _headers: Headers | undefined;
+
   get id() {
     const socket = this.ctx.node.req.socket;
     if (!socket) {
@@ -122,6 +124,26 @@ class NodeWebSocketPeer extends WebSocketPeerBase<{
         ? `[${socket.remoteAddress}]`
         : socket.remoteAddress;
     return `${addr}:${socket.remotePort}`;
+  }
+
+  get url() {
+    return this.ctx.node.req.url || "/";
+  }
+
+  get headers() {
+    if (!this._headers) {
+      this._headers = new Headers();
+      for (const [key, value] of Object.entries(this.ctx.node.req.headers)) {
+        if (typeof value === "string") {
+          this._headers.append(key, value);
+        } else if (Array.isArray(value)) {
+          for (const v of value) {
+            this._headers.append(key, v);
+          }
+        } // else value is undefined
+      }
+    }
+    return this._headers;
   }
 
   get readyState() {

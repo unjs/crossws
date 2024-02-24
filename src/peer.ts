@@ -8,15 +8,19 @@ const ReadyStateMap = {
   3: "closed",
 } as const;
 
-export interface WebSocketContext {}
-
-export abstract class WebSocketPeerBase<
-  T extends WebSocketContext = WebSocketContext,
-> {
-  constructor(public ctx: T) {}
+export abstract class WebSocketPeerBase<AdapterContext = any> {
+  constructor(public ctx: AdapterContext) {}
 
   get id(): string | undefined {
     return undefined;
+  }
+
+  get url(): string {
+    return "/";
+  }
+
+  get headers(): Headers {
+    return new Headers();
   }
 
   get readyState(): ReadyState | -1 {

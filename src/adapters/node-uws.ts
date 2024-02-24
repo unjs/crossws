@@ -1,13 +1,23 @@
 // https://github.com/websockets/ws
 // https://github.com/websockets/ws/blob/master/doc/ws.md
 
-import { WebSocketBehavior, WebSocket } from "uWebSockets.js";
+import type {
+  WebSocketBehavior,
+  WebSocket,
+  HttpRequest,
+  HttpResponse,
+} from "uWebSockets.js";
 import { WebSocketPeerBase } from "../peer";
 import { WebSocketMessage } from "../message";
 import { defineWebSocketAdapter } from "../adapter";
 import { CrossWSOptions, createCrossWS } from "../crossws";
 
-type UserData = { _peer?: any };
+type UserData = {
+  _peer?: any;
+  req: HttpRequest;
+  res: HttpResponse;
+  context: any;
+};
 
 type WebSocketHandler = WebSocketBehavior<UserData>;
 
@@ -38,7 +48,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       if (userData._peer) {
         return userData._peer as WebSocketPeer;
       }
-      const peer = new WebSocketPeer({ uws: { ws } });
+      const peer = new WebSocketPeer({ uws: { ws, userData } });
       userData._peer = peer;
       return peer;
     };
@@ -78,7 +88,20 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
         crossws.$("uws:subscription", peer, ws, topic, newCount, oldCount);
       },
       // error ? TODO
-      // upgrade(res, req, context) {}
+      upgrade(res, req, context) {
+        /* This immediately calls open handler, you must not use res after this call */
+        res.upgrade(
+          {
+            req,
+            res,
+            context,
+          },
+          req.getHeader("sec-websocket-key"),
+          req.getHeader("sec-websocket-protocol"),
+          req.getHeader("sec-websocket-extensions"),
+          context,
+        );
+      },
     };
 
     return {
@@ -90,8 +113,11 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 class WebSocketPeer extends WebSocketPeerBase<{
   uws: {
     ws: WebSocket<UserData>;
+    userData: UserData;
   };
 }> {
+  _headers: Headers | undefined;
+
   get id() {
     try {
       const addr = this.ctx.uws.ws?.getRemoteAddressAsText();
@@ -103,6 +129,22 @@ class WebSocketPeer extends WebSocketPeerBase<{
 
   // TODO
   // get readyState() {}
+
+  get url() {
+    return this.ctx.uws.userData.req.getUrl();
+  }
+
+  get headers() {
+    if (!this._headers) {
+      const headers = new Headers();
+      // eslint-disable-next-line unicorn/no-array-for-each
+      this.ctx.uws.userData.req.forEach((key, value) => {
+        headers.set(key, value);
+      });
+      this._headers = headers;
+    }
+    return this._headers;
+  }
 
   send(message: string, compress?: boolean) {
     this.ctx.uws.ws.send(message, false, compress);

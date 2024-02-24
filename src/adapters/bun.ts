@@ -1,6 +1,6 @@
 // https://bun.sh/docs/api/websockets
 
-import type { WebSocketHandler, ServerWebSocket } from "bun";
+import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
@@ -10,7 +10,11 @@ import { CrossWSOptions, createCrossWS } from "../crossws";
 
 export interface AdapterOptions extends CrossWSOptions {}
 
-type ContextData = { _peer?: WebSocketPeer };
+type ContextData = {
+  _peer?: WebSocketPeer;
+  req?: Request;
+  server?: Server;
+};
 
 export interface Adapter {
   websocket: WebSocketHandler<ContextData>;
@@ -31,6 +35,11 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
     };
 
     return {
+      handleUpgrade(req: Request, server: Server) {
+        return server.upgrade(req, {
+          data: { req, server },
+        });
+      },
       websocket: {
         message: (ws, message) => {
           const peer = getPeer(ws);
@@ -83,6 +92,14 @@ class WebSocketPeer extends WebSocketPeerBase<{
 
   get readyState() {
     return this.ctx.bun.ws.readyState as any;
+  }
+
+  get url() {
+    return this.ctx.bun.ws.data.req?.url || "/";
+  }
+
+  get headers() {
+    return this.ctx.bun.ws.data.req?.headers || new Headers();
   }
 
   send(message: string | ArrayBuffer) {

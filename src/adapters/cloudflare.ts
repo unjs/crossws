@@ -28,7 +28,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
     const crossws = createCrossWS(hooks, options);
 
     const handleUpgrade = (
-      request: _cf.Request,
+      req: _cf.Request,
       env: Env,
       context: _cf.ExecutionContext,
     ) => {
@@ -37,7 +37,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       const server = pair[1];
 
       const peer = new CloudflareWebSocketPeer({
-        cloudflare: { client, server, request, env, context },
+        cloudflare: { client, server, req, env, context },
       });
 
       server.accept();
@@ -77,13 +77,21 @@ class CloudflareWebSocketPeer extends WebSocketPeerBase<{
   cloudflare: {
     client: _cf.WebSocket;
     server: _cf.WebSocket;
-    request: _cf.Request;
+    req: _cf.Request;
     env: Env;
     context: _cf.ExecutionContext;
   };
 }> {
   get id() {
     return undefined;
+  }
+
+  get url() {
+    return this.ctx.cloudflare.req.url;
+  }
+
+  get headers() {
+    return this.ctx.cloudflare.req.headers as Headers;
   }
 
   get readyState() {

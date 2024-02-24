@@ -9,7 +9,7 @@ Bun.serve({
   port: 3001,
   websocket: adapter.websocket,
   async fetch(req, server) {
-    if (server.upgrade(req)) {
+    if (server.upgrade(req, { data: { req, server } })) {
       return;
     }
     return new Response(await getIndexHTML({ name: "bun" }), {
