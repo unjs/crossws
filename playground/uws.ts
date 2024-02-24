@@ -1,10 +1,10 @@
 // You can run this demo using `npm run play:node-uws` in repo
 
 import { App } from "uWebSockets.js";
-import nodeAdapter from "../src/adapters/node-uws.ts";
-import { createDemo, getIndexHTML } from "./_common";
+import uwsAdapter from "../src/adapters/uws.ts";
+import { createDemo, getIndexHTML } from "./_common.ts";
 
-const adapter = createDemo(nodeAdapter);
+const adapter = createDemo(uwsAdapter);
 
 const app = App().ws("/*", adapter.websocket);
 

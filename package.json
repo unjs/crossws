@@ -49,6 +49,11 @@
       "types": "./dist/adapters/node.d.ts",
       "import": "./dist/adapters/node.mjs",
       "require": "./dist/adapters/node.cjs"
+    },
+    "./adapters/uws": {
+      "types": "./dist/adapters/uws.d.ts",
+      "import": "./dist/adapters/uws.mjs",
+      "require": "./dist/adapters/uws.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -61,17 +66,20 @@
   ],
   "scripts": {
     "build": "unbuild",
-    "play:ws": "jiti playground/node-ws.ts",
-    "play:uws": "jiti playground/node-uws.ts",
-    "play:bun": "bun playground/bun.ts",
-    "play:deno": "deno run -A playground/deno.ts",
-    "play:cf": "wrangler dev --port 3001",
     "lint": "eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src -w",
     "prepack": "pnpm run build",
+    "play:bun": "bun playground/bun.ts",
+    "play:cf": "wrangler dev --port 3001",
+    "play:deno": "deno run -A playground/deno.ts",
+    "play:node": "jiti playground/node.ts",
+    "play:uws": "jiti playground/uws.ts",
     "release": "pnpm test && changelogen --release && npm publish && git push --follow-tags",
     "test": "pnpm lint && pnpm test:types",
     "test:types": "tsc --noEmit --skipLibCheck"
+  },
+  "resolutions": {
+    "crossws": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240117.0",
@@ -93,9 +101,6 @@
     "unbuild": "^2.0.0",
     "wrangler": "^3.25.0",
     "ws": "^8.16.0"
-  },
-  "resolutions": {
-    "crossws": "workspace:*"
   },
   "packageManager": "pnpm@8.15.0"
 }
