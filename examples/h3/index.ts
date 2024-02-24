@@ -1,15 +1,7 @@
-import { createApp, createRouter, eventHandler } from "h3";
+import { createApp, createRouter } from "h3";
 import { defineWebSocketHooks } from "crossws";
 
-const router = createRouter();
-export const app = createApp().use(router);
-
-router.get(
-  "/",
-  eventHandler(() =>
-    import("./index.html").then((r) => r.html({ name: "h3" })),
-  ),
-);
+export const app = createApp();
 
 // Listhen automatically sets up integration!
 // Learn more: https://crossws.unjs.io

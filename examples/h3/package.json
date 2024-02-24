@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "listhen --ws ./app.ts",
-    "dev": "listhen --ws -w ./app.ts"
+    "start": "listhen --ws .",
+    "dev": "listhen --ws -w ."
   },
   "dependencies": {
     "crossws": "latest",
