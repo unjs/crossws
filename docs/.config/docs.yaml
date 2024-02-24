@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=https://unpkg.com/undocs/schema/config.json
+
+name: CrossWS
+shortDescription: runtime agnostic WebSockets
+description: Unified WebSocket API for Node.js, Deno, Bun and Cloudflare
+  Workers.
+github: unjs/crossws
+landing:
+  heroLinks:
+    playOnline:
+      label: Play Online
+      icon: i-heroicons-play
+      to: https://stackblitz.com/github/unjs/crossws/tree/main/examples/h3?file=app.ts
+  features:
+    - title: Runtime Agnostic
+      description:
+        Seamlessly integrates with Bun, Deno, Cloudflare Workrs and Node.js
+        (ws or uWebSockets.js)
+    - title: Made for Performance
+      description:
+        High-performance server hooks API designed to avoid creating callbacks
+        per client but once.
+    - title: Lightweight
+      description:
+        Zero Dependency with bundled ws for Node.js support. Extremely lightweight
+        and tree-shakable packaging with ESM and CJS support.
+    - title: Developer Friendly
+      description: Typed Hooks API and human friednly logging support.

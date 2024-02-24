@@ -1,11 +1,10 @@
 {
   "private": true,
-  "name": "docs",
   "scripts": {
-    "dev": "unjs-docs dev",
-    "build": "unjs-docs build"
+    "dev": "undocs dev",
+    "build": "undocs build"
   },
   "devDependencies": {
-    "unjs-docs": "^0.2.0"
+    "undocs": "^0.2.17"
   }
 }

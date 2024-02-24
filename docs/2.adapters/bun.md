@@ -1,6 +1,10 @@
+---
+icon: simple-icons:bun
+---
+
 # Bun
 
-Integrate CrossWS with Bun.
+> Integrate CrossWS with Bun.
 
 To integrate CrossWS with your Bun server, you need to check for `server.upgrade` and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
 
@@ -34,6 +38,6 @@ Bun.serve({
 - `bun:ping (peer, ws, data)`
 - `bun:pong (peer, ws, data)`
 
-## Learn More
-
+::read-more
 See [`playground/bun.ts`](https://github.com/unjs/crossws/tree/main/playground/bun.ts) for demo and [`src/adapters/bun.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/bun.ts) for implementation.
+::

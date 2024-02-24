@@ -1,6 +1,10 @@
+---
+icon: devicon-plain:cloudflareworkers
+---
+
 # Cloudflare
 
-Integrate CrossWS with Cloudflare Workers.
+> Integrate CrossWS with Cloudflare Workers.
 
 To integrate CrossWS with your Cloudflare Workers, you need to check for the `upgrade` header.
 
@@ -29,6 +33,6 @@ export default {
 - `cloudflare:error (peer, event)`
 - `cloudflare:close (peer, event)`
 
-## Learn More
-
+::read-more
 See [`playground/cloudflare.ts`](https://github.com/unjs/crossws/tree/main/playground/cloudflare.ts) for demo and [`src/adapters/cloudflare.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/cloudflare.ts) for implementation.
+::

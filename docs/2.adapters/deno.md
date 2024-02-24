@@ -1,6 +1,10 @@
+---
+icon: teenyicons:deno-solid
+---
+
 # Deno
 
-Integrate CrossWS with Deno.
+> Integrate CrossWS with Deno.
 
 To integrate CrossWS with your Deno server, you need to check for the `upgrade` header and then call `handleUpgrade` method from the adapter passing the incoming request object. The returned value is the server upgrade response.
 
@@ -27,6 +31,6 @@ Deno.serve({ port: 3000 }, (request) => {
 - `deno:close (peer)`
 - `deno:error (peer, error)`
 
-## Learn More
-
+::read-more
 See [`playground/deno.ts`](./playground/deno.ts) for demo and [`src/adapters/deno.ts`](./src/adapters/deno.ts) for implementation.
+::
