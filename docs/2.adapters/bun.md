@@ -17,7 +17,7 @@ Bun.serve({
   port: 3000,
   websocket,
   fetch(req, server) {
-    if (handleUpgrade(req, server)) {
+    if (await handleUpgrade(req, server)) {
       return;
     }
     return new Response(
