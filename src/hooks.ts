@@ -7,8 +7,14 @@ type WSHook<ArgsT extends Array<any> = []> = (
   ...args: ArgsT
 ) => void | Promise<void>;
 
-export function defineWebSocketHooks(
-  hooks: Partial<WebSocketHooks>,
+type WSGlobalHook<ArgsT extends Array<any> = []> = (
+  ...args: ArgsT
+) => void | Promise<void>;
+
+export type UserHooks = Partial<WebSocketHooks & AdapterHooks>;
+
+export function defineWebSocketHooks<T extends UserHooks = UserHooks>(
+  hooks: T,
 ): Partial<WebSocketHooks> {
   return hooks;
 }
@@ -25,7 +31,9 @@ export interface WebSocketHooks {
 
   /** An error occurs */
   error: WSHook<[WebSocketError]>;
+}
 
+export interface AdapterHooks {
   // Bun
   "bun:message": WSHook<[ws: any, message: any]>;
   "bun:open": WSHook<[ws: any]>;
@@ -56,6 +64,10 @@ export interface WebSocketHooks {
   "node:pong": WSHook<[data: Buffer]>;
   "node:unexpected-response": WSHook<[req: any, res: any]>;
   "node:upgrade": WSHook<[req: any]>;
+  "node:server-error": WSGlobalHook<[error: any]>;
+  "node:server-listening": WSGlobalHook<[]>;
+  "node:server-close": WSGlobalHook<[]>;
+  "node:server-headers": WSGlobalHook<[headers: any, request: any]>;
 
   // uws (Node)
   "uws:open": WSHook<[ws: any]>;

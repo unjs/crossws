@@ -5,12 +5,14 @@ import { WebSocketBehavior, WebSocket } from "uWebSockets.js";
 import { WebSocketPeerBase } from "../peer";
 import { WebSocketMessage } from "../message";
 import { defineWebSocketAdapter } from "../adapter";
+import { CrossWSOptions, createCrossWS } from "../crossws";
 
 type UserData = { _peer?: any };
+
 type WebSocketHandler = WebSocketBehavior<UserData>;
 
-export interface AdapterOptions
-  extends Exclude<
+export interface AdapterOptions extends CrossWSOptions {
+  uws?: Exclude<
     WebSocketBehavior<any>,
     | "close"
     | "drain"
@@ -20,14 +22,17 @@ export interface AdapterOptions
     | "pong"
     | "subscription"
     | "upgrade"
-  > {}
+  >;
+}
 
 export interface Adapter {
   websocket: WebSocketHandler;
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (hooks, opts = {}) => {
+  (hooks, options = {}) => {
+    const crossws = createCrossWS(hooks, options);
+
     const getPeer = (ws: WebSocket<UserData>) => {
       const userData = ws.getUserData();
       if (userData._peer) {
@@ -39,38 +44,38 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
     };
 
     const websocket: WebSocketHandler = {
-      ...opts,
+      ...options.uws,
       close(ws, code, message) {
         const peer = getPeer(ws);
-        hooks["uws:close"]?.(peer, ws, code, message);
+        crossws.$("uws:close", peer, ws, code, message);
         hooks.close?.(peer, { code, reason: message?.toString() });
       },
       drain(ws) {
         const peer = getPeer(ws);
-        hooks["uws:drain"]?.(peer, ws);
+        crossws.$("uws:drain", peer, ws);
       },
       message(ws, message, isBinary) {
         const peer = getPeer(ws);
-        hooks["uws:message"]?.(peer, ws, message, isBinary);
+        crossws.$("uws:message", peer, ws, message, isBinary);
         const msg = new WebSocketMessage(message, isBinary);
         hooks.message?.(peer, msg);
       },
       open(ws) {
         const peer = getPeer(ws);
-        hooks["uws:open"]?.(peer, ws);
+        crossws.$("uws:open", peer, ws);
         hooks.open?.(peer);
       },
       ping(ws, message) {
         const peer = getPeer(ws);
-        hooks["uws:ping"]?.(peer, ws, message);
+        crossws.$("uws:ping", peer, ws, message);
       },
       pong(ws, message) {
         const peer = getPeer(ws);
-        hooks["uws:pong"]?.(peer, ws, message);
+        crossws.$("uws:pong", peer, ws, message);
       },
       subscription(ws, topic, newCount, oldCount) {
         const peer = getPeer(ws);
-        hooks["uws:subscription"]?.(peer, ws, topic, newCount, oldCount);
+        crossws.$("uws:subscription", peer, ws, topic, newCount, oldCount);
       },
       // error ? TODO
       // upgrade(res, req, context) {}

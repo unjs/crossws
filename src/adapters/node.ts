@@ -14,8 +14,9 @@ import { WebSocketPeerBase } from "../peer";
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
 import { defineWebSocketAdapter } from "../adapter";
+import { CrossWSOptions, createCrossWS } from "../crossws";
 
-export interface AdapterOptions {
+export interface AdapterOptions extends CrossWSOptions {
   wss?: WebSocketServer;
   serverOptions?: ServerOptions;
 }
@@ -25,27 +26,29 @@ export interface Adapter {
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (hooks, opts = {}) => {
+  (hooks, options = {}) => {
+    const crossws = createCrossWS(hooks, options);
+
     const wss: WebSocketServer =
-      opts.wss ||
+      options.wss ||
       (new _WebSocketServer({
         noServer: true,
-        ...(opts.serverOptions as any),
+        ...(options.serverOptions as any),
       }) as WebSocketServer);
 
     // Unmanaged server-level events
-    // wss.on("error", (error) => {
-    //   hooks["node:server-error"]?.( error);
-    // });
-    // wss.on("headers", (headers, request) => {
-    //   hooks["node:server-headers"]?.( headers, request);
-    // });
-    // wss.on("listening", () => {
-    //   hooks.onEvent?.("node:server-listening");
-    // });
-    // wss.on("close", () => {
-    //   hooks.onEvent?.("node:server-close");
-    // });
+    wss.on("error", (error) => {
+      crossws.$("node:server-error", error);
+    });
+    wss.on("headers", (headers, request) => {
+      crossws.$("node:server-headers", headers, request);
+    });
+    wss.on("listening", () => {
+      crossws.$("node:server-listening");
+    });
+    wss.on("close", () => {
+      crossws.$("node:server-close");
+    });
 
     wss.on("connection", (ws, req) => {
       const peer = new NodeWebSocketPeer({ node: { ws, req, server: wss } });
@@ -53,42 +56,42 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 
       // Managed socket-level events
       ws.on("message", (data: RawData, isBinary: boolean) => {
-        hooks["node:message"]?.(peer, data, isBinary);
+        crossws.$("node:message", peer, data, isBinary);
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
         hooks.message?.(peer, new WebSocketMessage(data, isBinary));
       });
       ws.on("error", (error: Error) => {
-        hooks["node:error"]?.(peer, error);
+        crossws.$("node:error", peer, error);
         hooks.error?.(peer, new WebSocketError(error));
       });
       ws.on("close", (code: number, reason: Buffer) => {
-        hooks["node:close"]?.(peer, code, reason);
+        crossws.$("node:close", peer, code, reason);
         hooks.close?.(peer, {
           code,
           reason: reason?.toString(),
         });
       });
       ws.on("open", () => {
-        hooks["node:open"]?.(peer);
+        crossws.$("node:open", peer);
       });
 
       // Unmanaged socket-level events
       ws.on("ping", (data: Buffer) => {
-        hooks["node:ping"]?.(peer, data);
+        crossws.$("node:ping", peer, data);
       });
       ws.on("pong", (data: Buffer) => {
-        hooks["node:pong"]?.(peer, data);
+        crossws.$("node:pong", peer, data);
       });
       ws.on(
         "unexpected-response",
         (req: ClientRequest, res: IncomingMessage) => {
-          hooks["node:unexpected-response"]?.(peer, req, res);
+          crossws.$("node:unexpected-response", peer, req, res);
         },
       );
       ws.on("upgrade", (req: IncomingMessage) => {
-        hooks["node:upgrade"]?.(peer, req);
+        crossws.$("node:upgrade", peer, req);
       });
     });
 

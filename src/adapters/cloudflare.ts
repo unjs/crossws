@@ -6,13 +6,14 @@ import { WebSocketPeerBase } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
+import { CrossWSOptions, createCrossWS } from "../crossws";
 
 type Env = Record<string, any>;
 
 declare const WebSocketPair: typeof _cf.WebSocketPair;
 declare const Response: typeof _cf.Response;
 
-export interface AdapterOptions {}
+export interface AdapterOptions extends CrossWSOptions {}
 
 export interface Adapter {
   handleUpgrade(
@@ -23,7 +24,9 @@ export interface Adapter {
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (hooks, opts = {}) => {
+  (hooks, options = {}) => {
+    const crossws = createCrossWS(hooks, options);
+
     const handleUpgrade = (
       request: _cf.Request,
       env: Env,
@@ -39,21 +42,21 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 
       server.accept();
 
-      hooks["cloudflare:accept"]?.(peer);
+      crossws.$("cloudflare:accept", peer);
       hooks.open?.(peer);
 
       server.addEventListener("message", (event) => {
-        hooks["cloudflare:message"]?.(peer, event);
+        crossws.$("cloudflare:message", peer, event);
         hooks.message?.(peer, new WebSocketMessage(event.data));
       });
 
       server.addEventListener("error", (event) => {
-        hooks["cloudflare:error"]?.(peer, event);
+        crossws.$("cloudflare:error", peer, event);
         hooks.error?.(peer, new WebSocketError(event.error));
       });
 
       server.addEventListener("close", (event) => {
-        hooks["cloudflare:close"]?.(peer, event);
+        crossws.$("cloudflare:close", peer, event);
         hooks.close?.(peer, { code: event.code, reason: event.reason });
       });
 

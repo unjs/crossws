@@ -6,8 +6,9 @@ import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
 import { WebSocketPeerBase } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
+import { CrossWSOptions, createCrossWS } from "../crossws";
 
-export interface AdapterOptions {}
+export interface AdapterOptions extends CrossWSOptions {}
 
 export interface Adapter {
   handleUpgrade(req: Request): Response;
@@ -18,26 +19,28 @@ declare global {
 }
 
 export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (hooks, opts = {}) => {
+  (hooks, options = {}) => {
+    const crossws = createCrossWS(hooks, options);
+
     const handleUpgrade = (request: Request) => {
       const upgrade = Deno.upgradeWebSocket(request);
       const peer = new DenoWebSocketPeer({
         deno: { ws: upgrade.socket, request },
       });
       upgrade.socket.addEventListener("open", () => {
-        hooks["deno:open"]?.(peer);
+        crossws.$("deno:open", peer);
         hooks.open?.(peer);
       });
       upgrade.socket.addEventListener("message", (event) => {
-        hooks["deno:message"]?.(peer, event);
+        crossws.$("deno:message", peer, event);
         hooks.message?.(peer, new WebSocketMessage(event.data));
       });
       upgrade.socket.addEventListener("close", () => {
-        hooks["deno:close"]?.(peer);
+        crossws.$("deno:close", peer);
         hooks.close?.(peer, {});
       });
       upgrade.socket.addEventListener("error", (error) => {
-        hooks["deno:error"]?.(peer, error);
+        crossws.$("deno:error", peer, error);
         hooks.error?.(peer, new WebSocketError(error));
       });
       return upgrade.response;
