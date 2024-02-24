@@ -1,7 +1,7 @@
 // You can run this demo using `npm run play:cf` in repo
 import type { Request, ExecutionContext } from "@cloudflare/workers-types";
 import cloudflareAdapter from "../src/adapters/cloudflare";
-import { createDemo, getIndexHTML } from "./_common.ts";
+import { createDemo, getIndexHTML } from "./_shared.ts";
 
 const { handleUpgrade } = createDemo(cloudflareAdapter);
 

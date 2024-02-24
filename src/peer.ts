@@ -8,11 +8,11 @@ const ReadyStateMap = {
   3: "closed",
 } as const;
 
-export abstract class WebSocketPeerBase<AdapterContext = any> {
+export abstract class WebSocketPeer<AdapterContext = any> {
   constructor(public ctx: AdapterContext) {}
 
   get id(): string | undefined {
-    return undefined;
+    return "??";
   }
 
   get url(): string {
@@ -33,8 +33,7 @@ export abstract class WebSocketPeerBase<AdapterContext = any> {
   ): number;
 
   toString() {
-    const readyState = ReadyStateMap[this.readyState];
-    return `<WebSocketPeer${this.id ? ` ${this.id}` : ""} (${readyState})>`;
+    return `${this.id || ""}${this.readyState === 1 ? "" : ` [${ReadyStateMap[this.readyState]}]`}`;
   }
 
   [Symbol.for("nodejs.util.inspect.custom")]() {

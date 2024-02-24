@@ -2,7 +2,7 @@
 
 import type * as _cf from "@cloudflare/workers-types";
 
-import { WebSocketPeerBase } from "../peer";
+import { WebSocketPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
@@ -36,14 +36,14 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       const client = pair[0];
       const server = pair[1];
 
-      const peer = new CloudflareWebSocketPeer({
+      const peer = new CloudflarePeer({
         cloudflare: { client, server, req, env, context },
       });
 
       server.accept();
 
       crossws.$("cloudflare:accept", peer);
-      hooks.open?.(peer);
+      crossws.open(peer);
 
       server.addEventListener("message", (event) => {
         crossws.$("cloudflare:message", peer, event);
@@ -73,7 +73,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class CloudflareWebSocketPeer extends WebSocketPeerBase<{
+class CloudflarePeer extends WebSocketPeer<{
   cloudflare: {
     client: _cf.WebSocket;
     server: _cf.WebSocket;

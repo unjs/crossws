@@ -10,7 +10,7 @@ import type {
   WebSocketServer,
   WebSocket as WebSocketT,
 } from "../../types/ws";
-import { WebSocketPeerBase } from "../peer";
+import { WebSocketPeer } from "../peer";
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
 import { defineWebSocketAdapter } from "../adapter";
@@ -37,22 +37,23 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       }) as WebSocketServer);
 
     // Unmanaged server-level events
-    wss.on("error", (error) => {
-      crossws.$("node:server-error", error);
-    });
-    wss.on("headers", (headers, request) => {
-      crossws.$("node:server-headers", headers, request);
-    });
-    wss.on("listening", () => {
-      crossws.$("node:server-listening");
-    });
-    wss.on("close", () => {
-      crossws.$("node:server-close");
-    });
+    // TODO: Expose with new API
+    // wss.on("error", (error) => {
+    //   crossws.$("node:server-error", error);
+    // });
+    // wss.on("headers", (headers, request) => {
+    //   crossws.$("node:server-headers", headers, request);
+    // });
+    // wss.on("listening", () => {
+    //   crossws.$("node:server-listening");
+    // });
+    // wss.on("close", () => {
+    //   crossws.$("node:server-close");
+    // });
 
     wss.on("connection", (ws, req) => {
-      const peer = new NodeWebSocketPeer({ node: { ws, req, server: wss } });
-      hooks.open?.(peer);
+      const peer = new NodePeer({ node: { ws, req, server: wss } });
+      crossws.open(peer);
 
       // Managed socket-level events
       ws.on("message", (data: RawData, isBinary: boolean) => {
@@ -105,7 +106,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class NodeWebSocketPeer extends WebSocketPeerBase<{
+class NodePeer extends WebSocketPeer<{
   node: {
     server: WebSocketServer;
     req: IncomingMessage;

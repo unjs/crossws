@@ -2,7 +2,7 @@
 
 import { createServer } from "node:http";
 import nodeAdapter from "../src/adapters/node";
-import { createDemo, getIndexHTML } from "./_common";
+import { createDemo, getIndexHTML } from "./_shared";
 
 const adapter = createDemo(nodeAdapter);
 

@@ -1,15 +1,15 @@
 import { WebSocketError } from "./error";
 import type { WebSocketMessage } from "./message";
-import type { WebSocketPeerBase } from "./peer";
+import type { WebSocketPeer } from "./peer";
 
 type WSHook<ArgsT extends Array<any> = []> = (
-  peer: WebSocketPeerBase,
+  peer: WebSocketPeer,
   ...args: ArgsT
 ) => void | Promise<void>;
 
-type WSGlobalHook<ArgsT extends Array<any> = []> = (
-  ...args: ArgsT
-) => void | Promise<void>;
+// type WSGlobalHook<ArgsT extends Array<any> = []> = (
+//   ...args: ArgsT
+// ) => void | Promise<void>;
 
 export type UserHooks = Partial<WebSocketHooks & AdapterHooks>;
 
@@ -20,6 +20,9 @@ export function defineWebSocketHooks<T extends UserHooks = UserHooks>(
 }
 
 export interface WebSocketHooks {
+  /** Catch-all handler */
+  $: (name: keyof UserHooks, peer: WebSocketPeer, ...args: any[]) => void;
+
   /** A message is received */
   message: WSHook<[WebSocketMessage]>;
 
@@ -64,10 +67,10 @@ export interface AdapterHooks {
   "node:pong": WSHook<[data: Buffer]>;
   "node:unexpected-response": WSHook<[req: any, res: any]>;
   "node:upgrade": WSHook<[req: any]>;
-  "node:server-error": WSGlobalHook<[error: any]>;
-  "node:server-listening": WSGlobalHook<[]>;
-  "node:server-close": WSGlobalHook<[]>;
-  "node:server-headers": WSGlobalHook<[headers: any, request: any]>;
+  // "node:server-error": WSGlobalHook<[error: any]>;
+  // "node:server-listening": WSGlobalHook<[]>;
+  // "node:server-close": WSGlobalHook<[]>;
+  // "node:server-headers": WSGlobalHook<[headers: any, request: any]>;
 
   // uws (Node)
   "uws:open": WSHook<[ws: any]>;

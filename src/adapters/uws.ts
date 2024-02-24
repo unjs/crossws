@@ -7,7 +7,7 @@ import type {
   HttpRequest,
   HttpResponse,
 } from "uWebSockets.js";
-import { WebSocketPeerBase } from "../peer";
+import { WebSocketPeer } from "../peer";
 import { WebSocketMessage } from "../message";
 import { defineWebSocketAdapter } from "../adapter";
 import { CrossWSOptions, createCrossWS } from "../crossws";
@@ -48,7 +48,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       if (userData._peer) {
         return userData._peer as WebSocketPeer;
       }
-      const peer = new WebSocketPeer({ uws: { ws, userData } });
+      const peer = new UWSPeer({ uws: { ws, userData } });
       userData._peer = peer;
       return peer;
     };
@@ -73,7 +73,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       open(ws) {
         const peer = getPeer(ws);
         crossws.$("uws:open", peer, ws);
-        hooks.open?.(peer);
+        crossws.open(peer);
       },
       ping(ws, message) {
         const peer = getPeer(ws);
@@ -110,18 +110,21 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class WebSocketPeer extends WebSocketPeerBase<{
+class UWSPeer extends WebSocketPeer<{
   uws: {
     ws: WebSocket<UserData>;
     userData: UserData;
   };
 }> {
   _headers: Headers | undefined;
+  _decoder = new TextDecoder();
 
   get id() {
     try {
-      const addr = this.ctx.uws.ws?.getRemoteAddressAsText();
-      return new TextDecoder().decode(addr);
+      const addr = this._decoder.decode(
+        this.ctx.uws.ws?.getRemoteAddressAsText(),
+      );
+      return addr.replace(/(0000:)+/, "");
     } catch {
       // Error: Invalid access of closed uWS.WebSocket/SSLWebSocket.
     }

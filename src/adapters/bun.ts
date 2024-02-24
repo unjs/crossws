@@ -4,7 +4,7 @@ import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
-import { WebSocketPeerBase } from "../peer";
+import { WebSocketPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter";
 import { CrossWSOptions, createCrossWS } from "../crossws";
 
@@ -28,7 +28,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       if (ws.data?._peer) {
         return ws.data._peer;
       }
-      const peer = new WebSocketPeer({ bun: { ws } });
+      const peer = new BunPeer({ bun: { ws } });
       ws.data = ws.data || {};
       ws.data._peer = peer;
       return peer;
@@ -79,7 +79,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class WebSocketPeer extends WebSocketPeerBase<{
+class BunPeer extends WebSocketPeer<{
   bun: { ws: ServerWebSocket<ContextData> };
 }> {
   get id() {

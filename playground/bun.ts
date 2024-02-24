@@ -1,7 +1,7 @@
 // You can run this demo using `bun --bun ./bun.ts` or `npm run play:bun` in repo
 
 import bunAdapter from "../src/adapters/bun";
-import { createDemo, getIndexHTML } from "./_common";
+import { createDemo, getIndexHTML } from "./_shared";
 
 const adapter = createDemo(bunAdapter);
 

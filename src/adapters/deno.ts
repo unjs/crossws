@@ -4,7 +4,7 @@
 
 import { WebSocketMessage } from "../message";
 import { WebSocketError } from "../error";
-import { WebSocketPeerBase } from "../peer";
+import { WebSocketPeer } from "../peer";
 import { defineWebSocketAdapter } from "../adapter.js";
 import { CrossWSOptions, createCrossWS } from "../crossws";
 
@@ -24,12 +24,12 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
 
     const handleUpgrade = (req: Request) => {
       const upgrade = Deno.upgradeWebSocket(req);
-      const peer = new DenoWebSocketPeer({
+      const peer = new DenoPeer({
         deno: { ws: upgrade.socket, req },
       });
       upgrade.socket.addEventListener("open", () => {
         crossws.$("deno:open", peer);
-        hooks.open?.(peer);
+        crossws.open(peer);
       });
       upgrade.socket.addEventListener("message", (event) => {
         crossws.$("deno:message", peer, event);
@@ -52,7 +52,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class DenoWebSocketPeer extends WebSocketPeerBase<{
+class DenoPeer extends WebSocketPeer<{
   deno: { ws: any; req: Request };
 }> {
   get id() {
