@@ -11,7 +11,11 @@ To integrate CrossWS with your Bun server, you need to handle upgrade with `hand
 ```ts
 import wsAdapter from "crossws/adapters/bun";
 
-const { websocket, handleUpgrade } = wsAdapter({ message: console.log });
+const { websocket, handleUpgrade } = wsAdapter({
+  hooks: {
+    message: console.log,
+  },
+});
 
 Bun.serve({
   port: 3000,

@@ -47,7 +47,11 @@ Instead of [using `ws`](/adapters/node-ws) you can use [uWebSockets.js](https://
 import { App } from "uWebSockets.js";
 import wsAdapter from "crossws/adapters/uws";
 
-const { websocket } = wsAdapter({ message: console.log });
+const { websocket } = wsAdapter({
+  hooks: {
+    message: console.log,
+  },
+});
 
 const server = App().ws("/*", websocket);
 

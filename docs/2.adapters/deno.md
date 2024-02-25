@@ -11,7 +11,11 @@ To integrate CrossWS with your Deno server, you need to check for the `upgrade` 
 ```ts
 import wsAdapter from "crossws/adapters/deno";
 
-const { handleUpgrade } = wsAdapter({ message: console.log });
+const { handleUpgrade } = wsAdapter({
+  hooks: {
+    message: console.log,
+  },
+});
 
 Deno.serve({ port: 3000 }, (request) => {
   if (request.headers.get("upgrade") === "websocket") {

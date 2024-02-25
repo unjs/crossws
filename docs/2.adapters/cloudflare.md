@@ -11,7 +11,11 @@ To integrate CrossWS with your Cloudflare Workers, you need to check for the `up
 ```ts
 import wsAdapter from "crossws/adapters/cloudflare";
 
-const { handleUpgrade } = wsAdapter({ message: console.log });
+const { handleUpgrade } = wsAdapter({
+  hooks: {
+    message: console.log,
+  },
+});
 
 export default {
   async fetch(request, env, context) {
