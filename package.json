@@ -1,6 +1,6 @@
 {
   "name": "crossws",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Cross-platform WebSocket Servers for Node.js, Deno, Bun and Cloudflare Workers",
   "repository": "unjs/crossws",
   "license": "MIT",

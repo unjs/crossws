@@ -1,6 +1,27 @@
 # Changelog
 
 
+## v0.2.0
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.1.3...v0.2.0)
+
+### 💅 Refactors
+
+- ⚠️  Improve types and api ([2ebacd3](https://github.com/unjs/crossws/commit/2ebacd3))
+
+### 🏡 Chore
+
+- Add new playground ([4e82c55](https://github.com/unjs/crossws/commit/4e82c55))
+- Update playground ([ced76fa](https://github.com/unjs/crossws/commit/ced76fa))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Improve types and api ([2ebacd3](https://github.com/unjs/crossws/commit/2ebacd3))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+
 ## v0.1.3
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.1.2...v0.1.3)
