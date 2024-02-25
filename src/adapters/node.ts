@@ -119,11 +119,13 @@ class NodePeer extends Peer<{
     if (!socket) {
       return undefined;
     }
-    const addr =
-      socket.remoteFamily === "IPv6"
-        ? `[${socket.remoteAddress}]`
-        : socket.remoteAddress;
-    return `${addr}:${socket.remotePort}`;
+    const headers = this.ctx.node.req.headers;
+    let addr = headers["x-forwarded-for"] || socket.remoteAddress || "??";
+    if (addr.includes(":")) {
+      addr = `[${addr}]`;
+    }
+    const port = headers["x-forwarded-port"] || socket.remotePort || "??";
+    return `${addr}:${port}`;
   }
 
   get url() {
