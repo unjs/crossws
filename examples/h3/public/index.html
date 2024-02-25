@@ -42,7 +42,8 @@
     <pre id="logs"></pre>
 
     <script type="module">
-      const url = "ws://" + location.host + "/_ws";
+      const isSecure = location.protocol === "https:";
+      const url = (isSecure ? "wss://" : "ws://") + location.host + "/_ws";
 
       const logsEl = document.querySelector("#logs");
       let lastTime = performance.now();
