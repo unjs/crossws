@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.1
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.2.0...v0.2.1)
+
+### 🩹 Fixes
+
+- `$callHook` should check hook existence ([40082ba](https://github.com/unjs/crossws/commit/40082ba))
+
+### 📖 Documentation
+
+- Update usage to 0.2x ([db99a91](https://github.com/unjs/crossws/commit/db99a91))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+
 ## v0.2.0
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.1.3...v0.2.0)
