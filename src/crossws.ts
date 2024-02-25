@@ -39,7 +39,7 @@ export function createCrossWS(opts: AdapterOptions = {}): CrossWS {
     },
     // Adapter hook
     $callHook(name, ...args) {
-      return opts.adapterHooks?.[name].apply(undefined, args);
+      return opts.adapterHooks?.[name]?.apply(undefined, args);
     },
   };
 }
