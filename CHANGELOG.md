@@ -1,6 +1,22 @@
 # Changelog
 
 
+## v0.2.2
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.2.1...v0.2.2)
+
+### 🩹 Fixes
+
+- **deno:** Pass info ([2c63b37](https://github.com/unjs/crossws/commit/2c63b37))
+
+### 🏡 Chore
+
+- **example:** Handle secure origins ([7f8639f](https://github.com/unjs/crossws/commit/7f8639f))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+
 ## v0.2.1
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.2.0...v0.2.1)
