@@ -7,8 +7,8 @@
     "dev": "listhen --ws -w ."
   },
   "dependencies": {
-    "crossws": "latest",
+    "crossws": "^0.2.0",
     "h3": "latest",
-    "listhen": "latest"
+    "listhen": "^1.7.1"
   }
 }
