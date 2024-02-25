@@ -1,6 +1,18 @@
 # Changelog
 
 
+## v0.2.3
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.2.2...v0.2.3)
+
+### 🩹 Fixes
+
+- **node:** Respect `x-forwarded` for client id ([3f8bd0c](https://github.com/unjs/crossws/commit/3f8bd0c))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+
 ## v0.2.2
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.2.1...v0.2.2)
