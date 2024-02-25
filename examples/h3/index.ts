@@ -1,12 +1,12 @@
 import { createApp } from "h3";
-import { defineWebSocketHooks } from "crossws";
+import { defineHooks } from "crossws";
 
 export const app = createApp();
 
 // Listhen automatically sets up integration!
 // Learn more: https://crossws.unjs.io
 
-export const websocket = defineWebSocketHooks({
+export const websocket = defineHooks({
   open(peer) {
     console.log("[ws] open", peer);
   },

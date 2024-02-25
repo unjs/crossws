@@ -1,6 +1,6 @@
 import { toBufferLike } from "./_utils";
 
-export class WSMessage {
+export class Message {
   constructor(
     public readonly rawData: any,
     public readonly isBinary?: boolean,

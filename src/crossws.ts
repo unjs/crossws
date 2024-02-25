@@ -1,63 +1,45 @@
-import type { WebSocketHooks, UserHooks } from "./hooks";
-import { WSPeer, WSRequest } from "./peer";
+import { Peer } from "./peer";
+import type {
+  AdapterOptions,
+  Caller,
+  Hooks,
+  CrossWS,
+  WSRequest,
+} from "./types";
 
-export interface CrossWS extends WebSocketHooks {
-  upgrade: (req: WSRequest) => Promise<{ headers: HeadersInit }>;
-}
-
-export interface CrossWSOptions {
-  resolve?: (info: WSRequest | WSPeer) => UserHooks | Promise<UserHooks>;
-}
-
-export function createCrossWS(
-  hooks: UserHooks,
-  options: CrossWSOptions,
-): CrossWS {
-  const _callHook = options.resolve
-    ? <WebSocketHooks["$"]>async function (name, info, ...args): Promise<any> {
-        const hooks = await options.resolve?.(info);
-        const hook = hooks?.[name];
-        return hook?.(info as any, ...(args as [any]));
-      }
-    : undefined;
+export function createCrossWS(opts: AdapterOptions = {}): CrossWS {
+  const resolveHook = async <K extends keyof Hooks>(
+    req: Peer | WSRequest,
+    name: K,
+  ) => {
+    const hooks = await opts.resolve?.(req);
+    return hooks?.[name] as Hooks[K] | undefined;
+  };
 
   return {
-    async $(name, ...args) {
-      await Promise.all([hooks.$?.(name, ...args), _callHook?.(name, ...args)]);
+    // WS Hooks
+    async callHook(name, ...args) {
+      await opts.hooks?.[name]?.apply(undefined, args);
+      const hook = await resolveHook(args[0], name);
+      await hook?.apply(undefined, args); // eslint-disable-line prefer-spread
     },
+    // Upgrade
     async upgrade(req) {
-      const upgradeResults = await Promise.all([
-        hooks.upgrade?.(req),
-        _callHook?.("upgrade", req),
+      const [res1, res2] = await Promise.all([
+        opts.hooks?.upgrade?.(req),
+        await resolveHook(req, "upgrade").then((h) => h?.(req)),
       ]);
-      const headers: Record<string, string> = Object.create(null);
-      for (const result of upgradeResults) {
-        if (result?.headers) {
-          Object.assign(headers, result.headers);
+      const headers = new Headers(res1?.headers);
+      if (res2?.headers) {
+        for (const [key, value] of new Headers(res2?.headers)) {
+          headers.append(key, value);
         }
       }
       return { headers };
     },
-    async message(peer, message) {
-      await Promise.all([
-        hooks.message?.(peer, message),
-        _callHook?.("message", peer, message),
-      ]);
-    },
-    async open(peer) {
-      await Promise.all([hooks.open?.(peer), _callHook?.("open", peer)]);
-    },
-    async close(peer, { code, reason }) {
-      await Promise.all([
-        hooks.close?.(peer, { code, reason }),
-        _callHook?.("close", peer, { code, reason }),
-      ]);
-    },
-    async error(peer, error) {
-      await Promise.all([
-        hooks.error?.(peer, error),
-        _callHook?.("error", peer, error),
-      ]);
+    // Adapter hook
+    $callHook(name, ...args) {
+      return opts.adapterHooks?.[name].apply(undefined, args);
     },
   };
 }

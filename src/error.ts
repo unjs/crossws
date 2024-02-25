@@ -1,6 +1,6 @@
-export class WebSocketError extends Error {
+export class WSError extends Error {
   constructor(...args: any[]) {
     super(...args);
-    this.name = "WebSocketError";
+    this.name = "WSError";
   }
 }

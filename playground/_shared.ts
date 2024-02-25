@@ -1,19 +1,15 @@
-import {
-  CrossWSOptions,
-  WebSocketAdapter,
-  defineWebSocketHooks,
-} from "../src/index.ts";
+import { ResolveHooks, Adapter, defineHooks } from "../src/index.ts";
 
 export const getIndexHTML = () =>
   fetch(
     "https://raw.githubusercontent.com/unjs/crossws/main/examples/h3/public/index.html",
   ).then((res) => res.text());
 
-export function createDemo<T extends WebSocketAdapter>(
+export function createDemo<T extends Adapter<any, any>>(
   adapter: T,
-  opts?: Parameters<T>[1],
+  options?: Parameters<T>[0],
 ): ReturnType<T> {
-  const hooks = defineWebSocketHooks({
+  const hooks = defineHooks({
     $(name, peer, ...args) {
       console.log(
         `$ ${peer} ${name} (${args.map((arg) => stringify(arg)).join(", ")})`,
@@ -39,7 +35,7 @@ export function createDemo<T extends WebSocketAdapter>(
     },
   });
 
-  const resolve: CrossWSOptions["resolve"] = (info) => {
+  const resolve: ResolveHooks = (info) => {
     return {
       open: (peer) => {
         peer.send({
@@ -51,9 +47,10 @@ export function createDemo<T extends WebSocketAdapter>(
     };
   };
 
-  return adapter(hooks, {
+  return adapter({
+    ...options,
+    hooks,
     resolve,
-    ...opts,
   });
 }
 

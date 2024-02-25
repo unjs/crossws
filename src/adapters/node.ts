@@ -10,25 +10,25 @@ import type {
   WebSocketServer,
   WebSocket as WebSocketT,
 } from "../../types/ws";
-import { WSPeer } from "../peer";
-import { WSMessage } from "../message";
-import { WebSocketError } from "../error";
-import { defineWebSocketAdapter } from "../adapter";
-import { CrossWSOptions, createCrossWS } from "../crossws";
+import { Peer } from "../peer";
+import { Message } from "../message";
+import { WSError } from "../error";
+import { AdapterOptions, defineWebSocketAdapter } from "../types";
+import { createCrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
 
-export interface AdapterOptions extends CrossWSOptions {
+export interface NodeAdapter {
+  handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
+}
+
+export interface NodeOptions extends AdapterOptions {
   wss?: WebSocketServer;
   serverOptions?: ServerOptions;
 }
 
-export interface Adapter {
-  handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
-}
-
-export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (hooks, options = {}) => {
-    const crossws = createCrossWS(hooks, options);
+export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
+  (options = {}) => {
+    const crossws = createCrossWS(options);
 
     const wss: WebSocketServer =
       options.wss ||
@@ -38,47 +38,47 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
       }) as WebSocketServer);
 
     wss.on("connection", (ws, req) => {
-      const peer = new NodeWSPeer({ node: { ws, req, server: wss } });
-      crossws.open(peer);
+      const peer = new NodePeer({ node: { ws, req, server: wss } });
+      crossws.callHook("open", peer);
 
       // Managed socket-level events
       ws.on("message", (data: RawData, isBinary: boolean) => {
-        crossws.$("node:message", peer, data, isBinary);
+        crossws.$callHook("node:message", peer, data, isBinary);
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
-        crossws.message(peer, new WSMessage(data, isBinary));
+        crossws.callHook("message", peer, new Message(data, isBinary));
       });
       ws.on("error", (error: Error) => {
-        crossws.$("node:error", peer, error);
-        crossws.error(peer, new WebSocketError(error));
+        crossws.$callHook("node:error", peer, error);
+        crossws.callHook("error", peer, new WSError(error));
       });
       ws.on("close", (code: number, reason: Buffer) => {
-        crossws.$("node:close", peer, code, reason);
-        crossws.close(peer, {
+        crossws.$callHook("node:close", peer, code, reason);
+        crossws.callHook("close", peer, {
           code,
           reason: reason?.toString(),
         });
       });
       ws.on("open", () => {
-        crossws.$("node:open", peer);
+        crossws.$callHook("node:open", peer);
       });
 
       // Unmanaged socket-level events
       ws.on("ping", (data: Buffer) => {
-        crossws.$("node:ping", peer, data);
+        crossws.$callHook("node:ping", peer, data);
       });
       ws.on("pong", (data: Buffer) => {
-        crossws.$("node:pong", peer, data);
+        crossws.$callHook("node:pong", peer, data);
       });
       ws.on(
         "unexpected-response",
         (req: ClientRequest, res: IncomingMessage) => {
-          crossws.$("node:unexpected-response", peer, req, res);
+          crossws.$callHook("node:unexpected-response", peer, req, res);
         },
       );
       ws.on("upgrade", (req: IncomingMessage) => {
-        crossws.$("node:upgrade", peer, req);
+        crossws.$callHook("node:upgrade", peer, req);
       });
     });
 
@@ -107,7 +107,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class NodeWSPeer extends WSPeer<{
+class NodePeer extends Peer<{
   node: {
     server: WebSocketServer;
     req: IncomingMessage;

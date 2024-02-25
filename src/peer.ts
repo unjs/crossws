@@ -1,4 +1,4 @@
-import { WSMessage } from "./message";
+import type { WSRequest } from "./types";
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
 type ReadyState = 0 | 1 | 2 | 3;
@@ -10,12 +10,7 @@ const ReadyStateMap = {
   3: "closed",
 } as const;
 
-export interface WSRequest {
-  readonly url: string;
-  readonly headers: HeadersInit;
-}
-
-export abstract class WSPeer<AdapterContext = any> implements WSRequest {
+export abstract class Peer<AdapterContext = any> implements WSRequest {
   _subscriptions: Set<string> = new Set();
 
   constructor(public ctx: AdapterContext) {}

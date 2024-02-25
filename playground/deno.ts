@@ -7,10 +7,6 @@ import type * as _Deno from "../types/lib.deno.d.ts";
 
 import { createDemo, getIndexHTML } from "./_shared.ts";
 
-declare global {
-  const Deno: typeof import("@deno/types").Deno;
-}
-
 const adapter = createDemo(denoAdapter);
 
 Deno.serve({ port: 3001 }, async (req) => {
@@ -18,7 +14,7 @@ Deno.serve({ port: 3001 }, async (req) => {
     return adapter.handleUpgrade(req);
   }
 
-  return new Response(await getIndexHTML({ name: "deno" }), {
+  return new Response(await getIndexHTML(), {
     headers: { "Content-Type": "text/html" },
   });
 });

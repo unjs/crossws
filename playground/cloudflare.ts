@@ -15,7 +15,7 @@ export default {
       return handleUpgrade(request, env, context);
     }
 
-    return new Response(await getIndexHTML({ name: "cloudflare" }), {
+    return new Response(await getIndexHTML(), {
       headers: { "content-type": "text/html" },
     });
   },

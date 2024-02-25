@@ -2,18 +2,18 @@
 // https://deno.land/api?s=Deno.upgradeWebSocket
 // https://examples.deno.land/http-server-websocket
 
-import { WSMessage } from "../message";
-import { WebSocketError } from "../error";
-import { WSPeer } from "../peer";
-import { defineWebSocketAdapter } from "../adapter.js";
-import { CrossWSOptions, createCrossWS } from "../crossws";
+import { Message } from "../message";
+import { WSError } from "../error";
+import { Peer } from "../peer";
+import { AdapterOptions, defineWebSocketAdapter } from "../types.js";
+import { createCrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
 
-export interface AdapterOptions extends CrossWSOptions {}
-
-export interface Adapter {
+export interface DenoAdapter {
   handleUpgrade(req: Request): Promise<Response>;
 }
+
+export interface DenoOptions extends AdapterOptions {}
 
 declare global {
   const Deno: typeof import("@deno/types").Deno;
@@ -21,9 +21,9 @@ declare global {
 
 type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
 
-export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (hooks, options = {}) => {
-    const crossws = createCrossWS(hooks, options);
+export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
+  (options = {}) => {
+    const crossws = createCrossWS(options);
 
     const handleUpgrade = async (req: Request) => {
       const { headers } = await crossws.upgrade({
@@ -36,25 +36,25 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
         headers,
       });
 
-      const peer = new DenoWSPeer({
+      const peer = new DenoPeer({
         deno: { ws: upgrade.socket, req },
       });
 
       upgrade.socket.addEventListener("open", () => {
-        crossws.$("deno:open", peer);
-        crossws.open(peer);
+        crossws.$callHook("deno:open", peer);
+        crossws.callHook("open", peer);
       });
       upgrade.socket.addEventListener("message", (event) => {
-        crossws.$("deno:message", peer, event);
-        crossws.message(peer, new WSMessage(event.data));
+        crossws.$callHook("deno:message", peer, event);
+        crossws.callHook("message", peer, new Message(event.data));
       });
       upgrade.socket.addEventListener("close", () => {
-        crossws.$("deno:close", peer);
-        crossws.close(peer, {});
+        crossws.$callHook("deno:close", peer);
+        crossws.callHook("close", peer, {});
       });
       upgrade.socket.addEventListener("error", (error) => {
-        crossws.$("deno:error", peer, error);
-        crossws.error(peer, new WebSocketError(error));
+        crossws.$callHook("deno:error", peer, error);
+        crossws.callHook("error", peer, new WSError(error));
       });
       return upgrade.response;
     };
@@ -65,7 +65,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class DenoWSPeer extends WSPeer<{
+class DenoPeer extends Peer<{
   deno: { ws: WebSocketUpgrade["socket"]; req: Request };
 }> {
   get id() {

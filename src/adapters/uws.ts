@@ -7,10 +7,10 @@ import type {
   HttpRequest,
   HttpResponse,
 } from "uWebSockets.js";
-import { WSPeer } from "../peer";
-import { WSMessage } from "../message";
-import { defineWebSocketAdapter } from "../adapter";
-import { CrossWSOptions, createCrossWS } from "../crossws";
+import { Peer } from "../peer";
+import { Message } from "../message";
+import { AdapterOptions, defineWebSocketAdapter } from "../types";
+import { createCrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
 
 type UserData = {
@@ -22,7 +22,11 @@ type UserData = {
 
 type WebSocketHandler = WebSocketBehavior<UserData>;
 
-export interface AdapterOptions extends CrossWSOptions {
+export interface UWSAdapter {
+  websocket: WebSocketHandler;
+}
+
+export interface UWSOptions extends AdapterOptions {
   uws?: Exclude<
     WebSocketBehavior<any>,
     | "close"
@@ -36,20 +40,16 @@ export interface AdapterOptions extends CrossWSOptions {
   >;
 }
 
-export interface Adapter {
-  websocket: WebSocketHandler;
-}
+export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
+  (options = {}) => {
+    const crossws = createCrossWS(options);
 
-export default defineWebSocketAdapter<Adapter, AdapterOptions>(
-  (hooks, options = {}) => {
-    const crossws = createCrossWS(hooks, options);
-
-    const getWSPeer = (ws: WebSocket<UserData>) => {
+    const getPeer = (ws: WebSocket<UserData>) => {
       const userData = ws.getUserData();
       if (userData._peer) {
-        return userData._peer as WSPeer;
+        return userData._peer as Peer;
       }
-      const peer = new UWSWSPeer({ uws: { ws, userData } });
+      const peer = new UWSPeer({ uws: { ws, userData } });
       userData._peer = peer;
       return peer;
     };
@@ -57,36 +57,43 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
     const websocket: WebSocketHandler = {
       ...options.uws,
       close(ws, code, message) {
-        const peer = getWSPeer(ws);
-        crossws.$("uws:close", peer, ws, code, message);
-        crossws.close(peer, { code, reason: message?.toString() });
+        const peer = getPeer(ws);
+        crossws.$callHook("uws:close", peer, ws, code, message);
+        crossws.callHook("close", peer, { code, reason: message?.toString() });
       },
       drain(ws) {
-        const peer = getWSPeer(ws);
-        crossws.$("uws:drain", peer, ws);
+        const peer = getPeer(ws);
+        crossws.$callHook("uws:drain", peer, ws);
       },
       message(ws, message, isBinary) {
-        const peer = getWSPeer(ws);
-        crossws.$("uws:message", peer, ws, message, isBinary);
-        const msg = new WSMessage(message, isBinary);
-        crossws.message(peer, msg);
+        const peer = getPeer(ws);
+        crossws.$callHook("uws:message", peer, ws, message, isBinary);
+        const msg = new Message(message, isBinary);
+        crossws.callHook("message", peer, msg);
       },
       open(ws) {
-        const peer = getWSPeer(ws);
-        crossws.$("uws:open", peer, ws);
-        crossws.open(peer);
+        const peer = getPeer(ws);
+        crossws.$callHook("uws:open", peer, ws);
+        crossws.callHook("open", peer);
       },
       ping(ws, message) {
-        const peer = getWSPeer(ws);
-        crossws.$("uws:ping", peer, ws, message);
+        const peer = getPeer(ws);
+        crossws.$callHook("uws:ping", peer, ws, message);
       },
       pong(ws, message) {
-        const peer = getWSPeer(ws);
-        crossws.$("uws:pong", peer, ws, message);
+        const peer = getPeer(ws);
+        crossws.$callHook("uws:pong", peer, ws, message);
       },
       subscription(ws, topic, newCount, oldCount) {
-        const peer = getWSPeer(ws);
-        crossws.$("uws:subscription", peer, ws, topic, newCount, oldCount);
+        const peer = getPeer(ws);
+        crossws.$callHook(
+          "uws:subscription",
+          peer,
+          ws,
+          topic,
+          newCount,
+          oldCount,
+        );
       },
       async upgrade(res, req, context) {
         let aborted = false;
@@ -133,7 +140,7 @@ export default defineWebSocketAdapter<Adapter, AdapterOptions>(
   },
 );
 
-class UWSWSPeer extends WSPeer<{
+class UWSPeer extends Peer<{
   uws: {
     ws: WebSocket<UserData>;
     userData: UserData;

@@ -9,9 +9,19 @@ const adapter = createDemo(uwsAdapter);
 const app = App().ws("/*", adapter.websocket);
 
 app.get("/*", async (res, req) => {
-  res.writeStatus("200 OK");
-  res.writeHeader("Content-Type", "text/html");
-  res.end(await getIndexHTML({ name: "node-uws" }));
+  let aborted = false;
+  res.onAborted(() => {
+    aborted = true;
+  });
+  const html = await getIndexHTML();
+  if (aborted) {
+    return;
+  }
+  res.cork(() => {
+    res.writeStatus("200 OK");
+    res.writeHeader("Content-Type", "text/html");
+    res.end(html);
+  });
 });
 
 app.listen(3001, () => {

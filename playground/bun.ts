@@ -12,7 +12,7 @@ Bun.serve({
     if (await handleUpgrade(req, server)) {
       return;
     }
-    return new Response(await getIndexHTML({ name: "bun" }), {
+    return new Response(await getIndexHTML(), {
       headers: { "Content-Type": "text/html" },
     });
   },
