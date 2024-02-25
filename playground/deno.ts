@@ -9,9 +9,9 @@ import { createDemo, getIndexHTML } from "./_shared.ts";
 
 const adapter = createDemo(denoAdapter);
 
-Deno.serve({ port: 3001 }, async (req) => {
+Deno.serve({ port: 3001 }, async (req, info) => {
   if (req.headers.get("upgrade") === "websocket") {
-    return adapter.handleUpgrade(req);
+    return adapter.handleUpgrade(req, info);
   }
 
   return new Response(await getIndexHTML(), {

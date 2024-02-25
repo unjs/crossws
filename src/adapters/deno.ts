@@ -10,7 +10,7 @@ import { createCrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
 
 export interface DenoAdapter {
-  handleUpgrade(req: Request): Promise<Response>;
+  handleUpgrade(req: Request, info: ServeHandlerInfo): Promise<Response>;
 }
 
 export interface DenoOptions extends AdapterOptions {}
@@ -20,12 +20,13 @@ declare global {
 }
 
 type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
+type ServeHandlerInfo = any; // TODO
 
 export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
   (options = {}) => {
     const crossws = createCrossWS(options);
 
-    const handleUpgrade = async (req: Request) => {
+    const handleUpgrade = async (req: Request, info: ServeHandlerInfo) => {
       const { headers } = await crossws.upgrade({
         url: req.url,
         headers: req.headers,
@@ -37,7 +38,7 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
       });
 
       const peer = new DenoPeer({
-        deno: { ws: upgrade.socket, req },
+        deno: { ws: upgrade.socket, req, info },
       });
 
       upgrade.socket.addEventListener("open", () => {
@@ -66,7 +67,11 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
 );
 
 class DenoPeer extends Peer<{
-  deno: { ws: WebSocketUpgrade["socket"]; req: Request };
+  deno: {
+    ws: WebSocketUpgrade["socket"];
+    req: Request;
+    info: ServeHandlerInfo;
+  };
 }> {
   get id() {
     // @ts-expect-error types missing

@@ -17,9 +17,9 @@ const { handleUpgrade } = wsAdapter({
   },
 });
 
-Deno.serve({ port: 3000 }, (request) => {
+Deno.serve({ port: 3000 }, (request, info) => {
   if (request.headers.get("upgrade") === "websocket") {
-    return handleUpgrade(request);
+    return handleUpgrade(request, info);
   }
   return new Response(
     `<script>new WebSocket("ws://localhost:3000").addEventListener("open", (e) => e.target.send("Hello from client!"));</script>`,
