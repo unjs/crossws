@@ -1,9 +1,7 @@
 import { ResolveHooks, Adapter, defineHooks } from "../src/index.ts";
 
 export const getIndexHTML = () =>
-  fetch(
-    "https://raw.githubusercontent.com/unjs/crossws/main/examples/h3/public/index.html",
-  ).then((res) => res.text());
+  import("./_index.html.ts").then((r) => r.default);
 
 export function createDemo<T extends Adapter<any, any>>(
   adapter: T,

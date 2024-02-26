@@ -1,0 +1,91 @@
+export default /* html */ `<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <title>CrossWS Test Page</title>
+    <!-- https://minstyle.io/ -->
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/minstyle.io@2.0.2/dist/css/minstyle.io.min.css"
+    />
+  </head>
+  <body class="ms-m-5">
+    <h3>WebSocket Test Page</h3>
+
+    <div class="ms-btn-group">
+      <button onclick="sendPing()">Send Ping</button>
+      <button onclick="connect()">Reconnect</button>
+      <button onclick="clearLogs()">Clear</button>
+    </div>
+
+    <div class="ms-form-group ms-mt-2">
+      <div class="row">
+        <div class="col-sm-6">
+          <input
+            type="email"
+            class="ms-secondary ms-small"
+            id="message"
+            placeholder="Message..."
+            value="ping"
+            onkeypress="if(event.key==='Enter') sendMessage()"
+          />
+        </div>
+        <div class="col-sm-1">
+          <button class="ms-btn ms-secondary ms-small" onclick="sendMessage()">
+            Send
+          </button>
+        </div>
+      </div>
+      <br />
+    </div>
+
+    <pre id="logs"></pre>
+
+    <script type="module">
+      const isSecure = location.protocol === "https:";
+      const url = (isSecure ? "wss://" : "ws://") + location.host + "/_ws";
+
+      const logsEl = document.querySelector("#logs");
+      let lastTime = performance.now();
+      const log = (...args) => {
+        console.log("[ws]", ...args);
+        logsEl.innerHTML += "<br>" + args.join(" ");
+      };
+
+      let ws;
+      globalThis.connect = async () => {
+        if (ws) {
+          log("Closing...");
+          ws.close();
+        }
+
+        log("Connecting to", url, "...");
+        ws = new WebSocket(url);
+
+        ws.addEventListener("message", (event) => {
+          log("Message from server:", event.data);
+        });
+
+        log("Waiting for connection...");
+        await new Promise((resolve) => ws.addEventListener("open", resolve));
+      };
+
+      globalThis.clearLogs = () => {
+        logsEl.innerText = "";
+      };
+
+      globalThis.sendPing = () => {
+        log("Sending ping...");
+        ws.send("ping");
+      };
+
+      globalThis.sendMessage = () => {
+        ws.send(document.querySelector("#message").value);
+      };
+
+      await connect();
+      sendPing();
+    </script>
+  </body>
+</html>
+`;
