@@ -1,6 +1,36 @@
 # Changelog
 
 
+## v0.2.4
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.2.3...v0.2.4)
+
+### 🚀 Enhancements
+
+- Auto generated peer id ([a3b61f5](https://github.com/unjs/crossws/commit/a3b61f5))
+- Basic pubsub support for node ([4bd61ca](https://github.com/unjs/crossws/commit/4bd61ca))
+
+### 💅 Refactors
+
+- Improve peer inspect message ([9f7e1f0](https://github.com/unjs/crossws/commit/9f7e1f0))
+
+### 📖 Documentation
+
+- Update content ([6d78e12](https://github.com/unjs/crossws/commit/6d78e12))
+
+### 🏡 Chore
+
+- Use seperate playground index ([889b37b](https://github.com/unjs/crossws/commit/889b37b))
+- Update lockfile ([c119028](https://github.com/unjs/crossws/commit/c119028))
+- Update docs ([54e0dca](https://github.com/unjs/crossws/commit/54e0dca))
+- Update playground ([a6879bd](https://github.com/unjs/crossws/commit/a6879bd))
+- Update example ([0ce11c5](https://github.com/unjs/crossws/commit/0ce11c5))
+- Update playground ([cbeb472](https://github.com/unjs/crossws/commit/cbeb472))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+
 ## v0.2.3
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.2.2...v0.2.3)
