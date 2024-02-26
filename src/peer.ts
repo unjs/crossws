@@ -59,11 +59,13 @@ export abstract class Peer<AdapterContext = any> implements WSRequest {
   }
 
   [Symbol.for("nodejs.util.inspect.custom")]() {
-    const _addr = this.addr || "??";
+    const _id = this.toString();
+    const _addr = this.addr ? ` (${this.addr})` : "";
     const _state =
       this.readyState === 1 || this.readyState === -1
         ? ""
         : ` [${ReadyStateMap[this.readyState]}]`;
-    return `Peer<${_addr}${_state}>`;
+
+    return `${_id}${_addr}${_state}`;
   }
 }
