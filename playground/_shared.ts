@@ -14,13 +14,20 @@ export function createDemo<T extends Adapter<any, any>>(
       );
     },
     open(peer) {
-      peer.send("Welcome to the server!");
-      peer.subscribe("welcome");
-      peer.publish("welcome", `New user joined! ${peer}`);
+      peer.send({ user: "system", message: `Welcome to the server ${peer}!` });
+      peer.subscribe("chat");
+      peer.publish("chat", { user: "system", message: `${peer} joined!` });
     },
     message(peer, message) {
       if (message.text() === "ping") {
-        peer.send("pong");
+        peer.send({ user: "system", message: "pong" });
+      } else {
+        const _message = {
+          user: peer.toString(),
+          message: message.text(),
+        };
+        peer.send(_message);
+        peer.publish("chat", _message);
       }
     },
     upgrade(req) {
@@ -33,34 +40,17 @@ export function createDemo<T extends Adapter<any, any>>(
     },
   });
 
-  // open(peer) {
-  //   // Send welcome to the new client
-  //   peer.send("Welcome to the server!");
-
-  //   // Join new client to the "chat" channel
-  //   peer.subscribe("chat");
-
-  //   // Notify every other connected client
-  //   peer.publish("chat", `[system] ${peer} joined!`);
-  // },
-
-  // message(peer, message) {
-  //   // The server re-broadcasts incoming messages to everyone
-  //   peer.publish("chat", `[${peer}] ${message}`);
-  // },
-
-  // close(peer) {
-  //   peer.publish("chat", `[system] ${peer} has left the chat!`);
-  //   peer.unsubscribe("chat");
-  // },
-
   const resolve: ResolveHooks = (info) => {
     return {
       open: (peer) => {
         peer.send({
-          url: info.url,
-          headers:
-            info.headers && Object.fromEntries(new Headers(info.headers)),
+          message: {
+            info: {
+              url: info.url,
+              headers:
+                info.headers && Object.fromEntries(new Headers(info.headers)),
+            },
+          },
         });
       },
     };
