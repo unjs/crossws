@@ -73,7 +73,7 @@ class DenoPeer extends Peer<{
     info: ServeHandlerInfo;
   };
 }> {
-  get id() {
+  get addr() {
     // @ts-expect-error types missing
     return this.ctx.deno.ws.remoteAddress;
   }

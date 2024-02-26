@@ -11,12 +11,21 @@ const ReadyStateMap = {
 } as const;
 
 export abstract class Peer<AdapterContext = any> implements WSRequest {
-  _subscriptions: Set<string> = new Set();
+  private _subscriptions: Set<string> = new Set();
 
-  constructor(public ctx: AdapterContext) {}
+  static _idCounter = 0;
+  private _id: string;
 
-  get id(): string | undefined {
-    return "??";
+  constructor(public ctx: AdapterContext) {
+    this._id = ++Peer._idCounter + "";
+  }
+
+  get id(): string {
+    return this._id.toString();
+  }
+
+  get addr(): string | undefined {
+    return undefined;
   }
 
   get url(): string {
@@ -46,10 +55,15 @@ export abstract class Peer<AdapterContext = any> implements WSRequest {
   }
 
   toString() {
-    return `${this.id || ""}${this.readyState === 1 || this.readyState === -1 ? "" : ` [${ReadyStateMap[this.readyState]}]`}`;
+    return `#${this.id}`;
   }
 
   [Symbol.for("nodejs.util.inspect.custom")]() {
-    return this.toString();
+    const _addr = this.addr || "??";
+    const _state =
+      this.readyState === 1 || this.readyState === -1
+        ? ""
+        : ` [${ReadyStateMap[this.readyState]}]`;
+    return `Peer<${_addr}${_state}>`;
   }
 }

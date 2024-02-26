@@ -114,7 +114,7 @@ class NodePeer extends Peer<{
     ws: WebSocketT;
   };
 }> {
-  get id() {
+  get addr() {
     const socket = this.ctx.node.req.socket;
     if (!socket) {
       return undefined;

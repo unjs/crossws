@@ -10,13 +10,13 @@ export const websocket = {
   hooks: defineHooks({
     open(peer) {
       console.log("[ws] open", peer);
-      peer.send({ user: "system", message: `Welcome ${peer}!` });
+      peer.send({ user: "server", message: `Welcome ${peer}!` });
     },
 
     message(peer, message) {
       console.log("[ws] message", peer, message);
       if (message.text().includes("ping")) {
-        peer.send({ user: "system", message: "pong" });
+        peer.send({ user: "server", message: "pong" });
       } else {
         peer.send({ user: peer.toString(), message: message.toString() });
       }

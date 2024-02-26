@@ -81,7 +81,7 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
 class BunPeer extends Peer<{
   bun: { ws: ServerWebSocket<ContextData> };
 }> {
-  get id() {
+  get addr() {
     let addr = this.ctx.bun.ws.remoteAddress;
     if (addr.includes(":")) {
       addr = `[${addr}]`;

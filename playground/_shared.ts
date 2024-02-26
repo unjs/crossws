@@ -8,19 +8,16 @@ export function createDemo<T extends Adapter<any, any>>(
   options?: Parameters<T>[0],
 ): ReturnType<T> {
   const hooks = defineHooks({
-    $(name, peer, ...args) {
-      console.log(
-        `$ ${peer} ${name} (${args.map((arg) => stringify(arg)).join(", ")})`,
-      );
-    },
     open(peer) {
-      peer.send({ user: "system", message: `Welcome to the server ${peer}!` });
+      console.log(`[ws] open ${peer}`);
+      peer.send({ user: "server", message: `Welcome to the server ${peer}!` });
       peer.subscribe("chat");
-      peer.publish("chat", { user: "system", message: `${peer} joined!` });
+      peer.publish("chat", { user: "server", message: `${peer} joined!` });
     },
     message(peer, message) {
+      console.log(`[ws] message ${peer} ${message.text()}`);
       if (message.text() === "ping") {
-        peer.send({ user: "system", message: "pong" });
+        peer.send({ user: "server", message: "pong" });
       } else {
         const _message = {
           user: peer.toString(),
@@ -31,6 +28,7 @@ export function createDemo<T extends Adapter<any, any>>(
       }
     },
     upgrade(req) {
+      console.log("[ws] upgrade", req.url);
       return {
         headers: {
           "x-powered-by": "cross-ws",
@@ -38,28 +36,18 @@ export function createDemo<T extends Adapter<any, any>>(
         },
       };
     },
+    close(peer, details) {
+      console.log(`[ws] close ${peer}`, details);
+    },
+    error(peer, error) {
+      console.log(`[ws] error ${peer}`, error);
+    },
   });
-
-  const resolve: ResolveHooks = (info) => {
-    return {
-      open: (peer) => {
-        peer.send({
-          message: {
-            info: {
-              url: info.url,
-              headers:
-                info.headers && Object.fromEntries(new Headers(info.headers)),
-            },
-          },
-        });
-      },
-    };
-  };
 
   return adapter({
     ...options,
     hooks,
-    resolve,
+    // resolve,
   });
 }
 

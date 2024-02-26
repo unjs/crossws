@@ -149,7 +149,7 @@ class UWSPeer extends Peer<{
   _headers: HeadersInit | undefined;
   _decoder = new TextDecoder();
 
-  get id() {
+  get addr() {
     try {
       const addr = this._decoder.decode(
         this.ctx.uws.ws?.getRemoteAddressAsText(),

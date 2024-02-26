@@ -88,7 +88,7 @@ class CloudflarePeer extends Peer<{
     context: _cf.ExecutionContext;
   };
 }> {
-  get id() {
+  get addr() {
     return undefined;
   }
 

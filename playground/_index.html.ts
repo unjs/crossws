@@ -65,12 +65,12 @@ export default /* html */ `
         const isSecure = location.protocol === "https:";
         const url = (isSecure ? "wss://" : "ws://") + location.host + "/_ws";
         if (ws) {
-          log("system", "Closing previous connection before reconnecting...");
+          log("ws", "Closing previous connection before reconnecting...");
           ws.close();
           clear();
         }
 
-        log("system", "Connecting to", url, "...");
+        log("ws", "Connecting to", url, "...");
         ws = new WebSocket(url);
 
         ws.addEventListener("message", (event) => {
@@ -84,7 +84,7 @@ export default /* html */ `
         });
 
         await new Promise((resolve) => ws.addEventListener("open", resolve));
-        log("system", "Connected!");
+        log("ws", "Connected!");
       };
 
       const clear = () => {
@@ -101,7 +101,7 @@ export default /* html */ `
       };
 
       const ping = () => {
-        log("you", "Sending ping");
+        log("ws", "Sending ping");
         ws.send("ping");
       };
 
@@ -115,7 +115,6 @@ export default /* html */ `
       }).mount();
 
       await connect();
-      ping();
     </script>
   </head>
   <body class="h-screen flex flex-col justify-between">
@@ -127,7 +126,7 @@ export default /* html */ `
             <p class="text-gray-500 mb-1 text-xs ml-10">{{ message.user }}</p>
             <div class="flex items-center">
               <img
-                :src="'https://www.gravatar.com/avatar/' + (message.user + rand) + '?s=512&d=monsterid'"
+                :src="'https://www.gravatar.com/avatar/' + encodeURIComponent(message.user + rand) + '?s=512&d=monsterid'"
                 alt="Avatar"
                 class="w-8 h-8 rounded-full"
               />
@@ -187,5 +186,5 @@ export default /* html */ `
       </div>
     </main>
   </body>
-</html>
+</html>\
 `.trim();
