@@ -110,6 +110,7 @@
         ping,
         clear,
         connect,
+        rand: Math.random(),
       }).mount();
 
       await connect();
@@ -125,14 +126,11 @@
             <p class="text-gray-500 mb-1 text-xs ml-10">{{ message.user }}</p>
             <div class="flex items-center">
               <img
-                src="https://robohash.org/a"
+                :src="'https://www.gravatar.com/avatar/' + (message.user + rand) + '?s=512&d=monsterid'"
                 alt="Avatar"
                 class="w-8 h-8 rounded-full"
               />
-              <div
-                class="ml-2 bg-gray-800 rounded-lg p-2"
-                style="max-width: 33.33vw"
-              >
+              <div class="ml-2 bg-gray-800 rounded-lg p-2">
                 <p
                   v-if="message.formattedText"
                   class="overflow-x-scroll"
@@ -150,37 +148,41 @@
       <div
         class="bg-gray-800 px-4 py-2 flex items-center justify-between fixed bottom-0 w-full"
       >
-        <input
-          type="text"
-          placeholder="Type your message..."
-          class="w-full rounded-l-lg px-4 py-2 bg-gray-700 text-white focus:outline-none focus:ring focus:border-blue-300"
-          @keydown.enter="send"
-          v-model="store.message"
-        />
-        <button
-          class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4"
-          @click="send"
-        >
-          Send
-        </button>
-        <button
-          class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4"
-          @click="ping"
-        >
-          Ping
-        </button>
-        <button
-          class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4"
-          @click="connect"
-        >
-          Reconnect
-        </button>
-        <button
-          class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-r-lg"
-          @click="clear"
-        >
-          Clear
-        </button>
+        <div class="w-full min-w-6">
+          <input
+            type="text"
+            placeholder="Type your message..."
+            class="w-full rounded-l-lg px-4 py-2 bg-gray-700 text-white focus:outline-none focus:ring focus:border-blue-300"
+            @keydown.enter="send"
+            v-model="store.message"
+          />
+        </div>
+        <div class="flex">
+          <button
+            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4"
+            @click="send"
+          >
+            Send
+          </button>
+          <button
+            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4"
+            @click="ping"
+          >
+            Ping
+          </button>
+          <button
+            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4"
+            @click="connect"
+          >
+            Reconnect
+          </button>
+          <button
+            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-r-lg"
+            @click="clear"
+          >
+            Clear
+          </button>
+        </div>
       </div>
     </main>
   </body>
