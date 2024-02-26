@@ -111,9 +111,14 @@ class NodePeer extends Peer<{
   node: {
     server: WebSocketServer;
     req: IncomingMessage;
-    ws: WebSocketT;
+    ws: WebSocketT & { _peer?: NodePeer };
   };
 }> {
+  constructor(ctx: NodePeer["ctx"]) {
+    super(ctx);
+    ctx.node.ws._peer = this;
+  }
+
   get addr() {
     const socket = this.ctx.node.req.socket;
     if (!socket) {
@@ -147,5 +152,15 @@ class NodePeer extends Peer<{
       ...options,
     });
     return 0;
+  }
+
+  publish(topic: string, message: any): void {
+    message = toBufferLike(message);
+    for (const client of this.ctx.node.server.clients) {
+      const peer = (client as WebSocketT & { _peer?: NodePeer })._peer;
+      if (peer && peer !== this && peer._subscriptions.has(topic)) {
+        peer.send(message);
+      }
+    }
   }
 }

@@ -11,7 +11,7 @@ const ReadyStateMap = {
 } as const;
 
 export abstract class Peer<AdapterContext = any> implements WSRequest {
-  private _subscriptions: Set<string> = new Set();
+  _subscriptions: Set<string> = new Set();
 
   static _idCounter = 0;
   private _id: string;
