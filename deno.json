@@ -11,5 +11,6 @@
     "./adapters/deno": "./src/adapters/deno.ts",
     "./adapters/node": "./src/adapters/node.ts",
     "./adapters/uws": "./src/adapters/uws.ts"
-  }
+  },
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json"
 }
