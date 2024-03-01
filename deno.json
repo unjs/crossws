@@ -1,0 +1,15 @@
+{
+  "name": "@unjs/crossws",
+  "version": "0.0.0",
+  "imports": {
+    "uWebSockets.js": "https://esm.sh/gh/uNetworking/uWebSockets.js"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./adapters/bun": "./src/adapters/bun.ts",
+    "./adapters/cloudflare": "./src/adapters/cloudflare.ts",
+    "./adapters/deno": "./src/adapters/deno.ts",
+    "./adapters/node": "./src/adapters/node.ts",
+    "./adapters/uws": "./src/adapters/uws.ts"
+  }
+}
