@@ -86,8 +86,8 @@
     "@cloudflare/workers-types": "^4.20240222.0",
     "@deno/types": "^0.0.1",
     "@types/bun": "^1.0.8",
-    "@types/node": "^20.11.25",
-    "@types/web": "^0.0.140",
+    "@types/node": "^20.11.26",
+    "@types/web": "^0.0.142",
     "@types/ws": "^8.5.10",
     "automd": "^0.3.6",
     "changelogen": "^0.5.5",
@@ -101,7 +101,7 @@
     "typescript": "^5.4.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
     "unbuild": "^2.0.0",
-    "wrangler": "^3.31.0",
+    "wrangler": "^3.32.0",
     "ws": "^8.16.0"
   },
   "peerDependencies": {
