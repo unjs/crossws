@@ -83,13 +83,13 @@
     "crossws": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240314.0",
+    "@cloudflare/workers-types": "^4.20240320.1",
     "@deno/types": "^0.0.1",
-    "@types/bun": "^1.0.8",
-    "@types/node": "^20.11.28",
+    "@types/bun": "^1.0.11",
+    "@types/node": "^20.11.30",
     "@types/web": "^0.0.142",
     "@types/ws": "^8.5.10",
-    "automd": "^0.3.6",
+    "automd": "^0.3.7",
     "changelogen": "^0.5.5",
     "consola": "^3.2.3",
     "eslint": "^8.57.0",
@@ -98,10 +98,10 @@
     "jiti": "^1.21.0",
     "listhen": "^1.7.2",
     "prettier": "^3.2.5",
-    "typescript": "^5.4.2",
+    "typescript": "^5.4.3",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
     "unbuild": "^2.0.0",
-    "wrangler": "^3.34.2",
+    "wrangler": "^3.39.0",
     "ws": "^8.16.0"
   },
   "peerDependencies": {
@@ -112,5 +112,5 @@
       "optional": true
     }
   },
-  "packageManager": "pnpm@8.15.4"
+  "packageManager": "pnpm@8.15.5"
 }
