@@ -8,16 +8,18 @@ icon: simple-icons:bun
 
 To integrate CrossWS with your Bun server, you need to handle upgrade with `handleUpgrade` util and also pass the `websocket` object returned from the adapter to server options. CrossWS leverages native Bun WebSocket API.
 
+If you wish to [publish](/guide/pubsub) messages without a Peer, you will need to provide the CrossWS adapter with a reference to your Bun server using `setPublishingServer`.
+
 ```ts
 import wsAdapter from "crossws/adapters/bun";
 
-const { websocket, handleUpgrade } = wsAdapter({
+const { websocket, handleUpgrade, setPublishingServer, publish } = wsAdapter({
   hooks: {
     message: console.log,
   },
 });
 
-Bun.serve({
+const server = Bun.serve({
   port: 3000,
   websocket,
   fetch(req, server) {
@@ -30,6 +32,8 @@ Bun.serve({
     );
   },
 });
+
+setPublishingServer(server);
 ```
 
 ## Adapter Hooks

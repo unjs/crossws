@@ -8,6 +8,8 @@ const adapter = createDemo(uwsAdapter);
 
 const app = App().ws("/*", adapter.websocket);
 
+adapter.setPublishingApp(app);
+
 app.get("/*", async (res, req) => {
   let aborted = false;
   res.onAborted(() => {

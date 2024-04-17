@@ -3,9 +3,9 @@
 import bunAdapter from "../src/adapters/bun";
 import { createDemo, getIndexHTML } from "./_shared";
 
-const { websocket, handleUpgrade } = createDemo(bunAdapter);
+const { websocket, handleUpgrade, setPublishingServer } = createDemo(bunAdapter);
 
-Bun.serve({
+const server = Bun.serve({
   port: 3001,
   websocket,
   async fetch(req, server) {
@@ -17,3 +17,5 @@ Bun.serve({
     });
   },
 });
+
+setPublishingServer(server);

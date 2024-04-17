@@ -8,6 +8,8 @@ icon: akar-icons:node-fill
 
 To integrate CrossWS with your Node.js HTTP server, you need to connect the `upgrade` event to the `handleUpgrade` method returned from the adapter. CrossWS uses a prebundled version of [ws](https://github.com/websockets/ws).
 
+The Node adapter supports [publishing](/guide/pubsub) messages without a Peer, using the `publish` method in the wsAdapter.
+
 ```ts
 import { createServer } from "node:http";
 import wsAdapter from "crossws/adapters/node";
@@ -18,7 +20,7 @@ const server = createServer((req, res) => {
   );
 }).listen(3000);
 
-const { handleUpgrade } = wsAdapter({ message: console.log });
+const { handleUpgrade, publish } = wsAdapter({ message: console.log });
 server.on("upgrade", handleUpgrade);
 ```
 
@@ -43,17 +45,21 @@ Integrate CrossWS with Node.js using uWebSockets.js.
 
 Instead of [using `ws`](/adapters/node-ws) you can use [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) for Node.js servers.
 
+If you wish to [publish](/guide/pubsub) messages without a Peer, you will need to provide the CrossWS adapter with a reference to the uWebSocket.js TemplatedApp using `setPublishingApp`.
+
 ```ts
 import { App } from "uWebSockets.js";
 import wsAdapter from "crossws/adapters/uws";
 
-const { websocket } = wsAdapter({
+const { websocket, setPublishingApp, publish } = wsAdapter({
   hooks: {
     message: console.log,
   },
 });
 
 const server = App().ws("/*", websocket);
+
+setPublishingApp(app);
 
 server.get("/*", (res, req) => {
   res.writeStatus("200 OK").writeHeader("Content-Type", "text/html");

@@ -1,6 +1,11 @@
 // https://bun.sh/docs/api/websockets
 
-import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
+import type {
+  WebSocketHandler,
+  ServerWebSocket,
+  Server,
+  ServerWebSocketSendStatus,
+} from "bun";
 import { Message } from "../message";
 import { Peer } from "../peer";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
@@ -10,6 +15,12 @@ import { toBufferLike } from "../_utils";
 export interface BunAdapter {
   websocket: WebSocketHandler<ContextData>;
   handleUpgrade(req: Request, server: Server): Promise<boolean>;
+  setPublishingServer(server: Server): void;
+  publish(
+    topic: string,
+    message: any,
+    options?: { compress?: boolean },
+  ): ServerWebSocketSendStatus;
 }
 
 export interface BunOptions extends AdapterOptions {}
@@ -33,6 +44,8 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
       ws.data._peer = peer;
       return peer;
     };
+
+    let publishingServer: Server | undefined;
 
     return {
       async handleUpgrade(req: Request, server: Server) {
@@ -73,6 +86,18 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
           const peer = getPeer(ws);
           crossws.$callHook("bun:pong", peer, ws, data);
         },
+      },
+      setPublishingServer(server) {
+        publishingServer = server;
+      },
+      publish(topic, message, options) {
+        return (
+          publishingServer?.publish(
+            topic,
+            toBufferLike(message),
+            options?.compress,
+          ) ?? 0
+        );
       },
     };
   },

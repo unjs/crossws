@@ -6,6 +6,7 @@ import type {
   WebSocket,
   HttpRequest,
   HttpResponse,
+  TemplatedApp,
 } from "uWebSockets.js";
 import { Peer } from "../peer";
 import { Message } from "../message";
@@ -24,6 +25,12 @@ type WebSocketHandler = WebSocketBehavior<UserData>;
 
 export interface UWSAdapter {
   websocket: WebSocketHandler;
+  setPublishingApp(app: TemplatedApp): void;
+  publish(
+    topic: string,
+    message: any,
+    options?: { compress?: boolean; binary?: boolean },
+  ): number;
 }
 
 export interface UWSOptions extends AdapterOptions {
@@ -134,8 +141,23 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
       },
     };
 
+    let publishingApp: TemplatedApp | undefined;
+
     return {
       websocket,
+      setPublishingApp(app) {
+        publishingApp = app;
+      },
+      publish(topic, message, options) {
+        message = toBufferLike(message);
+        publishingApp?.publish(
+          topic,
+          message,
+          options?.binary,
+          options?.compress,
+        );
+        return 0;
+      },
     };
   },
 );
@@ -188,10 +210,16 @@ class UWSPeer extends Peer<{
 
   publish(
     topic: string,
-    message: string,
+    message: any,
     options?: { compress?: boolean; binary?: boolean },
   ) {
-    this.ctx.uws.ws.publish(topic, message, options?.binary, options?.compress);
+    message = toBufferLike(message);
+    this.ctx.uws.ws.publish(
+      topic,
+      toBufferLike(message),
+      options?.binary,
+      options?.compress,
+    );
     return 0;
   }
 }
