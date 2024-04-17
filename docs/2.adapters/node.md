@@ -79,5 +79,5 @@ server.listen(3001, () => {
 - `uws:subscription (ws, topic, newCount, oldCount)`
 
 ::read-more
-See [`playground/node-uws.ts`](https://github.com/unjs/crossws/tree/main/playground/node-uws.ts) for demo and [`src/adapters/node-uws.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/node-uws.ts) for implementation.
+See [`playground/uws.ts`](https://github.com/unjs/crossws/tree/main/playground/uws.ts) for demo and [`src/adapters/uws.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/uws.ts) for implementation.
 ::
