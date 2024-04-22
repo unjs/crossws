@@ -100,6 +100,6 @@ class DenoPeer extends Peer<{
   }
 
   terminate(): void {
-    this.ctx.deno.ws.terminate()
+    this.ctx.deno.ws.terminate();
   }
 }
