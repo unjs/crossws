@@ -9,6 +9,14 @@ export function toBufferLike(val: any): BufferLike {
     return val;
   }
 
+  if (
+    Buffer.isBuffer(val) ||
+    val instanceof Uint8Array ||
+    val instanceof ArrayBuffer
+  ) {
+    return val;
+  }
+
   if (isPlainObject(val)) {
     return JSON.stringify(val);
   }

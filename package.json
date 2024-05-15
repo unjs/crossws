@@ -76,7 +76,7 @@
     "play:node": "jiti playground/node.ts",
     "play:uws": "jiti playground/uws.ts",
     "release": "pnpm test && pnpm build && changelogen --release && npm publish && git push --follow-tags",
-    "test": "pnpm lint && pnpm test:types",
+    "test": "pnpm lint && vitest && pnpm test:types",
     "test:types": "tsc --noEmit --skipLibCheck"
   },
   "resolutions": {
@@ -112,5 +112,8 @@
       "optional": true
     }
   },
-  "packageManager": "pnpm@9.0.5"
+  "packageManager": "pnpm@9.0.5",
+  "dependencies": {
+    "vitest": "^1.6.0"
+  }
 }
