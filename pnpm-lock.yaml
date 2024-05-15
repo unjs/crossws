@@ -10,10 +10,6 @@ overrides:
 importers:
 
   .:
-    dependencies:
-      vitest:
-        specifier: ^1.6.0
-        version: 1.6.0(@types/node@20.11.28)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20240314.0
@@ -69,6 +65,9 @@ importers:
       unbuild:
         specifier: ^2.0.0
         version: 2.0.0(typescript@5.4.2)
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.0(@types/node@20.11.28)
       wrangler:
         specifier: ^3.34.2
         version: 3.34.2(@cloudflare/workers-types@4.20240314.0)
