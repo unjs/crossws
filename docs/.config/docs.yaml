@@ -25,4 +25,4 @@ landing:
         Zero Dependency with bundled ws for Node.js support. Extremely lightweight
         and tree-shakable packaging with ESM and CJS support.
     - title: Developer Friendly
-      description: Typed Hooks API and human friednly logging support.
+      description: Typed Hooks API and human friendly logging support.
