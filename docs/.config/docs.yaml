@@ -14,7 +14,7 @@ landing:
   features:
     - title: Runtime Agnostic
       description:
-        Seamlessly integrates with Bun, Deno, Cloudflare Workrs and Node.js
+        Seamlessly integrates with Bun, Deno, Cloudflare Workers and Node.js
         (ws or uWebSockets.js)
     - title: Made for Performance
       description:
