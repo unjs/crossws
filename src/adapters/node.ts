@@ -19,6 +19,7 @@ import { toBufferLike } from "../_utils";
 
 export interface NodeAdapter {
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
+  publish(topic: string, message: any): void;
 }
 
 export interface NodeOptions extends AdapterOptions {
@@ -102,6 +103,15 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
         wss.handleUpgrade(req, socket, head, (ws) => {
           wss.emit("connection", ws, req);
         });
+      },
+      publish(topic, message) {
+        message = toBufferLike(message);
+        for (const client of wss.clients) {
+          const peer = (client as WebSocketT & { _peer?: NodePeer })._peer;
+          if (peer && peer._subscriptions.has(topic)) {
+            peer.send(message);
+          }
+        }
       },
     };
   },
