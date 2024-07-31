@@ -104,13 +104,5 @@
     "wrangler": "^3.67.1",
     "ws": "^8.18.0"
   },
-  "peerDependencies": {
-    "uWebSockets.js": "*"
-  },
-  "peerDependenciesMeta": {
-    "uWebSockets.js": {
-      "optional": true
-    }
-  },
   "packageManager": "pnpm@9.6.0"
 }
