@@ -171,4 +171,12 @@ class NodePeer extends Peer<{
       }
     }
   }
+
+  close(code?: number, data?: string | Buffer) {
+    this.ctx.node.ws.close(code, data);
+  }
+
+  terminate() {
+    this.ctx.node.ws.terminate();
+  }
 }

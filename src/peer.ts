@@ -68,4 +68,30 @@ export abstract class Peer<AdapterContext = any> implements WSRequest {
 
     return `${_id}${_addr}${_state}`;
   }
+
+  /**
+   * Closes the connection.
+   *
+   * Here is a list of close codes:
+   *
+   * - `1000` means "normal closure" (default)
+   * - `1009` means a message was too big and was rejected
+   * - `1011` means the server encountered an error
+   * - `1012` means the server is restarting
+   * - `1013` means the server is too busy or the client is rate-limited
+   * - `4000` through `4999` are reserved for applications (you can use it!)
+   *
+   * To close the connection abruptly, use `terminate()`.
+   *
+   * @param code The close code to send
+   * @param reason The close reason to send
+   */
+  abstract close(code?: number, reason?: string): void;
+
+  /**
+   * Abruptly close the connection.
+   *
+   * To gracefully close the connection, use `close()`.
+   */
+  abstract terminate(): void;
 }

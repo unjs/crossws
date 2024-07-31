@@ -120,4 +120,12 @@ class BunPeer extends Peer<{
   unsubscribe(topic: string): void {
     this.ctx.bun.ws.unsubscribe(topic);
   }
+
+  close(code?: number, reason?: string) {
+    this.ctx.bun.ws.close(code, reason);
+  }
+
+  terminate() {
+    this.ctx.bun.ws.terminate();
+  }
 }

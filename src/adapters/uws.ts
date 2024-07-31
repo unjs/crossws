@@ -6,6 +6,7 @@ import type {
   WebSocket,
   HttpRequest,
   HttpResponse,
+  RecognizedString,
 } from "uWebSockets.js";
 import { Peer } from "../peer";
 import { Message } from "../message";
@@ -189,6 +190,14 @@ class UWSPeer extends Peer<{
     const isBinary = typeof data !== "string";
     this.ctx.uws.ws.publish(topic, data, isBinary, options?.compress);
     return 0;
+  }
+
+  close(code?: number, reason?: RecognizedString) {
+    this.ctx.uws.ws.end(code, reason);
+  }
+
+  terminate(): void {
+    this.ctx.uws.ws.close();
   }
 }
 
