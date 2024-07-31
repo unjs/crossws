@@ -27,7 +27,7 @@ export function createCrossWS(opts: AdapterOptions = {}): CrossWS {
     async upgrade(req) {
       const [res1, res2] = await Promise.all([
         opts.hooks?.upgrade?.(req),
-        await resolveHook(req, "upgrade").then((h) => h?.(req)),
+        resolveHook(req, "upgrade").then((h) => h?.(req)),
       ]);
       const headers = new Headers(res1?.headers);
       if (res2?.headers) {
