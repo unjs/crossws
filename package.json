@@ -76,7 +76,7 @@
     "play:node": "jiti playground/node.ts",
     "play:uws": "jiti playground/uws.ts",
     "release": "pnpm test && pnpm build && changelogen --release && npm publish && git push --follow-tags",
-    "test": "pnpm lint && pnpm test:types",
+    "test": "pnpm lint && pnpm test:types && vitest run",
     "test:types": "tsc --noEmit --skipLibCheck"
   },
   "resolutions": {
@@ -89,6 +89,7 @@
     "@types/node": "^22.0.1",
     "@types/web": "^0.0.152",
     "@types/ws": "^8.5.12",
+    "@vitest/coverage-v8": "^2.0.5",
     "automd": "^0.3.8",
     "changelogen": "^0.5.5",
     "consola": "^3.2.3",
@@ -101,6 +102,7 @@
     "typescript": "^5.5.4",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
     "unbuild": "^2.0.0",
+    "vitest": "^2.0.0",
     "wrangler": "^3.67.1",
     "ws": "^8.18.0"
   },
