@@ -9,11 +9,7 @@ export function toBufferLike(val: any): BufferLike {
     return val;
   }
 
-  if (
-    Buffer.isBuffer(val) ||
-    val instanceof Uint8Array ||
-    val instanceof ArrayBuffer
-  ) {
+  if (val instanceof Uint8Array || val instanceof ArrayBuffer) {
     return val;
   }
 
