@@ -100,7 +100,7 @@
     "listhen": "^1.7.2",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.44.0",
     "unbuild": "^2.0.0",
     "vitest": "^2.0.0",
     "wrangler": "^3.67.1",
