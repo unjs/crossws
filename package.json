@@ -76,8 +76,8 @@
     "play:node": "jiti playground/node.ts",
     "play:uws": "jiti playground/uws.ts",
     "release": "pnpm test && pnpm build && changelogen --release && npm publish && git push --follow-tags",
-    "test": "pnpm lint && pnpm typecheck && vitest run",
-    "typecheck": "tsc --noEmit --skipLibCheck"
+    "test": "pnpm lint && pnpm test:types && vitest run",
+    "test:types": "tsc --noEmit --skipLibCheck"
   },
   "resolutions": {
     "crossws": "workspace:*"
