@@ -67,8 +67,8 @@
   "scripts": {
     "build": "unbuild",
     "dev": "pnpm play:node",
-    "lint": "eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src -w",
+    "lint": "eslint --cache . && prettier -c src",
+    "lint:fix": "eslint --cache . --fix && prettier -c src -w",
     "prepack": "pnpm run build",
     "play:bun": "bun playground/bun.ts",
     "play:cf": "wrangler dev --port 3001",
