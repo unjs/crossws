@@ -11,6 +11,7 @@ export function createDemo<T extends Adapter<any, any>>(
     open(peer) {
       console.log(`[ws] open ${peer}`);
       peer.send({ user: "server", message: `Welcome to the server ${peer}!` });
+      peer.send(new TextEncoder().encode("(binary message works!)"));
       peer.subscribe("chat");
       peer.publish("chat", { user: "server", message: `${peer} joined!` });
     },

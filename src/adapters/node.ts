@@ -145,21 +145,29 @@ class NodePeer extends Peer<{
     return this.ctx.node.ws.readyState;
   }
 
-  send(message: any, options?: { compress?: boolean; binary?: boolean }) {
-    this.ctx.node.ws.send(toBufferLike(message), {
+  send(message: any, options?: { compress?: boolean }) {
+    const data = toBufferLike(message);
+    const isBinary = typeof data !== "string";
+    this.ctx.node.ws.send(data, {
       compress: options?.compress,
-      binary: options?.binary,
+      binary: isBinary,
       ...options,
     });
     return 0;
   }
 
-  publish(topic: string, message: any): void {
-    message = toBufferLike(message);
+  publish(topic: string, message: any, options?: { compress?: boolean }): void {
+    const data = toBufferLike(message);
+    const isBinary = typeof data !== "string";
+    const sendOptions = {
+      compress: options?.compress,
+      binary: isBinary,
+      ...options,
+    };
     for (const client of this.ctx.node.server.clients) {
       const peer = (client as WebSocketT & { _peer?: NodePeer })._peer;
       if (peer && peer !== this && peer._subscriptions.has(topic)) {
-        peer.send(message);
+        peer.ctx.node.ws.send(data, sendOptions);
       }
     }
   }

@@ -67,8 +67,8 @@
   "scripts": {
     "build": "unbuild",
     "dev": "pnpm play:node",
-    "lint": "eslint --cache --ext .ts,.js,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --ext .ts,.js,.mjs,.cjs . --fix && prettier -c src -w",
+    "lint": "eslint --cache . && prettier -c src",
+    "lint:fix": "eslint --cache . --fix && prettier -c src -w",
     "prepack": "pnpm run build",
     "play:bun": "bun playground/bun.ts",
     "play:cf": "wrangler dev --port 3001",
@@ -76,41 +76,35 @@
     "play:node": "jiti playground/node.ts",
     "play:uws": "jiti playground/uws.ts",
     "release": "pnpm test && pnpm build && changelogen --release && npm publish && git push --follow-tags",
-    "test": "pnpm lint && pnpm test:types",
+    "test": "pnpm lint && pnpm test:types && vitest run",
     "test:types": "tsc --noEmit --skipLibCheck"
   },
   "resolutions": {
     "crossws": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240314.0",
+    "@cloudflare/workers-types": "^4.20240725.0",
     "@deno/types": "^0.0.1",
-    "@types/bun": "^1.0.8",
-    "@types/node": "^20.11.28",
-    "@types/web": "^0.0.142",
-    "@types/ws": "^8.5.10",
-    "automd": "^0.3.6",
+    "@types/bun": "^1.1.6",
+    "@types/node": "^22.0.1",
+    "@types/web": "^0.0.152",
+    "@types/ws": "^8.5.12",
+    "@vitest/coverage-v8": "^2.0.5",
+    "automd": "^0.3.8",
     "changelogen": "^0.5.5",
     "consola": "^3.2.3",
-    "eslint": "^8.57.0",
-    "eslint-config-unjs": "^0.2.1",
-    "h3": "^1.11.1",
-    "jiti": "^1.21.0",
+    "eslint": "^9.8.0",
+    "eslint-config-unjs": "^0.3.2",
+    "h3": "^1.12.0",
+    "jiti": "^1.21.6",
     "listhen": "^1.7.2",
-    "prettier": "^3.2.5",
-    "typescript": "^5.4.2",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.33.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4",
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.44.0",
     "unbuild": "^2.0.0",
-    "wrangler": "^3.34.2",
-    "ws": "^8.16.0"
+    "vitest": "^2.0.0",
+    "wrangler": "^3.67.1",
+    "ws": "^8.18.0"
   },
-  "peerDependencies": {
-    "uWebSockets.js": "*"
-  },
-  "peerDependenciesMeta": {
-    "uWebSockets.js": {
-      "optional": true
-    }
-  },
-  "packageManager": "pnpm@8.15.4"
+  "packageManager": "pnpm@9.6.0"
 }

@@ -175,24 +175,20 @@ class UWSPeer extends Peer<{
     return this._headers;
   }
 
-  send(message: any, options?: { compress?: boolean; binary?: boolean }) {
-    return this.ctx.uws.ws.send(
-      toBufferLike(message),
-      options?.binary,
-      options?.compress,
-    );
+  send(message: any, options?: { compress?: boolean }) {
+    const data = toBufferLike(message);
+    const isBinary = typeof data !== "string";
+    return this.ctx.uws.ws.send(data, isBinary, options?.compress);
   }
 
   subscribe(topic: string): void {
     this.ctx.uws.ws.subscribe(topic);
   }
 
-  publish(
-    topic: string,
-    message: string,
-    options?: { compress?: boolean; binary?: boolean },
-  ) {
-    this.ctx.uws.ws.publish(topic, message, options?.binary, options?.compress);
+  publish(topic: string, message: string, options?: { compress?: boolean }) {
+    const data = toBufferLike(message);
+    const isBinary = typeof data !== "string";
+    this.ctx.uws.ws.publish(topic, data, isBinary, options?.compress);
     return 0;
   }
 
