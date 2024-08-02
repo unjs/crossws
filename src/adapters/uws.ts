@@ -11,7 +11,7 @@ import type {
 import { Peer } from "../peer";
 import { Message } from "../message";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
-import { createCrossWS } from "../crossws";
+import { CrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
 
 type UserData = {
@@ -43,103 +43,124 @@ export interface UWSOptions extends AdapterOptions {
 
 export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
   (options = {}) => {
-    const crossws = createCrossWS(options);
-
-    const getPeer = (ws: WebSocket<UserData>) => {
-      const userData = ws.getUserData();
-      if (userData._peer) {
-        return userData._peer as Peer;
-      }
-      const peer = new UWSPeer({ uws: { ws, userData } });
-      userData._peer = peer;
-      return peer;
-    };
-
-    const websocket: WebSocketHandler = {
-      ...options.uws,
-      close(ws, code, message) {
-        const peer = getPeer(ws);
-        crossws.$callHook("uws:close", peer, ws, code, message);
-        crossws.callHook("close", peer, { code, reason: message?.toString() });
-      },
-      drain(ws) {
-        const peer = getPeer(ws);
-        crossws.$callHook("uws:drain", peer, ws);
-      },
-      message(ws, message, isBinary) {
-        const peer = getPeer(ws);
-        crossws.$callHook("uws:message", peer, ws, message, isBinary);
-        const msg = new Message(message, isBinary);
-        crossws.callHook("message", peer, msg);
-      },
-      open(ws) {
-        const peer = getPeer(ws);
-        crossws.$callHook("uws:open", peer, ws);
-        crossws.callHook("open", peer);
-      },
-      ping(ws, message) {
-        const peer = getPeer(ws);
-        crossws.$callHook("uws:ping", peer, ws, message);
-      },
-      pong(ws, message) {
-        const peer = getPeer(ws);
-        crossws.$callHook("uws:pong", peer, ws, message);
-      },
-      subscription(ws, topic, newCount, oldCount) {
-        const peer = getPeer(ws);
-        crossws.$callHook(
-          "uws:subscription",
-          peer,
-          ws,
-          topic,
-          newCount,
-          oldCount,
-        );
-      },
-      async upgrade(res, req, context) {
-        let aborted = false;
-        res.onAborted(() => {
-          aborted = true;
-        });
-
-        const { headers } = await crossws.upgrade({
-          get url() {
-            return req.getUrl();
-          },
-          get headers() {
-            return _getHeaders(req);
-          },
-        });
-        res.writeStatus("101 Switching Protocols");
-        for (const [key, value] of new Headers(headers)) {
-          res.writeHeader(key, value);
-        }
-
-        if (aborted) {
-          return;
-        }
-
-        res.cork(() => {
-          res.upgrade(
-            {
-              req,
-              res,
-              context,
-            },
-            req.getHeader("sec-websocket-key"),
-            req.getHeader("sec-websocket-protocol"),
-            req.getHeader("sec-websocket-extensions"),
-            context,
-          );
-        });
-      },
-    };
-
+    const crossws = new CrossWS(options);
     return {
-      websocket,
+      websocket: {
+        ...options.uws,
+        close(ws, code, message) {
+          const peer = getPeer(ws);
+          crossws.callAdapterHook("uws:close", peer, ws, code, message);
+          crossws.callHook("close", peer, {
+            code,
+            reason: message?.toString(),
+          });
+        },
+        drain(ws) {
+          const peer = getPeer(ws);
+          crossws.callAdapterHook("uws:drain", peer, ws);
+        },
+        message(ws, message, isBinary) {
+          const peer = getPeer(ws);
+          crossws.callAdapterHook("uws:message", peer, ws, message, isBinary);
+          const msg = new Message(message, isBinary);
+          crossws.callHook("message", peer, msg);
+        },
+        open(ws) {
+          const peer = getPeer(ws);
+          crossws.callAdapterHook("uws:open", peer, ws);
+          crossws.callHook("open", peer);
+        },
+        ping(ws, message) {
+          const peer = getPeer(ws);
+          crossws.callAdapterHook("uws:ping", peer, ws, message);
+        },
+        pong(ws, message) {
+          const peer = getPeer(ws);
+          crossws.callAdapterHook("uws:pong", peer, ws, message);
+        },
+        subscription(ws, topic, newCount, oldCount) {
+          const peer = getPeer(ws);
+          crossws.callAdapterHook(
+            "uws:subscription",
+            peer,
+            ws,
+            topic,
+            newCount,
+            oldCount,
+          );
+        },
+        async upgrade(res, req, context) {
+          let aborted = false;
+          res.onAborted(() => {
+            aborted = true;
+          });
+          const _res = await crossws.callHook("upgrade", new UWSReqProxy(req));
+          if (aborted) {
+            return;
+          }
+          if (_res instanceof Response) {
+            res.writeStatus(`${_res.status} ${_res.statusText}`);
+            for (const [key, value] of _res.headers) {
+              res.writeHeader(key, value);
+            }
+            const bytes = await _res.bytes();
+            if (!aborted) {
+              res.end(bytes);
+            }
+            return;
+          }
+          res.writeStatus("101 Switching Protocols");
+          if (_res?.headers) {
+            for (const [key, value] of new Headers(_res.headers)) {
+              res.writeHeader(key, value);
+            }
+          }
+          res.cork(() => {
+            res.upgrade(
+              {
+                req,
+                res,
+                context,
+              },
+              req.getHeader("sec-websocket-key"),
+              req.getHeader("sec-websocket-protocol"),
+              req.getHeader("sec-websocket-extensions"),
+              context,
+            );
+          });
+        },
+      },
     };
   },
 );
+
+class UWSReqProxy {
+  private _headers?: Headers;
+  constructor(private _req: HttpRequest) {}
+  get url(): string {
+    return this._req.getUrl();
+  }
+  get headers(): Headers {
+    if (!this._headers) {
+      const headers = (this._headers = new Headers());
+      // eslint-disable-next-line unicorn/no-array-for-each
+      this._req.forEach((key, value) => {
+        headers.append(key, value);
+      });
+    }
+    return this.headers;
+  }
+}
+
+function getPeer(ws: WebSocket<UserData>) {
+  const userData = ws.getUserData();
+  if (userData._peer) {
+    return userData._peer as Peer;
+  }
+  const peer = new UWSPeer({ uws: { ws, userData } });
+  userData._peer = peer;
+  return peer;
+}
 
 class UWSPeer extends Peer<{
   uws: {
@@ -147,8 +168,13 @@ class UWSPeer extends Peer<{
     userData: UserData;
   };
 }> {
-  _headers: HeadersInit | undefined;
   _decoder = new TextDecoder();
+  _req: UWSReqProxy;
+
+  constructor(ctx: UWSPeer["ctx"]) {
+    super(ctx);
+    this._req = new UWSReqProxy(ctx.uws.userData.req);
+  }
 
   get addr() {
     try {
@@ -161,18 +187,12 @@ class UWSPeer extends Peer<{
     }
   }
 
-  // TODO
-  // get readyState() {}
-
   get url() {
-    return this.ctx.uws.userData.req.getUrl();
+    return this._req.url;
   }
 
   get headers() {
-    if (!this._headers) {
-      this._headers = _getHeaders(this.ctx.uws.userData.req);
-    }
-    return this._headers;
+    return this._req.headers;
   }
 
   send(message: any, options?: { compress?: boolean }) {
@@ -199,13 +219,4 @@ class UWSPeer extends Peer<{
   terminate(): void {
     this.ctx.uws.ws.close();
   }
-}
-
-function _getHeaders(req: HttpRequest): HeadersInit {
-  const headers: [string, string][] = [];
-  // eslint-disable-next-line unicorn/no-array-for-each
-  req.forEach((key, value) => {
-    headers.push([key, value]);
-  });
-  return headers;
 }

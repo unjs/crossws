@@ -4,12 +4,12 @@ import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 import { Message } from "../message";
 import { Peer } from "../peer";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
-import { createCrossWS } from "../crossws";
+import { CrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
 
 export interface BunAdapter {
   websocket: WebSocketHandler<ContextData>;
-  handleUpgrade(req: Request, server: Server): Promise<boolean>;
+  handleUpgrade(req: Request, server: Server): Promise<Response | undefined>;
 }
 
 export interface BunOptions extends AdapterOptions {}
@@ -22,61 +22,63 @@ type ContextData = {
 
 export default defineWebSocketAdapter<BunAdapter, BunOptions>(
   (options = {}) => {
-    const crossws = createCrossWS(options);
-
-    const getPeer = (ws: ServerWebSocket<ContextData>) => {
-      if (ws.data?._peer) {
-        return ws.data._peer;
-      }
-      const peer = new BunPeer({ bun: { ws } });
-      ws.data = ws.data || {};
-      ws.data._peer = peer;
-      return peer;
-    };
-
+    const crossws = new CrossWS(options);
     return {
-      async handleUpgrade(req: Request, server: Server) {
-        const { headers } = await crossws.upgrade({
-          url: req.url,
-          headers: req.headers,
+      async handleUpgrade(request, server) {
+        const res = await crossws.callHook("upgrade", request);
+        if (res instanceof Response) {
+          return res;
+        }
+        const upgradeOK = server.upgrade(request, {
+          data: { request, server },
+          headers: res?.headers,
         });
-        return server.upgrade(req, {
-          data: { req, server },
-          headers,
-        });
+        return upgradeOK
+          ? undefined
+          : new Response("Upgrade failed", { status: 500 });
       },
       websocket: {
         message: (ws, message) => {
           const peer = getPeer(ws);
-          crossws.$callHook("bun:message", peer, ws, message);
+          crossws.callAdapterHook("bun:message", peer, ws, message);
           crossws.callHook("message", peer, new Message(message));
         },
         open: (ws) => {
           const peer = getPeer(ws);
-          crossws.$callHook("bun:open", peer, ws);
+          crossws.callAdapterHook("bun:open", peer, ws);
           crossws.callHook("open", peer);
         },
         close: (ws) => {
           const peer = getPeer(ws);
-          crossws.$callHook("bun:close", peer, ws);
+          crossws.callAdapterHook("bun:close", peer, ws);
           crossws.callHook("close", peer, {});
         },
         drain: (ws) => {
           const peer = getPeer(ws);
-          crossws.$callHook("bun:drain", peer);
+          crossws.callAdapterHook("bun:drain", peer);
         },
         ping(ws, data) {
           const peer = getPeer(ws);
-          crossws.$callHook("bun:ping", peer, ws, data);
+          crossws.callAdapterHook("bun:ping", peer, ws, data);
         },
         pong(ws, data) {
           const peer = getPeer(ws);
-          crossws.$callHook("bun:pong", peer, ws, data);
+          crossws.callAdapterHook("bun:pong", peer, ws, data);
         },
       },
     };
   },
 );
+
+function getPeer(ws: ServerWebSocket<ContextData>) {
+  if (ws.data?._peer) {
+    return ws.data._peer;
+  }
+  const peer = new BunPeer({ bun: { ws } });
+  ws.data = ws.data || {};
+  ws.data._peer = peer;
+  return peer;
+}
 
 class BunPeer extends Peer<{
   bun: { ws: ServerWebSocket<ContextData> };

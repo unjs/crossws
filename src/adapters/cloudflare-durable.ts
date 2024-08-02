@@ -1,9 +1,11 @@
+// https://developers.cloudflare.com/durable-objects/examples/websocket-hibernation-server/
+
 import type * as CF from "@cloudflare/workers-types";
 import type { DurableObject } from "cloudflare:workers";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
 import { Peer } from "../peer";
 import { Message } from "../message";
-import { createCrossWS } from "../crossws";
+import { CrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
 
 declare class DurableObjectPub extends DurableObject {
@@ -51,64 +53,47 @@ export default defineWebSocketAdapter<
   CloudflareDurableAdapter,
   CloudflareOptions
 >((opts) => {
-  const crossws = createCrossWS(opts);
-
-  const handleUpgrade: CloudflareDurableAdapter["handleUpgrade"] = async (
-    req,
-    env,
-    _context,
-  ) => {
-    const bindingName = opts?.bindingName ?? "$DurableObject";
-    const instanceName = opts?.instanceName ?? "crossws";
-    const binding = (env as any)[bindingName] as CF.DurableObjectNamespace;
-    const id = binding.idFromName(instanceName);
-    const stub = binding.get(id);
-    return stub.fetch(req as CF.Request) as unknown as Response;
-  };
-
-  const handleDurableUpgrade: CloudflareDurableAdapter["handleDurableUpgrade"] =
-    async (obj, req) => {
+  const crossws = new CrossWS(opts);
+  return {
+    handleUpgrade: async (req, env, _context) => {
+      const bindingName = opts?.bindingName ?? "$DurableObject";
+      const instanceName = opts?.instanceName ?? "crossws";
+      const binding = (env as any)[bindingName] as CF.DurableObjectNamespace;
+      const id = binding.idFromName(instanceName);
+      const stub = binding.get(id);
+      return stub.fetch(req as CF.Request) as unknown as Response;
+    },
+    handleDurableUpgrade: async (obj, request) => {
+      const res = await crossws.callHook("upgrade", request as Request);
+      if (res instanceof Response) {
+        return res;
+      }
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
       const peer = peerFromDurableEvent(obj, server);
-
-      const { headers } = await crossws.upgrade(peer);
-
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
-
-      crossws.$callHook("cloudflare:accept", peer);
+      crossws.callAdapterHook("cloudflare:accept", peer);
       crossws.callHook("open", peer);
-
       // eslint-disable-next-line unicorn/no-null
       return new Response(null, {
         status: 101,
         webSocket: client,
-        headers,
+        headers: res?.headers,
       });
-    };
-
-  const handleDurableMessage: CloudflareDurableAdapter["handleDurableMessage"] =
-    async (obj, ws, message) => {
+    },
+    handleDurableMessage: async (obj, ws, message) => {
       const peer = peerFromDurableEvent(obj, ws);
-      crossws.$callHook("cloudflare:message", peer, message);
+      crossws.callAdapterHook("cloudflare:message", peer, message);
       crossws.callHook("message", peer, new Message(message));
-    };
-
-  const handleDurableClose: CloudflareDurableAdapter["handleDurableClose"] =
-    async (obj, ws, code, reason, wasClean) => {
+    },
+    handleDurableClose: async (obj, ws, code, reason, wasClean) => {
       const peer = peerFromDurableEvent(obj, ws);
       const details = { code, reason, wasClean };
-      crossws.$callHook("cloudflare:close", peer, details);
+      crossws.callAdapterHook("cloudflare:close", peer, details);
       crossws.callHook("close", peer, details);
       ws.close(code, reason);
-    };
-
-  return {
-    handleUpgrade,
-    handleDurableUpgrade,
-    handleDurableClose,
-    handleDurableMessage,
+    },
   };
 });
 
@@ -148,7 +133,7 @@ class CloudflareDurablePeer extends Peer<{
   subscribe(topic: string): void {
     super.subscribe(topic);
     const state: CrosswsState = {
-      topics: this._subscriptions,
+      topics: this._topics,
     };
     this.ctx.cloudflare.ws._crossws = state;
     // Max limit: 2,048 bytes
