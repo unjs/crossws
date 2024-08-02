@@ -9,16 +9,13 @@ import { createDemo, getIndexHTML } from "./_shared.ts";
 
 const ws = createDemo(denoAdapter);
 
-const port = Number.parseInt(Deno.env.get("PORT") || "") || 3001
+const port = Number.parseInt(Deno.env.get("PORT") || "") || 3001;
 
-Deno.serve(
-  { hostname: 'localhost', port },
-  async (req, info) => {
-    if (req.headers.get("upgrade") === "websocket") {
-      return ws.handleUpgrade(req, info);
-    }
-    return new Response(await getIndexHTML(), {
-      headers: { "Content-Type": "text/html" },
-    });
-  },
-);
+Deno.serve({ hostname: "localhost", port }, async (req, info) => {
+  if (req.headers.get("upgrade") === "websocket") {
+    return ws.handleUpgrade(req, info);
+  }
+  return new Response(await getIndexHTML(), {
+    headers: { "Content-Type": "text/html" },
+  });
+});

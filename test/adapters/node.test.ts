@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe} from "vitest";
+import { afterAll, beforeAll, describe } from "vitest";
 import { createServer, Server } from "node:http";
 import { getRandomPort, waitForPort } from "get-port-please";
 import nodeAdapter from "../../src/adapters/node";
@@ -27,4 +27,3 @@ describe("node", () => {
 
   wsTests(() => url);
 });
-

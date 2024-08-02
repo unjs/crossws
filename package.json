@@ -67,8 +67,8 @@
   "scripts": {
     "build": "unbuild",
     "dev": "vitest",
-    "lint": "eslint --cache . && prettier -c src",
-    "lint:fix": "eslint --cache . --fix && prettier -c src -w",
+    "lint": "eslint --cache . && prettier -c src test",
+    "lint:fix": "eslint --cache . --fix && prettier -w src test",
     "prepack": "pnpm run build",
     "play:bun": "bun test/fixture/bun.ts",
     "play:cf": "wrangler dev --port 3001 -c test/fixture/wrangler.toml",

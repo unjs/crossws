@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, afterEach } from "vitest";
-import {execa, ResultPromise as ExecaRes} from "execa"
+import { execa, ResultPromise as ExecaRes } from "execa";
 import { fileURLToPath } from "node:url";
 import { getRandomPort, waitForPort } from "get-port-please";
 import WebSocket from "../src/websocket/node";
@@ -68,16 +68,24 @@ export function wsTestsExec(cmd: string, pubsub = true) {
   beforeAll(async () => {
     const port = await getRandomPort();
     url = `ws://localhost:${port}/`;
-    const [bin, ...args] = cmd.replace('$PORT', String(port)).replace('./', fixtureDir + '/').split(" ");
-    childProc = execa(bin, args, { env: { PORT: port.toString() } })
-    childProc.catch((error) => { if (error.signal !== "SIGTERM") { console.error(error); } })
-    childProc.stderr!.on('data', (chunk) => { console.log(chunk.toString()) })
+    const [bin, ...args] = cmd
+      .replace("$PORT", String(port))
+      .replace("./", fixtureDir + "/")
+      .split(" ");
+    childProc = execa(bin, args, { env: { PORT: port.toString() } });
+    childProc.catch((error) => {
+      if (error.signal !== "SIGTERM") {
+        console.error(error);
+      }
+    });
+    childProc.stderr!.on("data", (chunk) => {
+      console.log(chunk.toString());
+    });
     // childProc.stdout!.on('data', (chunk) => { console.log(chunk.toString()) })
-    await waitForPort(port, { host: 'localhost', delay: 50, retries: 100 })
+    await waitForPort(port, { host: "localhost", delay: 50, retries: 100 });
   });
   afterAll(async () => {
     await childProc.kill();
   });
   wsTests(() => url, pubsub);
 }
-

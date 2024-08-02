@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 import { wsConnect } from "./_utils";
 
-
 export function wsTests(getURL: () => string, pubsub = true) {
   test("http works", async () => {
     const response = await fetch(getURL().replace("ws", "http"));
@@ -38,4 +37,3 @@ export function wsTests(getURL: () => string, pubsub = true) {
     expect(await ws2.next()).toBe("hello from 2");
   });
 }
-
