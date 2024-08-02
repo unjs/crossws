@@ -1,4 +1,4 @@
-import { ResolveHooks, Adapter, defineHooks } from "../src/index.ts";
+import { ResolveHooks, Adapter, defineHooks } from "../../src/index.ts";
 
 export const getIndexHTML = () =>
   import("./_index.html.ts").then((r) => r.default);
@@ -9,14 +9,14 @@ export function createDemo<T extends Adapter<any, any>>(
 ): ReturnType<T> {
   const hooks = defineHooks({
     open(peer) {
-      console.log(`[ws] open ${peer}`);
+      // console.log(`[ws] open ${peer}`);
       peer.send({ user: "server", message: `Welcome to the server ${peer}!` });
       peer.send(new TextEncoder().encode("(binary message works!)"));
       peer.subscribe("chat");
       peer.publish("chat", { user: "server", message: `${peer} joined!` });
     },
     message(peer, message) {
-      console.log(`[ws] message ${peer} ${message.text()}`);
+      // console.log(`[ws] message ${peer} ${message.text()}`);
       if (message.text() === "ping") {
         peer.send({ user: "server", message: "pong" });
       } else {
@@ -29,7 +29,7 @@ export function createDemo<T extends Adapter<any, any>>(
       }
     },
     upgrade(req) {
-      console.log("[ws] upgrade", req.url);
+      // console.log("[ws] upgrade", req.url);
       return {
         headers: {
           "x-powered-by": "cross-ws",
@@ -38,10 +38,10 @@ export function createDemo<T extends Adapter<any, any>>(
       };
     },
     close(peer, details) {
-      console.log(`[ws] close ${peer}`, details);
+      // console.log(`[ws] close ${peer}`, details);
     },
     error(peer, error) {
-      console.log(`[ws] error ${peer}`, error);
+      // console.log(`[ws] error ${peer}`, error);
     },
   });
 

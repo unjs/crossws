@@ -1,4 +1,4 @@
-import { toBufferLike } from "./_utils";
+import { toBufferLike } from "./_utils.ts";
 
 export class Message {
   constructor(

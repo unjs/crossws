@@ -3,8 +3,7 @@
 compatibility_date = "2024-01-01"
 workers_dev = false
 
-# main = "playground/cloudflare.ts"
-main = "playground/cloudflare-durable.ts"
+main = "cloudflare-durable.ts"
 
 [[durable_objects.bindings]]
 name = "$DurableObject"

@@ -1,6 +1,6 @@
-import { WSError } from "./error";
-import type { Message } from "./message";
-import type { Peer } from "./peer";
+import { WSError } from "./error.ts";
+import type { Message } from "./message.ts";
+import type { Peer } from "./peer.ts";
 
 // --- Utils ---
 

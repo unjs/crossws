@@ -1,4 +1,4 @@
-import { Peer } from "./peer";
+import { Peer } from "./peer.ts";
 import type {
   AdapterOptions,
   Caller,
