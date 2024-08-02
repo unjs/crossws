@@ -73,10 +73,11 @@ export default /* html */ `
         log("ws", "Connecting to", url, "...");
         ws = new WebSocket(url);
 
-        ws.addEventListener("message", (event) => {
-          const { user = "system", message = "" } = event.data.startsWith("{")
-            ? JSON.parse(event.data)
-            : { message: event.data };
+        ws.addEventListener("message", async (event) => {
+          const data = typeof event.data === "string" ? event.data : await event.data.text();
+          const { user = "system", message = "" } = data.startsWith("{")
+            ? JSON.parse(data)
+            : { message: data };
           log(
             user,
             typeof message === "string" ? message : JSON.stringify(message),

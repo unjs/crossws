@@ -5,7 +5,21 @@ export function toBufferLike(val: any): BufferLike {
     return "";
   }
 
-  if (typeof val === "string") {
+  const type = typeof val;
+
+  if (type === "string") {
+    return val;
+  }
+
+  if (type === "number" || type === "boolean" || type === "bigint") {
+    return val.toString();
+  }
+
+  if (type === "function" || type === "symbol") {
+    return "{}";
+  }
+
+  if (val instanceof Uint8Array || val instanceof ArrayBuffer) {
     return val;
   }
 

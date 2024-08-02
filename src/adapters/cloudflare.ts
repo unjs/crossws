@@ -97,7 +97,7 @@ class CloudflarePeer extends Peer<{
   }
 
   get headers() {
-    return this.ctx.cloudflare.req.headers as Headers;
+    return this.ctx.cloudflare.req.headers as unknown as Headers;
   }
 
   get readyState() {
@@ -107,5 +107,16 @@ class CloudflarePeer extends Peer<{
   send(message: any) {
     this.ctx.cloudflare.server.send(toBufferLike(message));
     return 0;
+  }
+
+  close(code?: number, reason?: string) {
+    this.ctx.cloudflare.client.close(code, reason);
+  }
+
+  /**
+   * Cloudflare WebSockets do not support termination. This calls the `close()` method.
+   */
+  terminate(): void {
+    this.close();
   }
 }

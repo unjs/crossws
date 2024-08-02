@@ -94,4 +94,13 @@ class DenoPeer extends Peer<{
     this.ctx.deno.ws.send(toBufferLike(message));
     return 0;
   }
+
+  close(code?: number, reason?: string) {
+    this.ctx.deno.ws.close(code, reason);
+  }
+
+  terminate(): void {
+    // @ts-ignore (terminate is Deno-only api)
+    this.ctx.deno.ws.terminate();
+  }
 }
