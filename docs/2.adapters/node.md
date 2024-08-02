@@ -14,14 +14,20 @@ The Node adapter supports [publishing](/guide/pubsub) messages without a Peer, u
 import { createServer } from "node:http";
 import wsAdapter from "crossws/adapters/node";
 
+const ws = wsAdapter({
+  hooks: {
+    message: console.log,
+  },
+});
+
 const server = createServer((req, res) => {
   res.end(
     `<script>new WebSocket("ws://localhost:3000").addEventListener('open', (e) => e.target.send("Hello from client!"));</script>`,
   );
 }).listen(3000);
 
-const { handleUpgrade, publish } = wsAdapter({ message: console.log });
-server.on("upgrade", handleUpgrade);
+const ws = wsAdapter({ message: console.log });
+server.on("upgrade", ws.handleUpgrade);
 ```
 
 ## Adapter Hooks
@@ -51,15 +57,15 @@ If you wish to [publish](/guide/pubsub) messages without a Peer, you will need t
 import { App } from "uWebSockets.js";
 import wsAdapter from "crossws/adapters/uws";
 
-const { websocket, setPublishingApp, publish } = wsAdapter({
+const ws = wsAdapter({
   hooks: {
     message: console.log,
   },
 });
 
-const server = App().ws("/*", websocket);
+const server = App().ws("/*", ws.websocket);
 
-setPublishingApp(app);
+ws.setPublishingApp(app);
 
 server.get("/*", (res, req) => {
   res.writeStatus("200 OK").writeHeader("Content-Type", "text/html");

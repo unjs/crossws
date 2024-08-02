@@ -3,7 +3,7 @@ import type { Request, ExecutionContext } from "@cloudflare/workers-types";
 import cloudflareAdapter from "../src/adapters/cloudflare";
 import { createDemo, getIndexHTML } from "./_shared.ts";
 
-const { handleUpgrade } = createDemo(cloudflareAdapter);
+const ws = createDemo(cloudflareAdapter);
 
 export default {
   async fetch(
@@ -12,7 +12,7 @@ export default {
     context: ExecutionContext,
   ) {
     if (request.headers.get("upgrade") === "websocket") {
-      return handleUpgrade(request, env, context);
+      return ws.handleUpgrade(request, env, context);
     }
 
     return new Response(await getIndexHTML(), {

@@ -13,7 +13,7 @@ If you wish to [publish](/guide/pubsub) messages without a Peer, you will need t
 ```ts
 import wsAdapter from "crossws/adapters/bun";
 
-const { websocket, handleUpgrade, setPublishingServer, publish } = wsAdapter({
+const ws = wsAdapter({
   hooks: {
     message: console.log,
   },
@@ -21,9 +21,9 @@ const { websocket, handleUpgrade, setPublishingServer, publish } = wsAdapter({
 
 const server = Bun.serve({
   port: 3000,
-  websocket,
+  websocket: ws.websocket,
   fetch(req, server) {
-    if (await handleUpgrade(req, server)) {
+    if (await ws.handleUpgrade(req, server)) {
       return;
     }
     return new Response(
@@ -33,7 +33,7 @@ const server = Bun.serve({
   },
 });
 
-setPublishingServer(server);
+ws.setPublishingServer(server);
 ```
 
 ## Adapter Hooks
