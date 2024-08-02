@@ -4,9 +4,9 @@ import { App } from "uWebSockets.js";
 import uwsAdapter from "../src/adapters/uws";
 import { createDemo, getIndexHTML } from "./_shared.ts";
 
-const adapter = createDemo(uwsAdapter);
+const ws = createDemo(uwsAdapter);
 
-const app = App().ws("/*", adapter.websocket);
+const app = App().ws("/*", ws.websocket);
 
 app.get("/*", async (res, req) => {
   let aborted = false;

@@ -12,14 +12,19 @@ To integrate CrossWS with your Node.js HTTP server, you need to connect the `upg
 import { createServer } from "node:http";
 import wsAdapter from "crossws/adapters/node";
 
+const ws = wsAdapter({
+  hooks: {
+    message: console.log,
+  },
+});
+
 const server = createServer((req, res) => {
   res.end(
     `<script>new WebSocket("ws://localhost:3000").addEventListener('open', (e) => e.target.send("Hello from client!"));</script>`,
   );
 }).listen(3000);
 
-const { handleUpgrade } = wsAdapter({ message: console.log });
-server.on("upgrade", handleUpgrade);
+server.on("upgrade", ws.handleUpgrade);
 ```
 
 ## Adapter Hooks
@@ -47,13 +52,13 @@ Instead of [using `ws`](/adapters/node-ws) you can use [uWebSockets.js](https://
 import { App } from "uWebSockets.js";
 import wsAdapter from "crossws/adapters/uws";
 
-const { websocket } = wsAdapter({
+const ws = wsAdapter({
   hooks: {
     message: console.log,
   },
 });
 
-const server = App().ws("/*", websocket);
+const server = App().ws("/*", ws.websocket);
 
 server.get("/*", (res, req) => {
   res.writeStatus("200 OK").writeHeader("Content-Type", "text/html");

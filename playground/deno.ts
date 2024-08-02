@@ -7,11 +7,11 @@ import type * as _Deno from "../types/lib.deno.d.ts";
 
 import { createDemo, getIndexHTML } from "./_shared.ts";
 
-const adapter = createDemo(denoAdapter);
+const ws = createDemo(denoAdapter);
 
 Deno.serve({ port: 3001 }, async (req, info) => {
   if (req.headers.get("upgrade") === "websocket") {
-    return adapter.handleUpgrade(req, info);
+    return ws.handleUpgrade(req, info);
   }
 
   return new Response(await getIndexHTML(), {
