@@ -51,11 +51,3 @@ export function createDemo<T extends Adapter<any, any>>(
     // resolve,
   });
 }
-
-function stringify(val) {
-  const str = val.toString();
-  if (str === "[object Object]") {
-    return val.constructor?.name || "??";
-  }
-  return str;
-}

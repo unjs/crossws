@@ -97,7 +97,7 @@ class CloudflarePeer extends Peer<{
   }
 
   get headers() {
-    return this.ctx.cloudflare.req.headers as Headers;
+    return this.ctx.cloudflare.req.headers as unknown as Headers;
   }
 
   get readyState() {

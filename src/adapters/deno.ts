@@ -100,6 +100,7 @@ class DenoPeer extends Peer<{
   }
 
   terminate(): void {
+    // @ts-ignore (terminate is Deno-only api)
     this.ctx.deno.ws.terminate();
   }
 }
