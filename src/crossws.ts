@@ -3,7 +3,7 @@ import type {
   AdapterOptions,
   Hooks,
   MaybePromise,
-} from "./types";
+} from "./types.ts";
 
 export class CrossWS {
   options: AdapterOptions;

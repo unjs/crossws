@@ -1,7 +1,7 @@
 // You can run this demo using `npm run play:node` in repo
 
 import { createServer } from "node:http";
-import nodeAdapter from "../src/adapters/node";
+import nodeAdapter from "../../src/adapters/node";
 import { createDemo, getIndexHTML } from "./_shared";
 
 const ws = createDemo(nodeAdapter);

@@ -2,12 +2,12 @@
 // https://deno.land/api?s=Deno.upgradeWebSocket
 // https://examples.deno.land/http-server-websocket
 
-import { Message } from "../message";
-import { WSError } from "../error";
-import { Peer } from "../peer";
-import { AdapterOptions, defineWebSocketAdapter } from "../types.js";
-import { CrossWS } from "../crossws";
-import { toBufferLike } from "../_utils";
+import { Message } from "../message.ts";
+import { WSError } from "../error.ts";
+import { Peer } from "../peer.ts";
+import { AdapterOptions, defineWebSocketAdapter } from "../types.ts";
+import { CrossWS } from "../crossws.ts";
+import { toBufferLike } from "../_utils.ts";
 
 export interface DenoAdapter {
   handleUpgrade(req: Request, info: ServeHandlerInfo): Promise<Response>;
