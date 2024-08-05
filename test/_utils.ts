@@ -66,7 +66,7 @@ export function wsTestsExec(cmd: string, pubsub = true) {
   let childProc: ExecaRes;
   let url: string;
   beforeAll(async () => {
-    const port = await getRandomPort();
+    const port = await getRandomPort("localhost");
     url = `ws://localhost:${port}/`;
     const [bin, ...args] = cmd
       .replace("$PORT", String(port))
