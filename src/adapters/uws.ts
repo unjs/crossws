@@ -136,19 +136,20 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
 
 class UWSReqProxy {
   private _headers?: Headers;
-  constructor(private _req: HttpRequest) {}
-  get url(): string {
-    return this._req.getUrl();
+  private _rawHeaders: [string, string][] = [];
+  url: string;
+  constructor(private _req: HttpRequest) {
+    this.url = _req.getUrl();
+    // eslint-disable-next-line unicorn/no-array-for-each
+    this._req.forEach((key, value) => {
+      this._rawHeaders.push([key, value]);
+    });
   }
   get headers(): Headers {
     if (!this._headers) {
-      const headers = (this._headers = new Headers());
-      // eslint-disable-next-line unicorn/no-array-for-each
-      this._req.forEach((key, value) => {
-        headers.append(key, value);
-      });
+      this._headers = new Headers(this._rawHeaders);
     }
-    return this.headers;
+    return this._headers;
   }
 }
 

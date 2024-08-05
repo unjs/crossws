@@ -21,6 +21,7 @@ type AugmentedReq = IncomingMessage & { _upgradeHeaders?: HeadersInit };
 
 export interface NodeAdapter {
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
+  closeAll: (code?: number, data?: string | Buffer) => void;
 }
 
 export interface NodeOptions extends AdapterOptions {
@@ -104,6 +105,11 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
           wss.emit("connection", ws, req);
         });
       },
+      closeAll: (code, data) => {
+        for (const client of wss.clients) {
+          client.close(code, data);
+        }
+      },
     };
   },
 );
@@ -118,7 +124,7 @@ class NodeReqProxy {
     if (!this._headers) {
       this._headers = new Headers(this._req.headers as HeadersInit);
     }
-    return this.headers;
+    return this._headers;
   }
 }
 

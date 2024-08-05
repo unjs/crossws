@@ -71,7 +71,7 @@ export default defineWebSocketAdapter<
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
-      const peer = peerFromDurableEvent(obj, server);
+      const peer = peerFromDurableEvent(obj, server, request);
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
       crossws.callAdapterHook("cloudflare:accept", peer);
       crossws.callHook("open", peer);
@@ -100,6 +100,7 @@ export default defineWebSocketAdapter<
 function peerFromDurableEvent(
   obj: DurableObject,
   ws: WebSocket | CF.WebSocket,
+  request?: Request | CF.Request,
 ): CloudflareDurablePeer {
   if ((ws as any)._crosswsPeer) {
     return (ws as any)._crosswsPeer;
@@ -107,6 +108,7 @@ function peerFromDurableEvent(
   return ((ws as any)._crosswsPeer = new CloudflareDurablePeer({
     cloudflare: {
       ws: ws as CF.WebSocket,
+      request,
       env: (obj as DurableObjectPub).env,
       context: (obj as DurableObjectPub).ctx,
     },
@@ -116,12 +118,17 @@ function peerFromDurableEvent(
 class CloudflareDurablePeer extends Peer<{
   cloudflare: {
     ws: CF.WebSocket & { _crossws?: CrosswsState };
+    request?: Request | CF.Request;
     env: unknown;
     context: DurableObject["ctx"];
   };
 }> {
   get url() {
     return this.ctx.cloudflare.ws.url || "";
+  }
+
+  get headers() {
+    return this.ctx.cloudflare.request?.headers as Headers;
   }
 
   get readyState() {

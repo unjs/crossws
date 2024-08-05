@@ -16,7 +16,7 @@ export interface BunOptions extends AdapterOptions {}
 
 type ContextData = {
   _peer?: Peer;
-  req?: Request;
+  request?: Request;
   server?: Server;
 };
 
@@ -30,7 +30,7 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
           return res;
         }
         const upgradeOK = server.upgrade(request, {
-          data: { request, server },
+          data: { request, server } satisfies ContextData,
           headers: res?.headers,
         });
         return upgradeOK
@@ -96,11 +96,11 @@ class BunPeer extends Peer<{
   }
 
   get url() {
-    return this.ctx.bun.ws.data.req?.url || "/";
+    return this.ctx.bun.ws.data.request?.url || "/";
   }
 
   get headers() {
-    return this.ctx.bun.ws.data.req?.headers || new Headers();
+    return this.ctx.bun.ws.data.request?.headers;
   }
 
   send(message: any, options?: { compress?: boolean }) {

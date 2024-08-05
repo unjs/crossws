@@ -1,14 +1,20 @@
+import type { OutgoingHttpHeaders } from "node:http";
 import { afterAll, beforeAll, afterEach } from "vitest";
 import { execa, ResultPromise as ExecaRes } from "execa";
 import { fileURLToPath } from "node:url";
 import { getRandomPort, waitForPort } from "get-port-please";
-import WebSocket from "../src/websocket/node";
+import { WebSocket } from "ws";
 import { wsTests } from "./tests";
 
 const fixtureDir = fileURLToPath(new URL("fixture", import.meta.url));
 
-export function wsConnect(url: string, initialSkip?: number) {
-  const ws = new WebSocket(url);
+export function wsConnect(
+  url: string,
+  opts?: { skip?: number; headers?: OutgoingHttpHeaders },
+) {
+  const ws = new WebSocket(url, { headers: opts?.headers });
+
+  const upgradeHeaders: Record<string, string> = Object.create(null);
 
   const send = async (data: any) => {
     ws.send(
@@ -19,7 +25,7 @@ export function wsConnect(url: string, initialSkip?: number) {
   const messages: unknown[] = [];
 
   const waitCallbacks: Record<string, (message: any) => void> = {};
-  let nextIndex = initialSkip || 0;
+  let nextIndex = opts?.skip || 0;
   const next = () => {
     const index = nextIndex++;
     if (index < messages.length) {
@@ -33,14 +39,18 @@ export function wsConnect(url: string, initialSkip?: number) {
     nextIndex += count;
   };
 
+  ws.once("upgrade", (req) => {
+    Object.assign(upgradeHeaders, req.headers);
+  });
+
   ws.on("message", (data: any) => {
     const str =
       typeof data === "string" ? data : new TextDecoder().decode(data);
-    const msg = str[0] === "{" ? JSON.parse(str).message : str;
-    messages.push(msg);
+    const payload = str[0] === "{" ? JSON.parse(str) : str;
+    messages.push(payload);
     const index = messages.length - 1;
     if (waitCallbacks[index]) {
-      waitCallbacks[index](msg);
+      waitCallbacks[index](payload);
       delete waitCallbacks[index];
     }
   });
@@ -48,9 +58,8 @@ export function wsConnect(url: string, initialSkip?: number) {
   const connectPromise = new Promise<void>((resolve) => ws.on("open", resolve));
 
   afterEach(() => {
+    ws.removeAllListeners();
     ws.close();
-    ws.removeAllListeners("open");
-    ws.removeAllListeners("message");
   });
 
   return connectPromise.then(() => ({
@@ -59,10 +68,11 @@ export function wsConnect(url: string, initialSkip?: number) {
     next,
     skip,
     messages,
+    upgradeHeaders,
   }));
 }
 
-export function wsTestsExec(cmd: string, pubsub = true) {
+export function wsTestsExec(cmd: string, opts?: Parameters<typeof wsTests>[1]) {
   let childProc: ExecaRes;
   let url: string;
   beforeAll(async () => {
@@ -81,11 +91,13 @@ export function wsTestsExec(cmd: string, pubsub = true) {
     childProc.stderr!.on("data", (chunk) => {
       console.log(chunk.toString());
     });
-    // childProc.stdout!.on('data', (chunk) => { console.log(chunk.toString()) })
+    // childProc.stdout!.on("data", (chunk) => {
+    //   console.log(chunk.toString());
+    // });
     await waitForPort(port, { host: "localhost", delay: 50, retries: 100 });
   });
   afterAll(async () => {
     await childProc.kill();
   });
-  wsTests(() => url, pubsub);
+  wsTests(() => url, opts);
 }
