@@ -10,5 +10,5 @@
     "noEmit": true,
     "types": ["node", "@cloudflare/workers-types"]
   },
-  "include": ["src", "playground"]
+  "include": ["src", "test"],
 }

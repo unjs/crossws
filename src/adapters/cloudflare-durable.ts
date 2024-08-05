@@ -115,14 +115,17 @@ export default defineWebSocketAdapter<
 function peerFromDurableEvent(
   obj: DurableObject,
   ws: WebSocket | CF.WebSocket,
-) {
-  return new CloudflareDurablePeer({
+): CloudflareDurablePeer {
+  if ((ws as any)._crosswsPeer) {
+    return (ws as any)._crosswsPeer;
+  }
+  return ((ws as any)._crosswsPeer = new CloudflareDurablePeer({
     cloudflare: {
       ws: ws as CF.WebSocket,
       env: (obj as DurableObjectPub).env,
       context: (obj as DurableObjectPub).ctx,
     },
-  });
+  }));
 }
 
 class CloudflareDurablePeer extends Peer<{
@@ -156,8 +159,9 @@ class CloudflareDurablePeer extends Peer<{
   }
 
   publish(topic: string, message: any): void {
-    const clients =
-      this.ctx.cloudflare.context.getWebSockets() as unknown as (typeof this.ctx.cloudflare.ws)[];
+    const clients = (
+      this.ctx.cloudflare.context.getWebSockets() as unknown as (typeof this.ctx.cloudflare.ws)[]
+    ).filter((c) => c !== this.ctx.cloudflare.ws);
     if (clients.length === 0) {
       return;
     }

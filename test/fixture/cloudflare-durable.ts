@@ -1,6 +1,6 @@
 // You can run this demo using `npm run play:cf-durable` in repo
 import { DurableObject } from "cloudflare:workers";
-import cloudflareAdapter from "../src/adapters/cloudflare-durable.ts";
+import cloudflareAdapter from "../../src/adapters/cloudflare-durable.ts";
 import { createDemo, getIndexHTML } from "./_shared.ts";
 
 const ws = createDemo(cloudflareAdapter);
