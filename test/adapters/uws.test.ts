@@ -40,5 +40,5 @@ describe("uws", () => {
     app.close();
   });
 
-  wsTests(() => url);
+  wsTests(() => url, {});
 });

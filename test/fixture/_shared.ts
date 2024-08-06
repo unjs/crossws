@@ -9,27 +9,44 @@ export function createDemo<T extends Adapter<any, any>>(
 ): ReturnType<T> {
   const hooks = defineHooks({
     open(peer) {
-      // console.log(`[ws] open ${peer}`);
-      peer.send({ user: "server", message: `Welcome to the server ${peer}!` });
-      peer.send(new TextEncoder().encode("(binary message works!)"));
+      peer.send(`Welcome to the server ${peer}!`);
       peer.subscribe("chat");
-      peer.publish("chat", { user: "server", message: `${peer} joined!` });
+      peer.publish("chat", `${peer} joined!`);
     },
     message(peer, message) {
-      // console.log(`[ws] message ${peer} ${message.text()}`);
-      if (message.text() === "ping") {
-        peer.send({ user: "server", message: "pong" });
-      } else {
-        const _message = {
-          user: peer.toString(),
-          message: message.text(),
-        };
-        peer.send(_message);
-        peer.publish("chat", _message);
+      const msgText = message.text();
+      switch (msgText) {
+        case "ping": {
+          peer.send("pong");
+          break;
+        }
+        case "binary": {
+          peer.send(new TextEncoder().encode("binary message works!"));
+          break;
+        }
+        case "debug": {
+          peer.send({
+            id: peer.id,
+            ip: peer.addr,
+            url: peer.url,
+            headers: Object.fromEntries(peer.headers || []),
+          });
+          break;
+        }
+        default: {
+          peer.send(msgText);
+          peer.publish("chat", msgText);
+        }
       }
     },
     upgrade(req) {
-      // console.log("[ws] upgrade", req.url);
+      if (req.url.endsWith("?unauthorized")) {
+        return new Response("unauthorized", {
+          status: 401,
+          statusText: "Unauthorized",
+          headers: { "x-error": "unauthorized" },
+        });
+      }
       return {
         headers: {
           "x-powered-by": "cross-ws",
@@ -37,17 +54,10 @@ export function createDemo<T extends Adapter<any, any>>(
         },
       };
     },
-    close(peer, details) {
-      // console.log(`[ws] close ${peer}`, details);
-    },
-    error(peer, error) {
-      // console.log(`[ws] error ${peer}`, error);
-    },
   });
 
   return adapter({
     ...options,
     hooks,
-    // resolve,
   });
 }

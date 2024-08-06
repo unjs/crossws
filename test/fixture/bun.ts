@@ -9,9 +9,9 @@ Bun.serve({
   port: process.env.PORT || 3001,
   hostname: "localhost",
   websocket: ws.websocket,
-  async fetch(req, server) {
-    if (await ws.handleUpgrade(req, server)) {
-      return;
+  async fetch(request, server) {
+    if (request.headers.get("upgrade") === "websocket") {
+      return ws.handleUpgrade(request, server);
     }
     return new Response(await getIndexHTML(), {
       headers: { "Content-Type": "text/html" },

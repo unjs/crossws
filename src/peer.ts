@@ -1,5 +1,3 @@
-import type { WSRequest } from "./types";
-
 // https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
 type ReadyState = 0 | 1 | 2 | 3;
 const ReadyStateMap = {
@@ -10,8 +8,8 @@ const ReadyStateMap = {
   3: "closed",
 } as const;
 
-export abstract class Peer<AdapterContext = any> implements WSRequest {
-  _subscriptions: Set<string> = new Set();
+export abstract class Peer<AdapterContext = any> {
+  _topics: Set<string> = new Set();
 
   static _idCounter = 0;
   private _id: string;
@@ -29,11 +27,11 @@ export abstract class Peer<AdapterContext = any> implements WSRequest {
   }
 
   get url(): string {
-    return "/";
+    return "";
   }
 
-  get headers(): HeadersInit {
-    return {};
+  get headers(): Headers | undefined {
+    return undefined;
   }
 
   get readyState(): ReadyState | -1 {
@@ -47,11 +45,11 @@ export abstract class Peer<AdapterContext = any> implements WSRequest {
   }
 
   subscribe(topic: string) {
-    this._subscriptions.add(topic);
+    this._topics.add(topic);
   }
 
   unsubscribe(topic: string) {
-    this._subscriptions.delete(topic);
+    this._topics.delete(topic);
   }
 
   toString() {

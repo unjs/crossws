@@ -2,18 +2,6 @@ import { WSError } from "./error.ts";
 import type { Message } from "./message.ts";
 import type { Peer } from "./peer.ts";
 
-// --- Utils ---
-
-type MaybePromise<T> = T | Promise<T>;
-
-export type Caller<
-  T extends Record<string, (...args: any[]) => Promise<any>>,
-  RT = null,
-> = <K extends keyof T>(
-  key: K,
-  ...args: Parameters<T[K]>
-) => RT extends null ? Promise<ReturnType<T[K]>> : RT;
-
 // --- Adapter ---
 
 export interface AdapterOptions {
@@ -33,21 +21,6 @@ export function defineWebSocketAdapter<
   return factory;
 }
 
-// --- CrossWS ---
-
-export interface CrossWS {
-  $callHook: Caller<AdapterHooks>;
-  callHook: Caller<Exclude<Hooks, "upgrade">, void>;
-  upgrade: (req: WSRequest) => Promise<{ headers?: HeadersInit }>;
-}
-
-// --- Request ---
-
-export interface WSRequest {
-  readonly url: string;
-  readonly headers: HeadersInit;
-}
-
 // --- Hooks ---
 
 export function defineHooks<T extends Partial<Hooks> = Partial<Hooks>>(
@@ -57,17 +30,26 @@ export function defineHooks<T extends Partial<Hooks> = Partial<Hooks>>(
 }
 
 export type ResolveHooks = (
-  info: WSRequest | Peer,
+  info: RequestInit | Peer,
 ) => Partial<Hooks> | Promise<Partial<Hooks>>;
+
+export type MaybePromise<T> = T | Promise<T>;
 
 type HookFn<ArgsT extends any[] = any, RT = void> = (
   info: Peer,
   ...args: ArgsT
 ) => MaybePromise<RT>;
 
-export interface Hooks extends Record<string, HookFn<any[], any>> {
+export interface Hooks {
   /** Upgrading */
-  upgrade: (req: WSRequest) => MaybePromise<void | { headers?: HeadersInit }>;
+  upgrade: (
+    request:
+      | Request
+      | {
+          url: string;
+          headers: Headers;
+        },
+  ) => MaybePromise<Response | ResponseInit | void>;
 
   /** A message is received */
   message: (peer: Peer, message: Message) => MaybePromise<void>;

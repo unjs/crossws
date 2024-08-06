@@ -14,11 +14,14 @@ import { Peer } from "../peer";
 import { Message } from "../message";
 import { WSError } from "../error";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
-import { createCrossWS } from "../crossws";
+import { CrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
+
+type AugmentedReq = IncomingMessage & { _upgradeHeaders?: HeadersInit };
 
 export interface NodeAdapter {
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
+  closeAll: (code?: number, data?: string | Buffer) => void;
 }
 
 export interface NodeOptions extends AdapterOptions {
@@ -28,7 +31,7 @@ export interface NodeOptions extends AdapterOptions {
 
 export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
   (options = {}) => {
-    const crossws = createCrossWS(options);
+    const crossws = new CrossWS(options);
 
     const wss: WebSocketServer =
       options.wss ||
@@ -43,50 +46,49 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
 
       // Managed socket-level events
       ws.on("message", (data: RawData, isBinary: boolean) => {
-        crossws.$callHook("node:message", peer, data, isBinary);
+        crossws.callAdapterHook("node:message", peer, data, isBinary);
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
         crossws.callHook("message", peer, new Message(data, isBinary));
       });
       ws.on("error", (error: Error) => {
-        crossws.$callHook("node:error", peer, error);
+        crossws.callAdapterHook("node:error", peer, error);
         crossws.callHook("error", peer, new WSError(error));
       });
       ws.on("close", (code: number, reason: Buffer) => {
-        crossws.$callHook("node:close", peer, code, reason);
+        crossws.callAdapterHook("node:close", peer, code, reason);
         crossws.callHook("close", peer, {
           code,
           reason: reason?.toString(),
         });
       });
       ws.on("open", () => {
-        crossws.$callHook("node:open", peer);
+        crossws.callAdapterHook("node:open", peer);
       });
 
       // Unmanaged socket-level events
       ws.on("ping", (data: Buffer) => {
-        crossws.$callHook("node:ping", peer, data);
+        crossws.callAdapterHook("node:ping", peer, data);
       });
       ws.on("pong", (data: Buffer) => {
-        crossws.$callHook("node:pong", peer, data);
+        crossws.callAdapterHook("node:pong", peer, data);
       });
       ws.on(
         "unexpected-response",
         (req: ClientRequest, res: IncomingMessage) => {
-          crossws.$callHook("node:unexpected-response", peer, req, res);
+          crossws.callAdapterHook("node:unexpected-response", peer, req, res);
         },
       );
       ws.on("upgrade", (req: IncomingMessage) => {
-        crossws.$callHook("node:upgrade", peer, req);
+        crossws.callAdapterHook("node:upgrade", peer, req);
       });
     });
 
     wss.on("headers", function (outgoingHeaders, req) {
-      const upgradeHeaders = (req as any)._upgradeHeaders as HeadersInit;
+      const upgradeHeaders = (req as AugmentedReq)._upgradeHeaders;
       if (upgradeHeaders) {
-        const _headers = new Headers(upgradeHeaders);
-        for (const [key, value] of _headers) {
+        for (const [key, value] of new Headers(upgradeHeaders)) {
           outgoingHeaders.push(`${key}: ${value}`);
         }
       }
@@ -94,18 +96,71 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
 
     return {
       handleUpgrade: async (req, socket, head) => {
-        const { headers } = await crossws.upgrade({
-          url: req.url || "",
-          headers: req.headers as HeadersInit,
-        });
-        (req as any)._upgradeHeaders = headers;
+        const res = await crossws.callHook("upgrade", new NodeReqProxy(req));
+        if (res instanceof Response) {
+          return sendResponse(socket, res);
+        }
+        (req as AugmentedReq)._upgradeHeaders = res?.headers;
         wss.handleUpgrade(req, socket, head, (ws) => {
           wss.emit("connection", ws, req);
         });
       },
+      closeAll: (code, data) => {
+        for (const client of wss.clients) {
+          client.close(code, data);
+        }
+      },
     };
   },
 );
+
+class NodeReqProxy {
+  _req: IncomingMessage;
+  _headers?: Headers;
+  _url?: string;
+
+  constructor(req: IncomingMessage) {
+    this._req = req;
+  }
+
+  get url(): string {
+    if (!this._url) {
+      const req = this._req;
+      const host = req.headers["host"] || "localhost";
+      const isSecure =
+        (req.socket as any)?.encrypted ??
+        req.headers["x-forwarded-proto"] === "https";
+      this._url = `${isSecure ? "https" : "http"}://${host}${req.url}`;
+    }
+    return this._url;
+  }
+
+  get headers(): Headers {
+    if (!this._headers) {
+      this._headers = new Headers(this._req.headers as HeadersInit);
+    }
+    return this._headers;
+  }
+}
+
+async function sendResponse(socket: Duplex, res: Response) {
+  const head = [
+    `HTTP/1.1 ${res.status || 200} ${res.statusText || ""}`,
+    ...[...res.headers.entries()].map(
+      ([key, value]) =>
+        `${encodeURIComponent(key)}: ${encodeURIComponent(value)}`,
+    ),
+  ];
+  socket.write(head.join("\r\n") + "\r\n\r\n");
+  if (res.body) {
+    for await (const chunk of res.body) {
+      socket.write(chunk);
+    }
+  }
+  return new Promise<void>((resolve) => {
+    socket.end(resolve);
+  });
+}
 
 class NodePeer extends Peer<{
   node: {
@@ -114,8 +169,10 @@ class NodePeer extends Peer<{
     ws: WebSocketT & { _peer?: NodePeer };
   };
 }> {
+  _req: NodeReqProxy;
   constructor(ctx: NodePeer["ctx"]) {
     super(ctx);
+    this._req = new NodeReqProxy(ctx.node.req);
     ctx.node.ws._peer = this;
   }
 
@@ -134,11 +191,11 @@ class NodePeer extends Peer<{
   }
 
   get url() {
-    return this.ctx.node.req.url || "/";
+    return this._req.url;
   }
 
   get headers() {
-    return this.ctx.node.req.headers as HeadersInit;
+    return this._req.headers;
   }
 
   get readyState() {
@@ -166,7 +223,7 @@ class NodePeer extends Peer<{
     };
     for (const client of this.ctx.node.server.clients) {
       const peer = (client as WebSocketT & { _peer?: NodePeer })._peer;
-      if (peer && peer !== this && peer._subscriptions.has(topic)) {
+      if (peer && peer !== this && peer._topics.has(topic)) {
         peer.ctx.node.ws.send(data, sendOptions);
       }
     }

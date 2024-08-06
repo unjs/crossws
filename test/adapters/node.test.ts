@@ -8,9 +8,10 @@ import { wsTests } from "../tests";
 describe("node", () => {
   let server: Server;
   let url: string;
+  let ws: ReturnType<typeof createDemo<typeof nodeAdapter>>;
 
   beforeAll(async () => {
-    const ws = createDemo(nodeAdapter);
+    ws = createDemo(nodeAdapter);
     server = createServer((_req, res) => {
       res.end("ok");
     });
@@ -21,9 +22,10 @@ describe("node", () => {
     await waitForPort(port);
   });
 
-  afterAll(() => {
-    server.close();
+  afterAll(async () => {
+    ws.closeAll();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  wsTests(() => url);
+  wsTests(() => url, {});
 });

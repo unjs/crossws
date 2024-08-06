@@ -6,10 +6,8 @@ import { Peer } from "../peer";
 import { AdapterOptions, defineWebSocketAdapter } from "../types.js";
 import { Message } from "../message";
 import { WSError } from "../error";
-import { createCrossWS } from "../crossws";
+import { CrossWS } from "../crossws";
 import { toBufferLike } from "../_utils";
-
-type Env = Record<string, any>;
 
 declare const WebSocketPair: typeof _cf.WebSocketPair;
 declare const Response: typeof _cf.Response;
@@ -17,7 +15,7 @@ declare const Response: typeof _cf.Response;
 export interface CloudflareAdapter {
   handleUpgrade(
     req: _cf.Request,
-    env: Env,
+    env: unknown,
     context: _cf.ExecutionContext,
   ): Promise<_cf.Response>;
 }
@@ -26,55 +24,44 @@ export interface CloudflareOptions extends AdapterOptions {}
 
 export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
   (options = {}) => {
-    const crossws = createCrossWS(options);
-
-    const handleUpgrade = async (
-      req: _cf.Request,
-      env: Env,
-      context: _cf.ExecutionContext,
-    ) => {
-      const pair = new WebSocketPair();
-      const client = pair[0];
-      const server = pair[1];
-
-      const peer = new CloudflarePeer({
-        cloudflare: { client, server, req, env, context },
-      });
-
-      const { headers } = await crossws.upgrade(peer);
-
-      server.accept();
-      crossws.$callHook("cloudflare:accept", peer);
-      crossws.callHook("open", peer);
-
-      server.addEventListener("message", (event) => {
-        crossws.$callHook("cloudflare:message", peer, event);
-        crossws.callHook("message", peer, new Message(event.data));
-      });
-
-      server.addEventListener("error", (event) => {
-        crossws.$callHook("cloudflare:error", peer, event);
-        crossws.callHook("error", peer, new WSError(event.error));
-      });
-
-      server.addEventListener("close", (event) => {
-        crossws.$callHook("cloudflare:close", peer, event);
-        crossws.callHook("close", peer, {
-          code: event.code,
-          reason: event.reason,
-        });
-      });
-
-      // eslint-disable-next-line unicorn/no-null
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-        headers,
-      });
-    };
-
+    const crossws = new CrossWS(options);
     return {
-      handleUpgrade,
+      handleUpgrade: async (request, env, context) => {
+        const res = await crossws.callHook(
+          "upgrade",
+          request as unknown as Request,
+        );
+        if (res instanceof Response) {
+          return res;
+        }
+        const pair = new WebSocketPair();
+        const client = pair[0];
+        const server = pair[1];
+        const peer = new CloudflarePeer({
+          cloudflare: { client, server, request, env, context },
+        });
+        server.accept();
+        crossws.callAdapterHook("cloudflare:accept", peer);
+        crossws.callHook("open", peer);
+        server.addEventListener("message", (event) => {
+          crossws.callAdapterHook("cloudflare:message", peer, event);
+          crossws.callHook("message", peer, new Message(event.data));
+        });
+        server.addEventListener("error", (event) => {
+          crossws.callAdapterHook("cloudflare:error", peer, event);
+          crossws.callHook("error", peer, new WSError(event.error));
+        });
+        server.addEventListener("close", (event) => {
+          crossws.callAdapterHook("cloudflare:close", peer, event);
+          crossws.callHook("close", peer, event);
+        });
+        // eslint-disable-next-line unicorn/no-null
+        return new Response(null, {
+          status: 101,
+          webSocket: client,
+          headers: res?.headers,
+        });
+      },
     };
   },
 );
@@ -83,8 +70,8 @@ class CloudflarePeer extends Peer<{
   cloudflare: {
     client: _cf.WebSocket;
     server: _cf.WebSocket;
-    req: _cf.Request;
-    env: Env;
+    request: _cf.Request;
+    env: unknown;
     context: _cf.ExecutionContext;
   };
 }> {
@@ -93,11 +80,11 @@ class CloudflarePeer extends Peer<{
   }
 
   get url() {
-    return this.ctx.cloudflare.req.url;
+    return this.ctx.cloudflare.request.url;
   }
 
   get headers() {
-    return this.ctx.cloudflare.req.headers as unknown as Headers;
+    return this.ctx.cloudflare.request.headers as unknown as Headers;
   }
 
   get readyState() {
@@ -113,9 +100,6 @@ class CloudflarePeer extends Peer<{
     this.ctx.cloudflare.client.close(code, reason);
   }
 
-  /**
-   * Cloudflare WebSockets do not support termination. This calls the `close()` method.
-   */
   terminate(): void {
     this.close();
   }
