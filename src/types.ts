@@ -4,7 +4,9 @@ import type { Peer } from "./peer.ts";
 
 // --- Adapter ---
 
-export interface CrossWSAdapter {}
+export interface AdapterInstance {
+  readonly peers: Set<Peer>;
+}
 
 export interface AdapterOptions {
   resolve?: ResolveHooks;
@@ -13,12 +15,12 @@ export interface AdapterOptions {
 }
 
 export type Adapter<
-  AdapterT extends CrossWSAdapter = CrossWSAdapter,
+  AdapterT extends AdapterInstance = AdapterInstance,
   Options extends AdapterOptions = AdapterOptions,
 > = (options?: Options) => AdapterT;
 
 export function defineWebSocketAdapter<
-  AdapterT extends CrossWSAdapter = CrossWSAdapter,
+  AdapterT extends AdapterInstance = AdapterInstance,
   Options extends AdapterOptions = AdapterOptions,
 >(factory: Adapter<AdapterT, Options>) {
   return factory;

@@ -1,7 +1,7 @@
 // You can run this demo using `bun --bun ./bun.ts` or `npm run play:bun` in repo
 
 import bunAdapter from "../../src/adapters/bun";
-import { createDemo, getIndexHTML } from "./_shared";
+import { createDemo, getIndexHTML, handleDemoRoutes } from "./_shared";
 
 const ws = createDemo(bunAdapter);
 
@@ -10,6 +10,10 @@ Bun.serve({
   hostname: "localhost",
   websocket: ws.websocket,
   async fetch(request, server) {
+    const response = handleDemoRoutes(ws, request);
+    if (response) {
+      return response;
+    }
     if (request.headers.get("upgrade") === "websocket") {
       return ws.handleUpgrade(request, server);
     }

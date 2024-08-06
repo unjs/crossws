@@ -5,11 +5,15 @@
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
-import { AdapterOptions, defineWebSocketAdapter } from "../types.ts";
+import {
+  AdapterOptions,
+  AdapterInstance,
+  defineWebSocketAdapter,
+} from "../types.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { toBufferLike } from "../_utils.ts";
 
-export interface DenoAdapter {
+export interface DenoAdapter extends AdapterInstance {
   handleUpgrade(req: Request, info: ServeHandlerInfo): Promise<Response>;
 }
 
@@ -22,15 +26,12 @@ declare global {
 type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
 type ServeHandlerInfo = unknown; // TODO
 
-type DenoWSSharedState = {
-  peers: Set<DenoPeer>;
-};
-
 export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
-    const sharedState: DenoWSSharedState = { peers: new Set() };
+    const peers = new Set<DenoPeer>();
     return {
+      peers,
       handleUpgrade: async (request, info) => {
         const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {
@@ -41,9 +42,10 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
           headers: res?.headers,
         });
         const peer = new DenoPeer({
-          deno: { ws: upgrade.socket, request, info, sharedState },
+          peers,
+          deno: { ws: upgrade.socket, request, info },
         });
-        sharedState.peers.add(peer);
+        peers.add(peer);
         upgrade.socket.addEventListener("open", () => {
           hooks.callAdapterHook("deno:open", peer);
           hooks.callHook("open", peer);
@@ -53,12 +55,12 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
           hooks.callHook("message", peer, new Message(event.data));
         });
         upgrade.socket.addEventListener("close", () => {
-          sharedState.peers.delete(peer);
+          peers.delete(peer);
           hooks.callAdapterHook("deno:close", peer);
           hooks.callHook("close", peer, {});
         });
         upgrade.socket.addEventListener("error", (error) => {
-          sharedState.peers.delete(peer);
+          peers.delete(peer);
           hooks.callAdapterHook("deno:error", peer, error);
           hooks.callHook("error", peer, new WSError(error));
         });
@@ -69,11 +71,11 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
 );
 
 class DenoPeer extends Peer<{
+  peers: Set<DenoPeer>;
   deno: {
     ws: WebSocketUpgrade["socket"];
     request: Request;
     info: ServeHandlerInfo;
-    sharedState: DenoWSSharedState;
   };
 }> {
   get addr() {
@@ -98,11 +100,11 @@ class DenoPeer extends Peer<{
     return 0;
   }
 
-  publish(topic: string, message: any): void {
+  publish(topic: string, message: any) {
     const data = toBufferLike(message);
-    for (const peer of this._internal.deno.sharedState.peers) {
+    for (const peer of this._internal.peers) {
       if (peer !== this && peer._topics.has(topic)) {
-        peer.send(data);
+        peer._internal.deno.ws.send(data);
       }
     }
   }

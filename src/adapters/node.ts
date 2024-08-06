@@ -13,13 +13,17 @@ import type {
 import { Peer } from "../peer";
 import { Message } from "../message";
 import { WSError } from "../error";
-import { AdapterOptions, defineWebSocketAdapter } from "../types";
+import {
+  AdapterOptions,
+  AdapterInstance,
+  defineWebSocketAdapter,
+} from "../types";
 import { AdapterHookable } from "../hooks";
 import { toBufferLike } from "../_utils";
 
 type AugmentedReq = IncomingMessage & { _upgradeHeaders?: HeadersInit };
 
-export interface NodeAdapter {
+export interface NodeAdapter extends AdapterInstance {
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
   closeAll: (code?: number, data?: string | Buffer) => void;
 }
@@ -32,6 +36,7 @@ export interface NodeOptions extends AdapterOptions {
 export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
+    const peers = new Set<NodePeer>();
 
     const wss: WebSocketServer =
       options.wss ||
@@ -41,7 +46,8 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       }) as WebSocketServer);
 
     wss.on("connection", (ws, req) => {
-      const peer = new NodePeer({ node: { ws, req, server: wss } });
+      const peer = new NodePeer({ peers, node: { ws, req, server: wss } });
+      peers.add(peer);
       hooks.callHook("open", peer);
 
       // Managed socket-level events
@@ -53,10 +59,12 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
         hooks.callHook("message", peer, new Message(data, isBinary));
       });
       ws.on("error", (error: Error) => {
+        peers.delete(peer);
         hooks.callAdapterHook("node:error", peer, error);
         hooks.callHook("error", peer, new WSError(error));
       });
       ws.on("close", (code: number, reason: Buffer) => {
+        peers.delete(peer);
         hooks.callAdapterHook("node:close", peer, code, reason);
         hooks.callHook("close", peer, {
           code,
@@ -95,6 +103,9 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
     });
 
     return {
+      get peers() {
+        return peers;
+      },
       handleUpgrade: async (req, socket, head) => {
         const res = await hooks.callHook("upgrade", new NodeReqProxy(req));
         if (res instanceof Response) {
@@ -163,6 +174,7 @@ async function sendResponse(socket: Duplex, res: Response) {
 }
 
 class NodePeer extends Peer<{
+  peers: Set<NodePeer>;
   node: {
     server: WebSocketServer;
     req: IncomingMessage;
@@ -221,9 +233,8 @@ class NodePeer extends Peer<{
       binary: isBinary,
       ...options,
     };
-    for (const client of this._internal.node.server.clients) {
-      const peer = (client as WebSocketT & { _peer?: NodePeer })._peer;
-      if (peer && peer !== this && peer._topics.has(topic)) {
+    for (const peer of this._internal.peers) {
+      if (peer !== this && peer._topics.has(topic)) {
         peer._internal.node.ws.send(data, sendOptions);
       }
     }

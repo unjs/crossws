@@ -19,14 +19,19 @@ describe("uws", () => {
       res.onAborted(() => {
         aborted = true;
       });
-      const html = "OK";
+
+      let resBody = "OK";
+      const url = req.getUrl();
+      if (url === "/peers") {
+        resBody = JSON.stringify({ peers: [...ws.peers].map((p) => p.id) });
+      }
+
       if (aborted) {
         return;
       }
       res.cork(() => {
         res.writeStatus("200 OK");
-        res.writeHeader("Content-Type", "text/html");
-        res.end(html);
+        res.end(resBody);
       });
     });
 

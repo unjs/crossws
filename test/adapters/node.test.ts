@@ -12,7 +12,14 @@ describe("node", () => {
 
   beforeAll(async () => {
     ws = createDemo(nodeAdapter);
-    server = createServer((_req, res) => {
+    server = createServer((req, res) => {
+      if (req.url === "/peers") {
+        return res.end(
+          JSON.stringify({
+            peers: [...ws.peers].map((p) => p.id),
+          }),
+        );
+      }
       res.end("ok");
     });
     server.on("upgrade", ws.handleUpgrade);

@@ -10,7 +10,11 @@ import type {
 } from "uWebSockets.js";
 import { Peer } from "../peer";
 import { Message } from "../message";
-import { AdapterOptions, defineWebSocketAdapter } from "../types";
+import {
+  AdapterOptions,
+  AdapterInstance,
+  defineWebSocketAdapter,
+} from "../types";
 import { AdapterHookable } from "../hooks";
 import { toBufferLike } from "../_utils";
 
@@ -23,7 +27,7 @@ type UserData = {
 
 type WebSocketHandler = WebSocketBehavior<UserData>;
 
-export interface UWSAdapter {
+export interface UWSAdapter extends AdapterInstance {
   websocket: WebSocketHandler;
 }
 
@@ -44,11 +48,14 @@ export interface UWSOptions extends AdapterOptions {
 export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
+    const peers = new Set<UWSPeer>();
     return {
+      peers,
       websocket: {
         ...options.uws,
         close(ws, code, message) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
+          peers.delete(peer);
           hooks.callAdapterHook("uws:close", peer, ws, code, message);
           hooks.callHook("close", peer, {
             code,
@@ -56,30 +63,31 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           });
         },
         drain(ws) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook("uws:drain", peer, ws);
         },
         message(ws, message, isBinary) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook("uws:message", peer, ws, message, isBinary);
           const msg = new Message(message, isBinary);
           hooks.callHook("message", peer, msg);
         },
         open(ws) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
+          peers.add(peer);
           hooks.callAdapterHook("uws:open", peer, ws);
           hooks.callHook("open", peer);
         },
         ping(ws, message) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook("uws:ping", peer, ws, message);
         },
         pong(ws, message) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook("uws:pong", peer, ws, message);
         },
         subscription(ws, topic, newCount, oldCount) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook(
             "uws:subscription",
             peer,
@@ -146,14 +154,14 @@ class UWSReqProxy {
   private _rawHeaders: [string, string][] = [];
   url: string;
 
-  constructor(private _req: HttpRequest) {
+  constructor(_req: HttpRequest) {
     // We need to precompute values since uws doesn't provide them after handler.
 
     // Headers
     let host = "localhost";
     let proto = "http";
     // eslint-disable-next-line unicorn/no-array-for-each
-    this._req.forEach((key, value) => {
+    _req.forEach((key, value) => {
       if (key === "host") {
         host = value;
       } else if (key === "x-forwarded-proto" && value === "https") {
@@ -176,17 +184,18 @@ class UWSReqProxy {
   }
 }
 
-function getPeer(ws: WebSocket<UserData>) {
+function getPeer(ws: WebSocket<UserData>, peers: Set<UWSPeer>): UWSPeer {
   const userData = ws.getUserData();
   if (userData._peer) {
-    return userData._peer as Peer;
+    return userData._peer as UWSPeer;
   }
-  const peer = new UWSPeer({ uws: { ws, userData } });
+  const peer = new UWSPeer({ peers, uws: { ws, userData } });
   userData._peer = peer;
   return peer;
 }
 
 class UWSPeer extends Peer<{
+  peers: Set<UWSPeer>;
   uws: {
     ws: WebSocket<UserData>;
     userData: UserData;
