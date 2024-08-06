@@ -177,7 +177,22 @@ class CloudflareDurablePeer extends Peer<{
   get peers() {
     const clients =
       this._internal.cloudflare.context.getWebSockets() as unknown as (typeof this._internal.cloudflare.ws)[];
-    return new Set(clients.map((c) => c._crosswsPeer!));
+    return new Set(
+      clients.map((client) => {
+        let peer = client._crosswsPeer;
+        if (!peer) {
+          peer = client._crosswsPeer = new CloudflareDurablePeer({
+            cloudflare: {
+              ws: client,
+              request: undefined,
+              env: this._internal.cloudflare.env,
+              context: this._internal.cloudflare.context,
+            },
+          });
+        }
+        return peer;
+      }),
+    );
   }
 
   publish(topic: string, message: any): void {
