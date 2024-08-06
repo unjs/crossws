@@ -2,7 +2,11 @@
 
 import type * as CF from "@cloudflare/workers-types";
 import type { DurableObject } from "cloudflare:workers";
-import { AdapterOptions, defineWebSocketAdapter } from "../types";
+import {
+  AdapterOptions,
+  AdapterInstance,
+  defineWebSocketAdapter,
+} from "../types";
 import { Peer } from "../peer";
 import { Message } from "../message";
 import { AdapterHookable } from "../hooks";
@@ -22,7 +26,7 @@ type CrosswsState = {
   topics?: Set<string>;
 };
 
-export interface CloudflareDurableAdapter {
+export interface CloudflareDurableAdapter extends AdapterInstance {
   handleUpgrade(
     req: Request | CF.Request,
     env: unknown,
@@ -59,7 +63,9 @@ export default defineWebSocketAdapter<
   CloudflareOptions
 >((opts) => {
   const hooks = new AdapterHookable(opts);
+  const peers = new Set<CloudflareDurablePeer>();
   return {
+    peers,
     handleUpgrade: async (req, env, _context) => {
       const bindingName = opts?.bindingName ?? "$DurableObject";
       const instanceName = opts?.instanceName ?? "crossws";
@@ -81,6 +87,7 @@ export default defineWebSocketAdapter<
         server as unknown as CF.WebSocket,
         request,
       );
+      peers.add(peer);
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
       hooks.callAdapterHook("cloudflare:accept", peer);
       hooks.callHook("open", peer);
@@ -98,10 +105,10 @@ export default defineWebSocketAdapter<
     },
     handleDurableClose: async (obj, ws, code, reason, wasClean) => {
       const peer = peerFromDurableEvent(obj, ws as CF.WebSocket);
+      peers.delete(peer);
       const details = { code, reason, wasClean };
       hooks.callAdapterHook("cloudflare:close", peer, details);
       hooks.callHook("close", peer, details);
-      ws.close(code, reason);
     },
   };
 });
@@ -127,6 +134,7 @@ function peerFromDurableEvent(
 }
 
 class CloudflareDurablePeer extends Peer<{
+  peers?: never;
   cloudflare: {
     ws: AugmentedWebSocket;
     request?: Request | CF.Request;
@@ -164,6 +172,27 @@ class CloudflareDurablePeer extends Peer<{
     };
     this._internal.cloudflare.ws._crosswsState = state;
     this._internal.cloudflare.ws.serializeAttachment(state);
+  }
+
+  get peers() {
+    const clients =
+      this._internal.cloudflare.context.getWebSockets() as unknown as (typeof this._internal.cloudflare.ws)[];
+    return new Set(
+      clients.map((client) => {
+        let peer = client._crosswsPeer;
+        if (!peer) {
+          peer = client._crosswsPeer = new CloudflareDurablePeer({
+            cloudflare: {
+              ws: client,
+              request: undefined,
+              env: this._internal.cloudflare.env,
+              context: this._internal.cloudflare.context,
+            },
+          });
+        }
+        return peer;
+      }),
+    );
   }
 
   publish(topic: string, message: any): void {

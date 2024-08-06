@@ -88,4 +88,26 @@ export function wsTests(
       },
     });
   });
+
+  test("get peers from adapter", async () => {
+    await wsConnect(getURL());
+    await wsConnect(getURL());
+    const response = await fetch(getURL().replace("ws", "http") + "peers");
+    const { peers } = (await response.json()) as any;
+    expect(peers.length).toBe(2);
+  });
+
+  test("get peers from peer", async () => {
+    const ws1 = await wsConnect(getURL(), { skip: 1 });
+    const ws2 = await wsConnect(getURL(), { skip: 1 });
+    if (opts.pubsub !== false) {
+      ws1.skip(); // join message for ws2
+    }
+    await ws1.send("peers");
+    await ws2.send("peers");
+    const { peers: peers1 } = await ws1.next();
+    const { peers: peers2 } = await ws2.next();
+    expect(peers1.length).toBe(2);
+    expect(peers1).toMatchObject(peers2);
+  });
 }

@@ -8,17 +8,21 @@ const ReadyStateMap = {
   3: "closed",
 } as const;
 
-export abstract class Peer<AdapterContext = any> {
-  protected _internal: AdapterContext;
+export interface AdapterInternal {
+  peers?: Set<Peer>;
+}
+
+export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
+  protected _internal: Internal;
   protected _topics: Set<string>;
 
   private static _idCounter = 0;
   private _id: string;
 
-  constructor(_internalCtx: AdapterContext) {
+  constructor(internal: Internal) {
     this._id = ++Peer._idCounter + "";
     this._topics = new Set();
-    this._internal = _internalCtx;
+    this._internal = internal;
   }
 
   get id(): string {
@@ -41,11 +45,17 @@ export abstract class Peer<AdapterContext = any> {
     return -1;
   }
 
+  get peers(): Set<Peer> {
+    return this._internal.peers || new Set();
+  }
+
   abstract send(message: any, options?: { compress?: boolean }): number;
 
-  publish(topic: string, message: any, options?: { compress?: boolean }) {
-    // noop
-  }
+  abstract publish(
+    topic: string,
+    message: any,
+    options?: { compress?: boolean },
+  ): void;
 
   subscribe(topic: string) {
     this._topics.add(topic);

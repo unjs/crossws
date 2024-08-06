@@ -8,15 +8,24 @@ import { wsTests } from "./tests";
 
 const fixtureDir = fileURLToPath(new URL("fixture", import.meta.url));
 
+const websockets = new Set<WebSocket>();
+afterEach(() => {
+  for (const ws of websockets) {
+    ws.close();
+  }
+  websockets.clear();
+});
+
 export function wsConnect(
   url: string,
   opts?: { skip?: number; headers?: OutgoingHttpHeaders },
 ) {
   const ws = new WebSocket(url, { headers: opts?.headers });
+  websockets.add(ws);
 
   const upgradeHeaders: Record<string, string> = Object.create(null);
 
-  const send = async (data: any) => {
+  const send = async (data: any): Promise<any> => {
     ws.send(
       typeof data === "string" ? data : JSON.stringify({ message: data }),
     );
@@ -53,11 +62,6 @@ export function wsConnect(
       waitCallbacks[index](payload);
       delete waitCallbacks[index];
     }
-  });
-
-  afterEach(() => {
-    ws.removeAllListeners();
-    ws.close();
   });
 
   const res = {

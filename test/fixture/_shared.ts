@@ -1,4 +1,4 @@
-import { ResolveHooks, Adapter, defineHooks } from "../../src/index.ts";
+import { Adapter, AdapterInstance, defineHooks } from "../../src/index.ts";
 
 export const getIndexHTML = () =>
   import("./_index.html.ts").then((r) => r.default);
@@ -33,6 +33,12 @@ export function createDemo<T extends Adapter<any, any>>(
           });
           break;
         }
+        case "peers": {
+          peer.send({
+            peers: [...peer.peers].map((p) => p.id),
+          });
+          break;
+        }
         default: {
           peer.send(msgText);
           peer.publish("chat", msgText);
@@ -60,4 +66,18 @@ export function createDemo<T extends Adapter<any, any>>(
     ...options,
     hooks,
   });
+}
+
+export function handleDemoRoutes(
+  ws: AdapterInstance,
+  request: Request,
+): Response | undefined {
+  const url = new URL(request.url);
+  if (url.pathname === "/peers") {
+    return new Response(
+      JSON.stringify({
+        peers: [...ws.peers].map((p) => p.id),
+      }),
+    );
+  }
 }

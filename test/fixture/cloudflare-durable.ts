@@ -1,7 +1,7 @@
 // You can run this demo using `npm run play:cf-durable` in repo
 import { DurableObject } from "cloudflare:workers";
 import cloudflareAdapter from "../../src/adapters/cloudflare-durable.ts";
-import { createDemo, getIndexHTML } from "./_shared.ts";
+import { createDemo, getIndexHTML, handleDemoRoutes } from "./_shared.ts";
 
 const ws = createDemo(cloudflareAdapter);
 
@@ -11,6 +11,11 @@ export default {
     env: Record<string, any>,
     context: ExecutionContext,
   ): Promise<Response> {
+    const response = handleDemoRoutes(ws, request);
+    if (response) {
+      return response;
+    }
+
     if (request.headers.get("upgrade") === "websocket") {
       return ws.handleUpgrade(request, env, context);
     }

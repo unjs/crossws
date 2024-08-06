@@ -3,11 +3,15 @@
 import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 import { Message } from "../message";
 import { Peer } from "../peer";
-import { AdapterOptions, defineWebSocketAdapter } from "../types";
+import {
+  AdapterOptions,
+  AdapterInstance,
+  defineWebSocketAdapter,
+} from "../types";
 import { AdapterHookable } from "../hooks";
 import { toBufferLike } from "../_utils";
 
-export interface BunAdapter {
+export interface BunAdapter extends AdapterInstance {
   websocket: WebSocketHandler<ContextData>;
   handleUpgrade(req: Request, server: Server): Promise<Response | undefined>;
 }
@@ -15,7 +19,7 @@ export interface BunAdapter {
 export interface BunOptions extends AdapterOptions {}
 
 type ContextData = {
-  _peer?: Peer;
+  _peer?: BunPeer;
   request?: Request;
   requestUrl?: string;
   server?: Server;
@@ -24,7 +28,9 @@ type ContextData = {
 export default defineWebSocketAdapter<BunAdapter, BunOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
+    const peers = new Set<BunPeer>();
     return {
+      peers,
       async handleUpgrade(request, server) {
         const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {
@@ -38,34 +44,37 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
           } satisfies ContextData,
           headers: res?.headers,
         });
-        return upgradeOK
-          ? undefined
-          : new Response("Upgrade failed", { status: 500 });
+        if (!upgradeOK) {
+          return new Response("Upgrade failed", { status: 500 });
+        }
       },
       websocket: {
         message: (ws, message) => {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callHook("message", peer, new Message(message));
         },
         open: (ws) => {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
+          peers.add(peer);
+          hooks.callAdapterHook("bun:open", peer, ws);
           hooks.callHook("open", peer);
         },
         close: (ws) => {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
+          peers.delete(peer);
           hooks.callAdapterHook("bun:close", peer, ws);
           hooks.callHook("close", peer, {});
         },
         drain: (ws) => {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook("bun:drain", peer);
         },
         ping(ws, data) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook("bun:ping", peer, ws, data);
         },
         pong(ws, data) {
-          const peer = getPeer(ws);
+          const peer = getPeer(ws, peers);
           hooks.callAdapterHook("bun:pong", peer, ws, data);
         },
       },
@@ -73,11 +82,14 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
   },
 );
 
-function getPeer(ws: ServerWebSocket<ContextData>) {
+function getPeer(
+  ws: ServerWebSocket<ContextData>,
+  peers: Set<BunPeer>,
+): BunPeer {
   if (ws.data?._peer) {
     return ws.data._peer;
   }
-  const peer = new BunPeer({ bun: { ws } });
+  const peer = new BunPeer({ peers, bun: { ws } });
   ws.data = {
     ...ws.data,
     _peer: peer,
@@ -86,6 +98,7 @@ function getPeer(ws: ServerWebSocket<ContextData>) {
 }
 
 class BunPeer extends Peer<{
+  peers: Set<BunPeer>;
   bun: { ws: ServerWebSocket<ContextData> };
 }> {
   get addr() {
