@@ -68,4 +68,13 @@ export function wsTests(
     expect(headers["connection"]).toBe("Upgrade");
     expect(headers["x-test"]).toBe("1");
   });
+
+  test("upgrade request url", async () => {
+    const ws = await wsConnect(getURL() + "?foo=bar", { skip: 1 });
+    await ws.send("debug");
+    const info = await ws.next();
+    expect(info.url).toMatch(/^http:\/\/localhost:\d+\/\?foo=bar$/);
+    const url = new URL(info.url);
+    expect(url.search).toBe("?foo=bar");
+  });
 }

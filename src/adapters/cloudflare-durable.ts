@@ -13,6 +13,11 @@ declare class DurableObjectPub extends DurableObject {
   public env: unknown;
 }
 
+type AugmentedWebSocket = CF.WebSocket & {
+  _crosswsState?: CrosswsState;
+  _crosswsPeer?: CloudflareDurablePeer;
+};
+
 type CrosswsState = {
   topics?: Set<string>;
 };
@@ -71,7 +76,11 @@ export default defineWebSocketAdapter<
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
-      const peer = peerFromDurableEvent(obj, server, request);
+      const peer = peerFromDurableEvent(
+        obj,
+        server as unknown as CF.WebSocket,
+        request,
+      );
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
       crossws.callAdapterHook("cloudflare:accept", peer);
       crossws.callHook("open", peer);
@@ -83,12 +92,12 @@ export default defineWebSocketAdapter<
       });
     },
     handleDurableMessage: async (obj, ws, message) => {
-      const peer = peerFromDurableEvent(obj, ws);
+      const peer = peerFromDurableEvent(obj, ws as CF.WebSocket);
       crossws.callAdapterHook("cloudflare:message", peer, message);
       crossws.callHook("message", peer, new Message(message));
     },
     handleDurableClose: async (obj, ws, code, reason, wasClean) => {
-      const peer = peerFromDurableEvent(obj, ws);
+      const peer = peerFromDurableEvent(obj, ws as CF.WebSocket);
       const details = { code, reason, wasClean };
       crossws.callAdapterHook("cloudflare:close", peer, details);
       crossws.callHook("close", peer, details);
@@ -99,32 +108,34 @@ export default defineWebSocketAdapter<
 
 function peerFromDurableEvent(
   obj: DurableObject,
-  ws: WebSocket | CF.WebSocket,
+  ws: AugmentedWebSocket,
   request?: Request | CF.Request,
 ): CloudflareDurablePeer {
-  if ((ws as any)._crosswsPeer) {
-    return (ws as any)._crosswsPeer;
+  let peer = ws._crosswsPeer;
+  if (peer) {
+    return peer;
   }
-  return ((ws as any)._crosswsPeer = new CloudflareDurablePeer({
+  peer = ws._crosswsPeer = new CloudflareDurablePeer({
     cloudflare: {
       ws: ws as CF.WebSocket,
       request,
       env: (obj as DurableObjectPub).env,
       context: (obj as DurableObjectPub).ctx,
     },
-  }));
+  });
+  return peer;
 }
 
 class CloudflareDurablePeer extends Peer<{
   cloudflare: {
-    ws: CF.WebSocket & { _crossws?: CrosswsState };
+    ws: AugmentedWebSocket;
     request?: Request | CF.Request;
     env: unknown;
     context: DurableObject["ctx"];
   };
 }> {
   get url() {
-    return this.ctx.cloudflare.ws.url || "";
+    return this.ctx.cloudflare.request?.url || this.ctx.cloudflare.ws.url || "";
   }
 
   get headers() {
@@ -143,10 +154,11 @@ class CloudflareDurablePeer extends Peer<{
   subscribe(topic: string): void {
     super.subscribe(topic);
     const state: CrosswsState = {
+      // Max limit: 2,048 bytes
+      ...(this.ctx.cloudflare.ws.deserializeAttachment() as CrosswsState),
       topics: this._topics,
     };
-    this.ctx.cloudflare.ws._crossws = state;
-    // Max limit: 2,048 bytes
+    this.ctx.cloudflare.ws._crosswsState = state;
     this.ctx.cloudflare.ws.serializeAttachment(state);
   }
 
@@ -159,9 +171,9 @@ class CloudflareDurablePeer extends Peer<{
     }
     const data = toBufferLike(message);
     for (const client of clients) {
-      let state = client._crossws;
+      let state = client._crosswsState;
       if (!state) {
-        state = client._crossws =
+        state = client._crosswsState =
           client.deserializeAttachment() as CrosswsState;
       }
       if (state.topics?.has(topic)) {

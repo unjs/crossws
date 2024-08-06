@@ -115,11 +115,26 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
 );
 
 class NodeReqProxy {
-  private _headers?: Headers;
-  constructor(private _req: IncomingMessage) {}
-  get url(): string {
-    return this._req.url || "/";
+  _req: IncomingMessage;
+  _headers?: Headers;
+  _url?: string;
+
+  constructor(req: IncomingMessage) {
+    this._req = req;
   }
+
+  get url(): string {
+    if (!this._url) {
+      const req = this._req;
+      const host = req.headers["host"] || "localhost";
+      const isSecure =
+        (req.socket as any)?.encrypted ??
+        req.headers["x-forwarded-proto"] === "https";
+      this._url = `${isSecure ? "https" : "http"}://${host}${req.url}`;
+    }
+    return this._url;
+  }
+
   get headers(): Headers {
     if (!this._headers) {
       this._headers = new Headers(this._req.headers as HeadersInit);

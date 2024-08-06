@@ -138,13 +138,29 @@ class UWSReqProxy {
   private _headers?: Headers;
   private _rawHeaders: [string, string][] = [];
   url: string;
+
   constructor(private _req: HttpRequest) {
-    this.url = _req.getUrl();
+    // We need to precompute values since uws doesn't provide them after handler.
+
+    // Headers
+    let host = "localhost";
+    let proto = "http";
     // eslint-disable-next-line unicorn/no-array-for-each
     this._req.forEach((key, value) => {
+      if (key === "host") {
+        host = value;
+      } else if (key === "x-forwarded-proto" && value === "https") {
+        proto = "https";
+      }
       this._rawHeaders.push([key, value]);
     });
+
+    // URL
+    const query = _req.getQuery();
+    const pathname = _req.getUrl();
+    this.url = `${proto}://${host}${pathname}${query ? `?${query}` : ""}`;
   }
+
   get headers(): Headers {
     if (!this._headers) {
       this._headers = new Headers(this._rawHeaders);

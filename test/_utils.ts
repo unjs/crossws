@@ -91,9 +91,11 @@ export function wsTestsExec(cmd: string, opts?: Parameters<typeof wsTests>[1]) {
     childProc.stderr!.on("data", (chunk) => {
       console.log(chunk.toString());
     });
-    // childProc.stdout!.on("data", (chunk) => {
-    //   console.log(chunk.toString());
-    // });
+    if (process.env.TEST_DEBUG) {
+      childProc.stdout!.on("data", (chunk) => {
+        console.log(chunk.toString());
+      });
+    }
     await waitForPort(port, { host: "localhost", delay: 50, retries: 100 });
   });
   afterAll(async () => {
