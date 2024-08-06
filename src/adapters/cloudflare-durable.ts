@@ -135,19 +135,23 @@ class CloudflareDurablePeer extends Peer<{
   };
 }> {
   get url() {
-    return this.ctx.cloudflare.request?.url || this.ctx.cloudflare.ws.url || "";
+    return (
+      this._internal.cloudflare.request?.url ||
+      this._internal.cloudflare.ws.url ||
+      ""
+    );
   }
 
   get headers() {
-    return this.ctx.cloudflare.request?.headers as Headers;
+    return this._internal.cloudflare.request?.headers as Headers;
   }
 
   get readyState() {
-    return this.ctx.cloudflare.ws.readyState as -1 | 0 | 1 | 2 | 3;
+    return this._internal.cloudflare.ws.readyState as -1 | 0 | 1 | 2 | 3;
   }
 
   send(message: any) {
-    this.ctx.cloudflare.ws.send(toBufferLike(message));
+    this._internal.cloudflare.ws.send(toBufferLike(message));
     return 0;
   }
 
@@ -155,17 +159,17 @@ class CloudflareDurablePeer extends Peer<{
     super.subscribe(topic);
     const state: CrosswsState = {
       // Max limit: 2,048 bytes
-      ...(this.ctx.cloudflare.ws.deserializeAttachment() as CrosswsState),
+      ...(this._internal.cloudflare.ws.deserializeAttachment() as CrosswsState),
       topics: this._topics,
     };
-    this.ctx.cloudflare.ws._crosswsState = state;
-    this.ctx.cloudflare.ws.serializeAttachment(state);
+    this._internal.cloudflare.ws._crosswsState = state;
+    this._internal.cloudflare.ws.serializeAttachment(state);
   }
 
   publish(topic: string, message: any): void {
     const clients = (
-      this.ctx.cloudflare.context.getWebSockets() as unknown as (typeof this.ctx.cloudflare.ws)[]
-    ).filter((c) => c !== this.ctx.cloudflare.ws);
+      this._internal.cloudflare.context.getWebSockets() as unknown as (typeof this._internal.cloudflare.ws)[]
+    ).filter((c) => c !== this._internal.cloudflare.ws);
     if (clients.length === 0) {
       return;
     }
@@ -183,7 +187,7 @@ class CloudflareDurablePeer extends Peer<{
   }
 
   close(code?: number, reason?: string) {
-    this.ctx.cloudflare.ws.close(code, reason);
+    this._internal.cloudflare.ws.close(code, reason);
   }
 
   terminate(): void {

@@ -170,18 +170,18 @@ class NodePeer extends Peer<{
   };
 }> {
   _req: NodeReqProxy;
-  constructor(ctx: NodePeer["ctx"]) {
+  constructor(ctx: NodePeer["_internal"]) {
     super(ctx);
     this._req = new NodeReqProxy(ctx.node.req);
     ctx.node.ws._peer = this;
   }
 
   get addr() {
-    const socket = this.ctx.node.req.socket;
+    const socket = this._internal.node.req.socket;
     if (!socket) {
       return undefined;
     }
-    const headers = this.ctx.node.req.headers;
+    const headers = this._internal.node.req.headers;
     let addr = headers["x-forwarded-for"] || socket.remoteAddress || "??";
     if (addr.includes(":")) {
       addr = `[${addr}]`;
@@ -199,13 +199,13 @@ class NodePeer extends Peer<{
   }
 
   get readyState() {
-    return this.ctx.node.ws.readyState;
+    return this._internal.node.ws.readyState;
   }
 
   send(message: any, options?: { compress?: boolean }) {
     const data = toBufferLike(message);
     const isBinary = typeof data !== "string";
-    this.ctx.node.ws.send(data, {
+    this._internal.node.ws.send(data, {
       compress: options?.compress,
       binary: isBinary,
       ...options,
@@ -221,19 +221,19 @@ class NodePeer extends Peer<{
       binary: isBinary,
       ...options,
     };
-    for (const client of this.ctx.node.server.clients) {
+    for (const client of this._internal.node.server.clients) {
       const peer = (client as WebSocketT & { _peer?: NodePeer })._peer;
       if (peer && peer !== this && peer._topics.has(topic)) {
-        peer.ctx.node.ws.send(data, sendOptions);
+        peer._internal.node.ws.send(data, sendOptions);
       }
     }
   }
 
   close(code?: number, data?: string | Buffer) {
-    this.ctx.node.ws.close(code, data);
+    this._internal.node.ws.close(code, data);
   }
 
   terminate() {
-    this.ctx.node.ws.terminate();
+    this._internal.node.ws.terminate();
   }
 }

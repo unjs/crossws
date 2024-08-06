@@ -195,7 +195,7 @@ class UWSPeer extends Peer<{
   _decoder = new TextDecoder();
   _req: UWSReqProxy;
 
-  constructor(ctx: UWSPeer["ctx"]) {
+  constructor(ctx: UWSPeer["_internal"]) {
     super(ctx);
     this._req = new UWSReqProxy(ctx.uws.userData.req);
   }
@@ -203,7 +203,7 @@ class UWSPeer extends Peer<{
   get addr() {
     try {
       const addr = this._decoder.decode(
-        this.ctx.uws.ws?.getRemoteAddressAsText(),
+        this._internal.uws.ws?.getRemoteAddressAsText(),
       );
       return addr.replace(/(0000:)+/, "");
     } catch {
@@ -222,25 +222,25 @@ class UWSPeer extends Peer<{
   send(message: any, options?: { compress?: boolean }) {
     const data = toBufferLike(message);
     const isBinary = typeof data !== "string";
-    return this.ctx.uws.ws.send(data, isBinary, options?.compress);
+    return this._internal.uws.ws.send(data, isBinary, options?.compress);
   }
 
   subscribe(topic: string): void {
-    this.ctx.uws.ws.subscribe(topic);
+    this._internal.uws.ws.subscribe(topic);
   }
 
   publish(topic: string, message: string, options?: { compress?: boolean }) {
     const data = toBufferLike(message);
     const isBinary = typeof data !== "string";
-    this.ctx.uws.ws.publish(topic, data, isBinary, options?.compress);
+    this._internal.uws.ws.publish(topic, data, isBinary, options?.compress);
     return 0;
   }
 
   close(code?: number, reason?: RecognizedString) {
-    this.ctx.uws.ws.end(code, reason);
+    this._internal.uws.ws.end(code, reason);
   }
 
   terminate(): void {
-    this.ctx.uws.ws.close();
+    this._internal.uws.ws.close();
   }
 }

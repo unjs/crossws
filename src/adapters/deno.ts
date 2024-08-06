@@ -78,29 +78,29 @@ class DenoPeer extends Peer<{
 }> {
   get addr() {
     // @ts-expect-error types missing
-    return this.ctx.deno.ws.remoteAddress;
+    return this._internal.deno.ws.remoteAddress;
   }
 
   get readyState() {
-    return this.ctx.deno.ws.readyState as -1 | 0 | 1 | 2 | 3;
+    return this._internal.deno.ws.readyState as -1 | 0 | 1 | 2 | 3;
   }
 
   get url() {
-    return this.ctx.deno.request.url;
+    return this._internal.deno.request.url;
   }
 
   get headers() {
-    return this.ctx.deno.request.headers || new Headers();
+    return this._internal.deno.request.headers || new Headers();
   }
 
   send(message: any) {
-    this.ctx.deno.ws.send(toBufferLike(message));
+    this._internal.deno.ws.send(toBufferLike(message));
     return 0;
   }
 
   publish(topic: string, message: any): void {
     const data = toBufferLike(message);
-    for (const peer of this.ctx.deno.sharedState.peers) {
+    for (const peer of this._internal.deno.sharedState.peers) {
       if (peer !== this && peer._topics.has(topic)) {
         peer.send(data);
       }
@@ -108,11 +108,11 @@ class DenoPeer extends Peer<{
   }
 
   close(code?: number, reason?: string) {
-    this.ctx.deno.ws.close(code, reason);
+    this._internal.deno.ws.close(code, reason);
   }
 
   terminate(): void {
     // @ts-ignore (terminate is Deno-only api)
-    this.ctx.deno.ws.terminate();
+    this._internal.deno.ws.terminate();
   }
 }
