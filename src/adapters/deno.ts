@@ -6,7 +6,7 @@ import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
 import { AdapterOptions, defineWebSocketAdapter } from "../types.ts";
-import { CrossWS } from "../crossws.ts";
+import { AdapterHookable } from "../hooks.ts";
 import { toBufferLike } from "../_utils.ts";
 
 export interface DenoAdapter {
@@ -28,11 +28,11 @@ type DenoWSSharedState = {
 
 export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
   (options = {}) => {
-    const crossws = new CrossWS(options);
+    const hooks = new AdapterHookable(options);
     const sharedState: DenoWSSharedState = { peers: new Set() };
     return {
       handleUpgrade: async (request, info) => {
-        const res = await crossws.callHook("upgrade", request);
+        const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {
           return res;
         }
@@ -45,22 +45,22 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
         });
         sharedState.peers.add(peer);
         upgrade.socket.addEventListener("open", () => {
-          crossws.callAdapterHook("deno:open", peer);
-          crossws.callHook("open", peer);
+          hooks.callAdapterHook("deno:open", peer);
+          hooks.callHook("open", peer);
         });
         upgrade.socket.addEventListener("message", (event) => {
-          crossws.callAdapterHook("deno:message", peer, event);
-          crossws.callHook("message", peer, new Message(event.data));
+          hooks.callAdapterHook("deno:message", peer, event);
+          hooks.callHook("message", peer, new Message(event.data));
         });
         upgrade.socket.addEventListener("close", () => {
           sharedState.peers.delete(peer);
-          crossws.callAdapterHook("deno:close", peer);
-          crossws.callHook("close", peer, {});
+          hooks.callAdapterHook("deno:close", peer);
+          hooks.callHook("close", peer, {});
         });
         upgrade.socket.addEventListener("error", (error) => {
           sharedState.peers.delete(peer);
-          crossws.callAdapterHook("deno:error", peer, error);
-          crossws.callHook("error", peer, new WSError(error));
+          hooks.callAdapterHook("deno:error", peer, error);
+          hooks.callHook("error", peer, new WSError(error));
         });
         return upgrade.response;
       },

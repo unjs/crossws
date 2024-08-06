@@ -5,7 +5,7 @@ import type {
   MaybePromise,
 } from "./types.ts";
 
-export class CrossWS {
+export class AdapterHookable {
   options: AdapterOptions;
 
   constructor(options?: AdapterOptions) {

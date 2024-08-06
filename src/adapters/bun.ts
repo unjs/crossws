@@ -4,7 +4,7 @@ import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 import { Message } from "../message";
 import { Peer } from "../peer";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
-import { CrossWS } from "../crossws";
+import { AdapterHookable } from "../hooks";
 import { toBufferLike } from "../_utils";
 
 export interface BunAdapter {
@@ -23,10 +23,10 @@ type ContextData = {
 
 export default defineWebSocketAdapter<BunAdapter, BunOptions>(
   (options = {}) => {
-    const crossws = new CrossWS(options);
+    const hooks = new AdapterHookable(options);
     return {
       async handleUpgrade(request, server) {
-        const res = await crossws.callHook("upgrade", request);
+        const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {
           return res;
         }
@@ -45,30 +45,28 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
       websocket: {
         message: (ws, message) => {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("bun:message", peer, ws, message);
-          crossws.callHook("message", peer, new Message(message));
+          hooks.callHook("message", peer, new Message(message));
         },
         open: (ws) => {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("bun:open", peer, ws);
-          crossws.callHook("open", peer);
+          hooks.callHook("open", peer);
         },
         close: (ws) => {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("bun:close", peer, ws);
-          crossws.callHook("close", peer, {});
+          hooks.callAdapterHook("bun:close", peer, ws);
+          hooks.callHook("close", peer, {});
         },
         drain: (ws) => {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("bun:drain", peer);
+          hooks.callAdapterHook("bun:drain", peer);
         },
         ping(ws, data) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("bun:ping", peer, ws, data);
+          hooks.callAdapterHook("bun:ping", peer, ws, data);
         },
         pong(ws, data) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("bun:pong", peer, ws, data);
+          hooks.callAdapterHook("bun:pong", peer, ws, data);
         },
       },
     };

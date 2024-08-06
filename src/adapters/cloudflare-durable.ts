@@ -5,7 +5,7 @@ import type { DurableObject } from "cloudflare:workers";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
 import { Peer } from "../peer";
 import { Message } from "../message";
-import { CrossWS } from "../crossws";
+import { AdapterHookable } from "../hooks";
 import { toBufferLike } from "../_utils";
 
 declare class DurableObjectPub extends DurableObject {
@@ -58,7 +58,7 @@ export default defineWebSocketAdapter<
   CloudflareDurableAdapter,
   CloudflareOptions
 >((opts) => {
-  const crossws = new CrossWS(opts);
+  const hooks = new AdapterHookable(opts);
   return {
     handleUpgrade: async (req, env, _context) => {
       const bindingName = opts?.bindingName ?? "$DurableObject";
@@ -69,7 +69,7 @@ export default defineWebSocketAdapter<
       return stub.fetch(req as CF.Request) as unknown as Response;
     },
     handleDurableUpgrade: async (obj, request) => {
-      const res = await crossws.callHook("upgrade", request as Request);
+      const res = await hooks.callHook("upgrade", request as Request);
       if (res instanceof Response) {
         return res;
       }
@@ -82,8 +82,8 @@ export default defineWebSocketAdapter<
         request,
       );
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
-      crossws.callAdapterHook("cloudflare:accept", peer);
-      crossws.callHook("open", peer);
+      hooks.callAdapterHook("cloudflare:accept", peer);
+      hooks.callHook("open", peer);
       // eslint-disable-next-line unicorn/no-null
       return new Response(null, {
         status: 101,
@@ -93,14 +93,14 @@ export default defineWebSocketAdapter<
     },
     handleDurableMessage: async (obj, ws, message) => {
       const peer = peerFromDurableEvent(obj, ws as CF.WebSocket);
-      crossws.callAdapterHook("cloudflare:message", peer, message);
-      crossws.callHook("message", peer, new Message(message));
+      hooks.callAdapterHook("cloudflare:message", peer, message);
+      hooks.callHook("message", peer, new Message(message));
     },
     handleDurableClose: async (obj, ws, code, reason, wasClean) => {
       const peer = peerFromDurableEvent(obj, ws as CF.WebSocket);
       const details = { code, reason, wasClean };
-      crossws.callAdapterHook("cloudflare:close", peer, details);
-      crossws.callHook("close", peer, details);
+      hooks.callAdapterHook("cloudflare:close", peer, details);
+      hooks.callHook("close", peer, details);
       ws.close(code, reason);
     },
   };

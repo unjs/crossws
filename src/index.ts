@@ -1,4 +1,4 @@
-export * from "./crossws.ts";
+export * from "./hooks.ts";
 export * from "./error.ts";
 export * from "./message.ts";
 export * from "./peer.ts";

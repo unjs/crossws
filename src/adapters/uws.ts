@@ -11,7 +11,7 @@ import type {
 import { Peer } from "../peer";
 import { Message } from "../message";
 import { AdapterOptions, defineWebSocketAdapter } from "../types";
-import { CrossWS } from "../crossws";
+import { AdapterHookable } from "../hooks";
 import { toBufferLike } from "../_utils";
 
 type UserData = {
@@ -43,44 +43,44 @@ export interface UWSOptions extends AdapterOptions {
 
 export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
   (options = {}) => {
-    const crossws = new CrossWS(options);
+    const hooks = new AdapterHookable(options);
     return {
       websocket: {
         ...options.uws,
         close(ws, code, message) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("uws:close", peer, ws, code, message);
-          crossws.callHook("close", peer, {
+          hooks.callAdapterHook("uws:close", peer, ws, code, message);
+          hooks.callHook("close", peer, {
             code,
             reason: message?.toString(),
           });
         },
         drain(ws) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("uws:drain", peer, ws);
+          hooks.callAdapterHook("uws:drain", peer, ws);
         },
         message(ws, message, isBinary) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("uws:message", peer, ws, message, isBinary);
+          hooks.callAdapterHook("uws:message", peer, ws, message, isBinary);
           const msg = new Message(message, isBinary);
-          crossws.callHook("message", peer, msg);
+          hooks.callHook("message", peer, msg);
         },
         open(ws) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("uws:open", peer, ws);
-          crossws.callHook("open", peer);
+          hooks.callAdapterHook("uws:open", peer, ws);
+          hooks.callHook("open", peer);
         },
         ping(ws, message) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("uws:ping", peer, ws, message);
+          hooks.callAdapterHook("uws:ping", peer, ws, message);
         },
         pong(ws, message) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook("uws:pong", peer, ws, message);
+          hooks.callAdapterHook("uws:pong", peer, ws, message);
         },
         subscription(ws, topic, newCount, oldCount) {
           const peer = getPeer(ws);
-          crossws.callAdapterHook(
+          hooks.callAdapterHook(
             "uws:subscription",
             peer,
             ws,
@@ -94,7 +94,7 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           res.onAborted(() => {
             aborted = true;
           });
-          const _res = await crossws.callHook("upgrade", new UWSReqProxy(req));
+          const _res = await hooks.callHook("upgrade", new UWSReqProxy(req));
           if (aborted) {
             return;
           }
