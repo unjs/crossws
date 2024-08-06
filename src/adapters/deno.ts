@@ -22,9 +22,14 @@ declare global {
 type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
 type ServeHandlerInfo = unknown; // TODO
 
+type DenoWSSharedState = {
+  peers: Set<DenoPeer>;
+};
+
 export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
   (options = {}) => {
     const crossws = new CrossWS(options);
+    const sharedState: DenoWSSharedState = { peers: new Set() };
     return {
       handleUpgrade: async (request, info) => {
         const res = await crossws.callHook("upgrade", request);
@@ -36,8 +41,9 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
           headers: res?.headers,
         });
         const peer = new DenoPeer({
-          deno: { ws: upgrade.socket, request, info },
+          deno: { ws: upgrade.socket, request, info, sharedState },
         });
+        sharedState.peers.add(peer);
         upgrade.socket.addEventListener("open", () => {
           crossws.callAdapterHook("deno:open", peer);
           crossws.callHook("open", peer);
@@ -47,10 +53,12 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
           crossws.callHook("message", peer, new Message(event.data));
         });
         upgrade.socket.addEventListener("close", () => {
+          sharedState.peers.delete(peer);
           crossws.callAdapterHook("deno:close", peer);
           crossws.callHook("close", peer, {});
         });
         upgrade.socket.addEventListener("error", (error) => {
+          sharedState.peers.delete(peer);
           crossws.callAdapterHook("deno:error", peer, error);
           crossws.callHook("error", peer, new WSError(error));
         });
@@ -65,6 +73,7 @@ class DenoPeer extends Peer<{
     ws: WebSocketUpgrade["socket"];
     request: Request;
     info: ServeHandlerInfo;
+    sharedState: DenoWSSharedState;
   };
 }> {
   get addr() {
@@ -87,6 +96,15 @@ class DenoPeer extends Peer<{
   send(message: any) {
     this.ctx.deno.ws.send(toBufferLike(message));
     return 0;
+  }
+
+  publish(topic: string, message: any): void {
+    const data = toBufferLike(message);
+    for (const peer of this.ctx.deno.sharedState.peers) {
+      if (peer !== this && peer._topics.has(topic)) {
+        peer.send(data);
+      }
+    }
   }
 
   close(code?: number, reason?: string) {
