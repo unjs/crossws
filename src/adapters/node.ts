@@ -103,9 +103,7 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
     });
 
     return {
-      get peers() {
-        return peers;
-      },
+      peers,
       handleUpgrade: async (req, socket, head) => {
         const res = await hooks.callHook("upgrade", new NodeReqProxy(req));
         if (res instanceof Response) {
