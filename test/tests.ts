@@ -3,7 +3,7 @@ import { wsConnect } from "./_utils";
 
 export function wsTests(
   getURL: () => string,
-  opts: { pubsub?: boolean; resHeaders?: boolean } = {},
+  opts: { adapter: string; pubsub?: boolean; resHeaders?: boolean },
 ) {
   test("http works", async () => {
     const response = await fetch(getURL().replace("ws", "http"));
@@ -111,7 +111,7 @@ export function wsTests(
     expect(peers1).toMatchObject(peers2);
   });
 
-  test.skipIf(opts.pubsub === false)(
+  test.skipIf(opts.adapter.startsWith("cloudflare"))(
     "publish to all peers from adapter",
     async () => {
       const ws1 = await wsConnect(getURL(), { skip: 1 });

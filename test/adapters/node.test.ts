@@ -42,5 +42,7 @@ describe("node", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  wsTests(() => url, {});
+  wsTests(() => url, {
+    adapter: "node",
+  });
 });
