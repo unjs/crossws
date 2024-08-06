@@ -1,17 +1,14 @@
-// https://developers.cloudflare.com/workers/examples/websockets/
+import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import { toBufferLike } from "../utils.ts";
+import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { AdapterHookable } from "../hooks.ts";
+import { Message } from "../message.ts";
+import { WSError } from "../error.ts";
+import { Peer } from "../peer.ts";
 
 import type * as _cf from "@cloudflare/workers-types";
 
-import { Peer } from "../peer";
-import {
-  AdapterOptions,
-  AdapterInstance,
-  defineWebSocketAdapter,
-} from "../types.js";
-import { Message } from "../message";
-import { WSError } from "../error";
-import { AdapterHookable } from "../hooks.js";
-import { adapterUtils, toBufferLike } from "../_utils";
+// --- types ---
 
 declare const WebSocketPair: typeof _cf.WebSocketPair;
 declare const Response: typeof _cf.Response;
@@ -26,6 +23,9 @@ export interface CloudflareAdapter extends AdapterInstance {
 
 export interface CloudflareOptions extends AdapterOptions {}
 
+// --- adapter ---
+
+// https://developers.cloudflare.com/workers/examples/websockets/
 export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
@@ -75,6 +75,8 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
     };
   },
 );
+
+// --- peer ---
 
 class CloudflarePeer extends Peer<{
   peers: Set<CloudflarePeer>;

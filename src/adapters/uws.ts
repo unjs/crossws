@@ -1,5 +1,9 @@
-// https://github.com/websockets/ws
-// https://github.com/websockets/ws/blob/master/doc/ws.md
+import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import { toBufferLike } from "../utils.ts";
+import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { AdapterHookable } from "../hooks.ts";
+import { Message } from "../message.ts";
+import { Peer } from "../peer.ts";
 
 import type {
   WebSocketBehavior,
@@ -8,15 +12,8 @@ import type {
   HttpResponse,
   RecognizedString,
 } from "uWebSockets.js";
-import { Peer } from "../peer";
-import { Message } from "../message";
-import {
-  AdapterOptions,
-  AdapterInstance,
-  defineWebSocketAdapter,
-} from "../types";
-import { AdapterHookable } from "../hooks";
-import { adapterUtils, toBufferLike } from "../_utils";
+
+// --- types ---
 
 type UserData = {
   _peer?: any;
@@ -45,6 +42,10 @@ export interface UWSOptions extends AdapterOptions {
   >;
 }
 
+// --- adapter ---
+
+// https://github.com/websockets/ws
+// https://github.com/websockets/ws/blob/master/doc/ws.md
 export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
@@ -149,40 +150,7 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
   },
 );
 
-class UWSReqProxy {
-  private _headers?: Headers;
-  private _rawHeaders: [string, string][] = [];
-  url: string;
-
-  constructor(_req: HttpRequest) {
-    // We need to precompute values since uws doesn't provide them after handler.
-
-    // Headers
-    let host = "localhost";
-    let proto = "http";
-    // eslint-disable-next-line unicorn/no-array-for-each
-    _req.forEach((key, value) => {
-      if (key === "host") {
-        host = value;
-      } else if (key === "x-forwarded-proto" && value === "https") {
-        proto = "https";
-      }
-      this._rawHeaders.push([key, value]);
-    });
-
-    // URL
-    const query = _req.getQuery();
-    const pathname = _req.getUrl();
-    this.url = `${proto}://${host}${pathname}${query ? `?${query}` : ""}`;
-  }
-
-  get headers(): Headers {
-    if (!this._headers) {
-      this._headers = new Headers(this._rawHeaders);
-    }
-    return this._headers;
-  }
-}
+// --- peer ---
 
 function getPeer(ws: WebSocket<UserData>, peers: Set<UWSPeer>): UWSPeer {
   const userData = ws.getUserData();
@@ -251,5 +219,42 @@ class UWSPeer extends Peer<{
 
   terminate(): void {
     this._internal.uws.ws.close();
+  }
+}
+
+// --- web compat ---
+
+class UWSReqProxy {
+  private _headers?: Headers;
+  private _rawHeaders: [string, string][] = [];
+  url: string;
+
+  constructor(_req: HttpRequest) {
+    // We need to precompute values since uws doesn't provide them after handler.
+
+    // Headers
+    let host = "localhost";
+    let proto = "http";
+    // eslint-disable-next-line unicorn/no-array-for-each
+    _req.forEach((key, value) => {
+      if (key === "host") {
+        host = value;
+      } else if (key === "x-forwarded-proto" && value === "https") {
+        proto = "https";
+      }
+      this._rawHeaders.push([key, value]);
+    });
+
+    // URL
+    const query = _req.getQuery();
+    const pathname = _req.getUrl();
+    this.url = `${proto}://${host}${pathname}${query ? `?${query}` : ""}`;
+  }
+
+  get headers(): Headers {
+    if (!this._headers) {
+      this._headers = new Headers(this._rawHeaders);
+    }
+    return this._headers;
   }
 }

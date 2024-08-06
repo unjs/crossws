@@ -1,14 +1,10 @@
-// https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
+import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import { toBufferLike } from "../utils.ts";
+import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { AdapterHookable } from "../hooks.ts";
+import { Peer } from "../peer.ts";
 
-import { WebSocketServer as _WebSocketServer } from "ws";
-import { Peer } from "../peer";
-import {
-  AdapterOptions,
-  AdapterInstance,
-  defineWebSocketAdapter,
-} from "../types";
-import { AdapterHookable } from "../hooks";
-import { adapterUtils, toBufferLike } from "../_utils";
+// --- types ---
 
 export interface SSEAdapter extends AdapterInstance {
   fetch(req: Request): Promise<Response>;
@@ -16,6 +12,9 @@ export interface SSEAdapter extends AdapterInstance {
 
 export interface SSEOptions extends AdapterOptions {}
 
+// --- adapter ---
+
+// https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
 export default defineWebSocketAdapter<SSEAdapter, SSEOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
@@ -48,6 +47,8 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>(
     };
   },
 );
+
+// --- peer ---
 
 class SSEPeer extends Peer<{
   peers: Set<SSEPeer>;

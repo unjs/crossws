@@ -1,16 +1,14 @@
-// https://developers.cloudflare.com/durable-objects/examples/websocket-hibernation-server/
+import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import { toBufferLike } from "../utils.ts";
+import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { AdapterHookable } from "../hooks.ts";
+import { Message } from "../message.ts";
+import { Peer } from "../peer.ts";
 
 import type * as CF from "@cloudflare/workers-types";
 import type { DurableObject } from "cloudflare:workers";
-import {
-  AdapterOptions,
-  AdapterInstance,
-  defineWebSocketAdapter,
-} from "../types";
-import { Peer } from "../peer";
-import { Message } from "../message";
-import { AdapterHookable } from "../hooks";
-import { adapterUtils, toBufferLike } from "../_utils";
+
+// --- types
 
 declare class DurableObjectPub extends DurableObject {
   public ctx: DurableObject["ctx"];
@@ -58,6 +56,9 @@ export interface CloudflareOptions extends AdapterOptions {
   instanceName?: string;
 }
 
+// --- adapter ---
+
+// https://developers.cloudflare.com/durable-objects/examples/websocket-hibernation-server/
 export default defineWebSocketAdapter<
   CloudflareDurableAdapter,
   CloudflareOptions
@@ -132,6 +133,8 @@ function peerFromDurableEvent(
   });
   return peer;
 }
+
+// --- peer ---
 
 class CloudflareDurablePeer extends Peer<{
   peers?: never;

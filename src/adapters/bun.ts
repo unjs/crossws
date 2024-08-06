@@ -1,15 +1,13 @@
-// https://bun.sh/docs/api/websockets
-
 import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
-import { Message } from "../message";
-import { Peer } from "../peer";
-import {
-  AdapterOptions,
-  AdapterInstance,
-  defineWebSocketAdapter,
-} from "../types";
-import { AdapterHookable } from "../hooks";
-import { adapterUtils, toBufferLike } from "../_utils";
+
+import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import { toBufferLike } from "../utils.ts";
+import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { AdapterHookable } from "../hooks.ts";
+import { Message } from "../message.ts";
+import { Peer } from "../peer.ts";
+
+// --- types ---
 
 export interface BunAdapter extends AdapterInstance {
   websocket: WebSocketHandler<ContextData>;
@@ -25,6 +23,9 @@ type ContextData = {
   server?: Server;
 };
 
+// --- adapter ---
+
+// https://bun.sh/docs/api/websockets
 export default defineWebSocketAdapter<BunAdapter, BunOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
@@ -81,6 +82,8 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
     };
   },
 );
+
+// --- peer ---
 
 function getPeer(
   ws: ServerWebSocket<ContextData>,

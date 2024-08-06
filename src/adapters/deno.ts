@@ -1,17 +1,12 @@
-// https://deno.land/api?s=WebSocket
-// https://deno.land/api?s=Deno.upgradeWebSocket
-// https://examples.deno.land/http-server-websocket
-
+import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import { toBufferLike } from "../utils.ts";
+import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
-import {
-  AdapterOptions,
-  AdapterInstance,
-  defineWebSocketAdapter,
-} from "../types.ts";
-import { AdapterHookable } from "../hooks.ts";
-import { adapterUtils, toBufferLike } from "../_utils.ts";
+
+// --- types ---
 
 export interface DenoAdapter extends AdapterInstance {
   handleUpgrade(req: Request, info: ServeHandlerInfo): Promise<Response>;
@@ -26,6 +21,11 @@ declare global {
 type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
 type ServeHandlerInfo = unknown; // TODO
 
+// --- adapter ---
+
+// https://deno.land/api?s=WebSocket
+// https://deno.land/api?s=Deno.upgradeWebSocket
+// https://examples.deno.land/http-server-websocket
 export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
@@ -69,6 +69,8 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
     };
   },
 );
+
+// --- peer ---
 
 class DenoPeer extends Peer<{
   peers: Set<DenoPeer>;

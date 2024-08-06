@@ -1,6 +1,3 @@
-import type { Peer } from "./peer.ts";
-import { AdapterInstance } from "./types.ts";
-
 type BufferLike = string | Buffer | Uint8Array | ArrayBuffer;
 
 export function toBufferLike(val: any): BufferLike {
@@ -59,17 +56,4 @@ export function isPlainObject(value: unknown): boolean {
   }
 
   return true;
-}
-
-export function adapterUtils(peers: Set<Peer>) {
-  return {
-    peers,
-    publish(topic: string, message: any, options) {
-      const firstPeer = peers.values().next().value as Peer;
-      if (firstPeer) {
-        firstPeer.send(message, options);
-        firstPeer.publish(topic, message, options);
-      }
-    },
-  } satisfies AdapterInstance;
 }

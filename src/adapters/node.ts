@@ -1,5 +1,10 @@
-// https://github.com/websockets/ws
-// https://github.com/websockets/ws/blob/master/doc/ws.md
+import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import { toBufferLike } from "../utils.ts";
+import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { AdapterHookable } from "../hooks.ts";
+import { Message } from "../message.ts";
+import { WSError } from "../error.ts";
+import { Peer } from "../peer.ts";
 
 import type { ClientRequest, IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
@@ -10,16 +15,8 @@ import type {
   WebSocketServer,
   WebSocket as WebSocketT,
 } from "../../types/ws";
-import { Peer } from "../peer";
-import { Message } from "../message";
-import { WSError } from "../error";
-import {
-  AdapterOptions,
-  AdapterInstance,
-  defineWebSocketAdapter,
-} from "../types";
-import { AdapterHookable } from "../hooks";
-import { adapterUtils, toBufferLike } from "../_utils";
+
+// --- types ---
 
 type AugmentedReq = IncomingMessage & { _upgradeHeaders?: HeadersInit };
 
@@ -33,6 +30,10 @@ export interface NodeOptions extends AdapterOptions {
   serverOptions?: ServerOptions;
 }
 
+// --- adapter ---
+
+// https://github.com/websockets/ws
+// https://github.com/websockets/ws/blob/master/doc/ws.md
 export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
   (options = {}) => {
     const hooks = new AdapterHookable(options);
@@ -123,53 +124,7 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
   },
 );
 
-class NodeReqProxy {
-  _req: IncomingMessage;
-  _headers?: Headers;
-  _url?: string;
-
-  constructor(req: IncomingMessage) {
-    this._req = req;
-  }
-
-  get url(): string {
-    if (!this._url) {
-      const req = this._req;
-      const host = req.headers["host"] || "localhost";
-      const isSecure =
-        (req.socket as any)?.encrypted ??
-        req.headers["x-forwarded-proto"] === "https";
-      this._url = `${isSecure ? "https" : "http"}://${host}${req.url}`;
-    }
-    return this._url;
-  }
-
-  get headers(): Headers {
-    if (!this._headers) {
-      this._headers = new Headers(this._req.headers as HeadersInit);
-    }
-    return this._headers;
-  }
-}
-
-async function sendResponse(socket: Duplex, res: Response) {
-  const head = [
-    `HTTP/1.1 ${res.status || 200} ${res.statusText || ""}`,
-    ...[...res.headers.entries()].map(
-      ([key, value]) =>
-        `${encodeURIComponent(key)}: ${encodeURIComponent(value)}`,
-    ),
-  ];
-  socket.write(head.join("\r\n") + "\r\n\r\n");
-  if (res.body) {
-    for await (const chunk of res.body) {
-      socket.write(chunk);
-    }
-  }
-  return new Promise<void>((resolve) => {
-    socket.end(resolve);
-  });
-}
+// --- peer ---
 
 class NodePeer extends Peer<{
   peers: Set<NodePeer>;
@@ -245,4 +200,54 @@ class NodePeer extends Peer<{
   terminate() {
     this._internal.node.ws.terminate();
   }
+}
+
+// --- web compat ---
+
+class NodeReqProxy {
+  _req: IncomingMessage;
+  _headers?: Headers;
+  _url?: string;
+
+  constructor(req: IncomingMessage) {
+    this._req = req;
+  }
+
+  get url(): string {
+    if (!this._url) {
+      const req = this._req;
+      const host = req.headers["host"] || "localhost";
+      const isSecure =
+        (req.socket as any)?.encrypted ??
+        req.headers["x-forwarded-proto"] === "https";
+      this._url = `${isSecure ? "https" : "http"}://${host}${req.url}`;
+    }
+    return this._url;
+  }
+
+  get headers(): Headers {
+    if (!this._headers) {
+      this._headers = new Headers(this._req.headers as HeadersInit);
+    }
+    return this._headers;
+  }
+}
+
+async function sendResponse(socket: Duplex, res: Response) {
+  const head = [
+    `HTTP/1.1 ${res.status || 200} ${res.statusText || ""}`,
+    ...[...res.headers.entries()].map(
+      ([key, value]) =>
+        `${encodeURIComponent(key)}: ${encodeURIComponent(value)}`,
+    ),
+  ];
+  socket.write(head.join("\r\n") + "\r\n\r\n");
+  if (res.body) {
+    for await (const chunk of res.body) {
+      socket.write(chunk);
+    }
+  }
+  return new Promise<void>((resolve) => {
+    socket.end(resolve);
+  });
 }

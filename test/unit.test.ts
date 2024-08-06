@@ -1,5 +1,5 @@
 import { test, expect } from "vitest";
-import { toBufferLike } from "../src/_utils";
+import { toBufferLike } from "../src/utils";
 
 test("toBufferLike", () => {
   expect(toBufferLike(undefined)).toBe("");
