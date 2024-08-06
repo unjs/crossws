@@ -8,6 +8,9 @@ icon: devicon-plain:cloudflareworkers
 
 To integrate CrossWS with your Cloudflare Workers, you need to check for the `upgrade` header.
 
+> [!IMPORTANT]
+> For [pub/sub](/guide/pubsub) support, you need to use [Durable objects](#durable-objects-support).
+
 ```ts
 import wsAdapter from "crossws/adapters/cloudflare";
 
