@@ -39,7 +39,7 @@ server.on("upgrade", ws.handleUpgrade);
 - `node:upgrade (peer, req)`
 
 ::read-more
-See [`playground/node.ts`](https://github.com/unjs/crossws/tree/main/playground/node.ts) for demo and [`src/adapters/node.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/node.ts) for implementation.
+See [`test/fixture/node.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/node.ts) for demo and [`src/adapters/node.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/node.ts) for implementation.
 ::
 
 ## uWebSockets
@@ -84,5 +84,5 @@ server.listen(3001, () => {
 - `uws:subscription (ws, topic, newCount, oldCount)`
 
 ::read-more
-See [`playground/node-uws.ts`](https://github.com/unjs/crossws/tree/main/playground/node-uws.ts) for demo and [`src/adapters/node-uws.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/node-uws.ts) for implementation.
+See [`test/fixture/node-uws.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/node-uws.ts) for demo and [`src/adapters/node-uws.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/node-uws.ts) for implementation.
 ::

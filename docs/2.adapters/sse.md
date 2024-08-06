@@ -58,5 +58,5 @@ ev.addEventListener("message", (event) => {
 ```
 
 ::read-more
-See [`playground/sse.ts`](https://github.com/unjs/crossws/tree/main/playground/sse.ts) for demo and [`src/adapters/sse.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/sse.ts) for implementation.
+See [`test/fixture/sse.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/sse.ts) for demo and [`src/adapters/sse.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/sse.ts) for implementation.
 ::

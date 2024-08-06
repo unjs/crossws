@@ -41,7 +41,7 @@ export default {
 - `cloudflare:close (peer, event)`
 
 ::read-more
-See [`playground/cloudflare.ts`](https://github.com/unjs/crossws/tree/main/playground/cloudflare.ts) for demo and [`src/adapters/cloudflare.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/cloudflare.ts) for implementation.
+See [`test/fixture/cloudflare.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/cloudflare.ts) for demo and [`src/adapters/cloudflare.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/cloudflare.ts) for implementation.
 ::
 
 ## Durable objects support
@@ -104,5 +104,5 @@ new_classes = ["$DurableObject"]
 ```
 
 ::read-more
-See [`playground/cloudflare-durable.ts`](https://github.com/unjs/crossws/tree/main/playground/cloudflare-durable.ts) for demo and [`src/adapters/cloudflare-durable.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/cloudflare-durable.ts) for implementation.
+See [`test/fixture/cloudflare-durable.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/cloudflare-durable.ts) for demo and [`src/adapters/cloudflare-durable.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/cloudflare-durable.ts) for implementation.
 ::

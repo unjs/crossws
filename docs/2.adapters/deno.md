@@ -36,5 +36,5 @@ Deno.serve({ port: 3000 }, (request, info) => {
 - `deno:error (peer, error)`
 
 ::read-more
-See [`playground/deno.ts`](./playground/deno.ts) for demo and [`src/adapters/deno.ts`](./src/adapters/deno.ts) for implementation.
+See [`test/fixture/deno.ts`](./test/fixture/deno.ts) for demo and [`src/adapters/deno.ts`](./src/adapters/deno.ts) for implementation.
 ::

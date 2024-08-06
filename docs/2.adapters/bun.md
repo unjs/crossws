@@ -43,5 +43,5 @@ Bun.serve({
 - `bun:pong (peer, ws, data)`
 
 ::read-more
-See [`playground/bun.ts`](https://github.com/unjs/crossws/tree/main/playground/bun.ts) for demo and [`src/adapters/bun.ts`](https://github.com/unjs/crossws/tree/main/src/adapters/bun.ts) for implementation.
+See [`test/fixture/bun.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/bun.ts) for demo and [`src/adapters/bun.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/bun.ts) for implementation.
 ::
