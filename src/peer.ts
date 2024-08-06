@@ -9,13 +9,16 @@ const ReadyStateMap = {
 } as const;
 
 export abstract class Peer<AdapterContext = any> {
-  _topics: Set<string> = new Set();
+  protected _internal: AdapterContext;
+  protected _topics: Set<string>;
 
-  static _idCounter = 0;
+  private static _idCounter = 0;
   private _id: string;
 
-  constructor(public ctx: AdapterContext) {
+  constructor(_internalCtx: AdapterContext) {
     this._id = ++Peer._idCounter + "";
+    this._topics = new Set();
+    this._internal = _internalCtx;
   }
 
   get id(): string {

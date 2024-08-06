@@ -91,7 +91,7 @@ class BunPeer extends Peer<{
   bun: { ws: ServerWebSocket<ContextData> };
 }> {
   get addr() {
-    let addr = this.ctx.bun.ws.remoteAddress;
+    let addr = this._internal.bun.ws.remoteAddress;
     if (addr.includes(":")) {
       addr = `[${addr}]`;
     }
@@ -99,23 +99,23 @@ class BunPeer extends Peer<{
   }
 
   get readyState() {
-    return this.ctx.bun.ws.readyState as any;
+    return this._internal.bun.ws.readyState as any;
   }
 
   get url() {
-    return this.ctx.bun.ws.data.requestUrl || "/";
+    return this._internal.bun.ws.data.requestUrl || "/";
   }
 
   get headers() {
-    return this.ctx.bun.ws.data.request?.headers;
+    return this._internal.bun.ws.data.request?.headers;
   }
 
   send(message: any, options?: { compress?: boolean }) {
-    return this.ctx.bun.ws.send(toBufferLike(message), options?.compress);
+    return this._internal.bun.ws.send(toBufferLike(message), options?.compress);
   }
 
   publish(topic: string, message: any, options?: { compress?: boolean }) {
-    return this.ctx.bun.ws.publish(
+    return this._internal.bun.ws.publish(
       topic,
       toBufferLike(message),
       options?.compress,
@@ -123,18 +123,18 @@ class BunPeer extends Peer<{
   }
 
   subscribe(topic: string): void {
-    this.ctx.bun.ws.subscribe(topic);
+    this._internal.bun.ws.subscribe(topic);
   }
 
   unsubscribe(topic: string): void {
-    this.ctx.bun.ws.unsubscribe(topic);
+    this._internal.bun.ws.unsubscribe(topic);
   }
 
   close(code?: number, reason?: string) {
-    this.ctx.bun.ws.close(code, reason);
+    this._internal.bun.ws.close(code, reason);
   }
 
   terminate() {
-    this.ctx.bun.ws.terminate();
+    this._internal.bun.ws.terminate();
   }
 }

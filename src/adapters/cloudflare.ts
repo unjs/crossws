@@ -80,24 +80,24 @@ class CloudflarePeer extends Peer<{
   }
 
   get url() {
-    return this.ctx.cloudflare.request.url;
+    return this._internal.cloudflare.request.url;
   }
 
   get headers() {
-    return this.ctx.cloudflare.request.headers as unknown as Headers;
+    return this._internal.cloudflare.request.headers as unknown as Headers;
   }
 
   get readyState() {
-    return this.ctx.cloudflare.client.readyState as -1 | 0 | 1 | 2 | 3;
+    return this._internal.cloudflare.client.readyState as -1 | 0 | 1 | 2 | 3;
   }
 
   send(message: any) {
-    this.ctx.cloudflare.server.send(toBufferLike(message));
+    this._internal.cloudflare.server.send(toBufferLike(message));
     return 0;
   }
 
   close(code?: number, reason?: string) {
-    this.ctx.cloudflare.client.close(code, reason);
+    this._internal.cloudflare.client.close(code, reason);
   }
 
   terminate(): void {
