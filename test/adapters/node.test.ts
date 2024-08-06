@@ -19,6 +19,14 @@ describe("node", () => {
             peers: [...ws.peers].map((p) => p.id),
           }),
         );
+      } else if (req.url!.startsWith("/publish")) {
+        const q = new URLSearchParams(req.url!.split("?")[1]);
+        const topic = q.get("topic") || "";
+        const message = q.get("message") || "";
+        if (topic && message) {
+          ws.publish(topic, message);
+          return res.end("published");
+        }
       }
       res.end("ok");
     });
@@ -34,5 +42,7 @@ describe("node", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
-  wsTests(() => url, {});
+  wsTests(() => url, {
+    adapter: "node",
+  });
 });

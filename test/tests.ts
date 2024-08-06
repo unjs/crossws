@@ -3,7 +3,7 @@ import { wsConnect } from "./_utils";
 
 export function wsTests(
   getURL: () => string,
-  opts: { pubsub?: boolean; resHeaders?: boolean } = {},
+  opts: { adapter: string; pubsub?: boolean; resHeaders?: boolean },
 ) {
   test("http works", async () => {
     const response = await fetch(getURL().replace("ws", "http"));
@@ -110,4 +110,18 @@ export function wsTests(
     expect(peers1.length).toBe(2);
     expect(peers1).toMatchObject(peers2);
   });
+
+  test.skipIf(opts.adapter.startsWith("cloudflare"))(
+    "publish to all peers from adapter",
+    async () => {
+      const ws1 = await wsConnect(getURL(), { skip: 1 });
+      const ws2 = await wsConnect(getURL(), { skip: 1 });
+      ws1.skip(); // join message for ws2
+      await fetch(
+        getURL().replace("ws", "http") + `publish?topic=chat&message=ping`,
+      );
+      expect(await ws1.next()).toBe("ping");
+      expect(await ws2.next()).toBe("ping");
+    },
+  );
 }

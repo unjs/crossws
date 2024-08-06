@@ -16,7 +16,7 @@ import {
   defineWebSocketAdapter,
 } from "../types";
 import { AdapterHookable } from "../hooks";
-import { toBufferLike } from "../_utils";
+import { adapterUtils, toBufferLike } from "../_utils";
 
 type UserData = {
   _peer?: any;
@@ -50,7 +50,7 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
     const hooks = new AdapterHookable(options);
     const peers = new Set<UWSPeer>();
     return {
-      peers,
+      ...adapterUtils(peers),
       websocket: {
         ...options.uws,
         close(ws, code, message) {

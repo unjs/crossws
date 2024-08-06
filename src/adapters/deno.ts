@@ -11,7 +11,7 @@ import {
   defineWebSocketAdapter,
 } from "../types.ts";
 import { AdapterHookable } from "../hooks.ts";
-import { toBufferLike } from "../_utils.ts";
+import { adapterUtils, toBufferLike } from "../_utils.ts";
 
 export interface DenoAdapter extends AdapterInstance {
   handleUpgrade(req: Request, info: ServeHandlerInfo): Promise<Response>;
@@ -31,7 +31,7 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
     const hooks = new AdapterHookable(options);
     const peers = new Set<DenoPeer>();
     return {
-      peers,
+      ...adapterUtils(peers),
       handleUpgrade: async (request, info) => {
         const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {
