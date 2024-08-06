@@ -78,7 +78,7 @@
     "play:sse": "bun test/fixture/sse.ts",
     "play:uws": "jiti test/fixture/uws.ts",
     "release": "pnpm test && pnpm build && changelogen --release && npm publish && git push --follow-tags",
-    "test": "pnpm lint && pnpm test:types && vitest run",
+    "test": "pnpm lint && pnpm test:types && vitest run --coverage",
     "test:types": "tsc --noEmit --skipLibCheck"
   },
   "resolutions": {
