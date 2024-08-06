@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://unpkg.com/undocs/schema/config.json
 
-name: CrossWS
-shortDescription: runtime agnostic WebSockets
+name: crossws
+shortDescription: runtime agnostic websocket servers
 description: Unified WebSocket API for Node.js, Deno, Bun and Cloudflare
   Workers.
 github: unjs/crossws
@@ -22,7 +22,7 @@ landing:
         per client but once.
     - title: Lightweight
       description:
-        Zero Dependency with bundled ws for Node.js support. Extremely lightweight
+        Zero Dependency with bundled support for Node.js support. Extremely lightweight
         and tree-shakable packaging with ESM and CJS support.
     - title: Developer Friendly
       description: Typed Hooks API and human friendly logging support.

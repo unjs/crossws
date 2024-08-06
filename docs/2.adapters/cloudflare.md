@@ -4,17 +4,17 @@ icon: devicon-plain:cloudflareworkers
 
 # Cloudflare
 
-> Integrate CrossWS with Cloudflare Workers.
+> Integrate crossws with Cloudflare Workers.
 
-To integrate CrossWS with your Cloudflare Workers, you need to check for the `upgrade` header.
+To integrate crossws with your Cloudflare Workers, you need to check for the `upgrade` header.
 
 > [!IMPORTANT]
-> For [pub/sub](/guide/pubsub) support, you need to use [Durable objects](#durable-objects-support).
+> For [pub/sub](/guide/pubsub) support, you need to use [Durable objects](#durable-objects).
 
 ```ts
-import wsAdapter from "crossws/adapters/cloudflare";
+import crossws from "crossws/adapters/cloudflare";
 
-const ws = wsAdapter({
+const ws = crossws({
   hooks: {
     message: console.log,
   },
@@ -44,15 +44,15 @@ export default {
 See [`test/fixture/cloudflare.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/cloudflare.ts) for demo and [`src/adapters/cloudflare.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/cloudflare.ts) for implementation.
 ::
 
-## Durable objects support
+## Durable objects
 
-To integrate CrossWS with Cloudflare [Durable Objects](https://developers.cloudflare.com/durable-objects/api/websockets/) (available on paid plans) with pub/sub and hibernation support, you need to check for the `upgrade` header and additionally export a Durable object with crossws adapter hooks integrated.
+To integrate crossws with Cloudflare [Durable Objects](https://developers.cloudflare.com/durable-objects/api/websockets/) (available on paid plans) with pub/sub and hibernation support, you need to check for the `upgrade` header and additionally export a Durable object with crossws adapter hooks integrated.
 
 ```js
 import { DurableObject } from "cloudflare:workers";
-import wsAdapter from "crossws/adapters/cloudflare-durable";
+import crossws from "crossws/adapters/cloudflare-durable";
 
-const ws = wsAdapter({
+const ws = crossws({
   // bindingName: "$DurableObject",
   // instanceName: "crossws",
   hooks: {
@@ -81,11 +81,11 @@ export class $DurableObject extends DurableObject {
     return ws.handleDurableUpgrade(this, request);
   }
 
-  async webSocketMessage(client, message) {
+  webSocketMessage(client, message) {
     return ws.handleDurableMessage(this, client, message);
   }
 
-  async webSocketClose(client, code, reason, wasClean) {
+  webSocketClose(client, code, reason, wasClean) {
     return ws.handleDurableClose(this, client, code, reason, wasClean);
   }
 }

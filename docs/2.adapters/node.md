@@ -4,15 +4,15 @@ icon: akar-icons:node-fill
 
 # Node.js
 
-> Integrate CrossWS with Node.js using ws or uWebSockets.js
+> Integrate crossws with Node.js using ws or uWebSockets.js
 
-To integrate CrossWS with your Node.js HTTP server, you need to connect the `upgrade` event to the `handleUpgrade` method returned from the adapter. CrossWS uses a prebundled version of [ws](https://github.com/websockets/ws).
+To integrate crossws with your Node.js HTTP server, you need to connect the `upgrade` event to the `handleUpgrade` method returned from the adapter. crossws uses a prebundled version of [ws](https://github.com/websockets/ws).
 
 ```ts
 import { createServer } from "node:http";
-import wsAdapter from "crossws/adapters/node";
+import crossws from "crossws/adapters/node";
 
-const ws = wsAdapter({
+const ws = crossws({
   hooks: {
     message: console.log,
   },
@@ -44,15 +44,15 @@ See [`test/fixture/node.ts`](https://github.com/unjs/crossws/blob/main/test/fixt
 
 ## uWebSockets
 
-Integrate CrossWS with Node.js using uWebSockets.js.
+You can alternatively use [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) for Node.js servers.
 
-Instead of [using `ws`](/adapters/node-ws) you can use [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js) for Node.js servers.
+First add `uNetworking/uWebSockets.js` as a dependency.
 
 ```ts
 import { App } from "uWebSockets.js";
-import wsAdapter from "crossws/adapters/uws";
+import crossws from "crossws/adapters/uws";
 
-const ws = wsAdapter({
+const ws = crossws({
   hooks: {
     message: console.log,
   },
