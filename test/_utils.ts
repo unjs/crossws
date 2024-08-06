@@ -55,21 +55,48 @@ export function wsConnect(
     }
   });
 
-  const connectPromise = new Promise<void>((resolve) => ws.on("open", resolve));
-
   afterEach(() => {
     ws.removeAllListeners();
     ws.close();
   });
 
-  return connectPromise.then(() => ({
+  const res = {
     ws,
     send,
     next,
     skip,
     messages,
     upgradeHeaders,
-  }));
+  };
+
+  const connectPromise = new Promise((resolve, reject) => {
+    ws.once("open", () => resolve(res));
+    ws.once("error", reject);
+    ws.once("unexpected-response", (_req, res) => {
+      const bodyChunks: any[] = [];
+      res.on("data", (chunk) => {
+        bodyChunks.push(chunk);
+      });
+      res.once("end", () => {
+        const body = Buffer.concat(bodyChunks).toString();
+        reject(
+          new Error(
+            `Unexpected response: ${res.statusCode} ${res.statusMessage} (body:${body})`,
+            {
+              cause: {
+                status: res.statusCode!,
+                statusText: res.statusMessage!,
+                headers: res.headers,
+                body,
+              },
+            },
+          ),
+        );
+      });
+    });
+  });
+
+  return Object.assign(connectPromise, res) as Promise<typeof res>;
 }
 
 export function wsTestsExec(cmd: string, opts?: Parameters<typeof wsTests>[1]) {

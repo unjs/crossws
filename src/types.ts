@@ -43,7 +43,12 @@ type HookFn<ArgsT extends any[] = any, RT = void> = (
 export interface Hooks {
   /** Upgrading */
   upgrade: (
-    req: Partial<Request>,
+    request:
+      | Request
+      | {
+          url: string;
+          headers: Headers;
+        },
   ) => MaybePromise<Response | ResponseInit | void>;
 
   /** A message is received */

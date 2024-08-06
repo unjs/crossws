@@ -103,9 +103,16 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
             for (const [key, value] of _res.headers) {
               res.writeHeader(key, value);
             }
-            const bytes = await _res.bytes();
+            if (_res.body) {
+              for await (const chunk of _res.body) {
+                if (aborted) {
+                  break;
+                }
+                res.write(chunk);
+              }
+            }
             if (!aborted) {
-              res.end(bytes);
+              res.end();
             }
             return;
           }

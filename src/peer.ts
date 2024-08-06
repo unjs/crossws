@@ -27,7 +27,7 @@ export abstract class Peer<AdapterContext = any> {
   }
 
   get url(): string {
-    return "/";
+    return "";
   }
 
   get headers(): Headers | undefined {

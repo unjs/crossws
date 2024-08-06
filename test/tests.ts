@@ -77,4 +77,15 @@ export function wsTests(
     const url = new URL(info.url);
     expect(url.search).toBe("?foo=bar");
   });
+
+  test("upgrade fail response", async () => {
+    await expect(wsConnect(getURL() + "?unauthorized")).rejects.toMatchObject({
+      cause: {
+        status: 401,
+        statusText: "Unauthorized",
+        body: "unauthorized",
+        headers: { "x-error": "unauthorized" },
+      },
+    });
+  });
 }

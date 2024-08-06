@@ -144,16 +144,22 @@ class NodeReqProxy {
 }
 
 async function sendResponse(socket: Duplex, res: Response) {
-  socket.write(`HTTP/1.1 ${res.status || 200} ${res.statusText || ""}\r\n`);
-  socket.write(
-    [...res.headers.entries()]
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\r\n") + "\r\n",
-  );
+  const head = [
+    `HTTP/1.1 ${res.status || 200} ${res.statusText || ""}`,
+    ...[...res.headers.entries()].map(
+      ([key, value]) =>
+        `${encodeURIComponent(key)}: ${encodeURIComponent(value)}`,
+    ),
+  ];
+  socket.write(head.join("\r\n") + "\r\n\r\n");
   if (res.body) {
-    socket.write(await res.bytes);
+    for await (const chunk of res.body) {
+      socket.write(chunk);
+    }
   }
-  socket.destroy();
+  return new Promise<void>((resolve) => {
+    socket.end(resolve);
+  });
 }
 
 class NodePeer extends Peer<{
