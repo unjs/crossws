@@ -123,7 +123,6 @@ function peerFromDurableEvent(
     return peer;
   }
   peer = ws._crosswsPeer = new CloudflareDurablePeer({
-    peers: undefined as any, // Intentionally undefined to avoid wrongly using it
     cloudflare: {
       ws: ws as CF.WebSocket,
       request,
@@ -135,7 +134,7 @@ function peerFromDurableEvent(
 }
 
 class CloudflareDurablePeer extends Peer<{
-  peers: Set<CloudflareDurablePeer>; // Won't be used
+  peers?: never;
   cloudflare: {
     ws: AugmentedWebSocket;
     request?: Request | CF.Request;

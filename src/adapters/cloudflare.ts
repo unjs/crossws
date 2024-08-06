@@ -44,6 +44,7 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
         const client = pair[0];
         const server = pair[1];
         const peer = new CloudflarePeer({
+          peers,
           cloudflare: { client, server, request, env, context },
         });
         peers.add(peer);
@@ -76,7 +77,7 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
 );
 
 class CloudflarePeer extends Peer<{
-  peers?: never;
+  peers: Set<CloudflarePeer>;
   cloudflare: {
     client: _cf.WebSocket;
     server: _cf.WebSocket;
