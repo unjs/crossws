@@ -103,7 +103,11 @@ export function wsConnect(
   return Object.assign(connectPromise, res) as Promise<typeof res>;
 }
 
-export function wsTestsExec(cmd: string, opts: Parameters<typeof wsTests>[1]) {
+export function wsTestsExec(
+  cmd: string,
+  opts: Parameters<typeof wsTests>[1],
+  tests = wsTests,
+) {
   let childProc: ExecaRes;
   let url: string;
   beforeAll(async () => {
@@ -132,5 +136,5 @@ export function wsTestsExec(cmd: string, opts: Parameters<typeof wsTests>[1]) {
   afterAll(async () => {
     await childProc.kill();
   });
-  wsTests(() => url, opts);
+  tests(() => url, opts);
 }
