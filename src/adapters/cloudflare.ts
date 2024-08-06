@@ -11,7 +11,7 @@ import {
 import { Message } from "../message";
 import { WSError } from "../error";
 import { AdapterHookable } from "../hooks.js";
-import { toBufferLike } from "../_utils";
+import { adapterUtils, toBufferLike } from "../_utils";
 
 declare const WebSocketPair: typeof _cf.WebSocketPair;
 declare const Response: typeof _cf.Response;
@@ -31,7 +31,7 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
     const hooks = new AdapterHookable(options);
     const peers = new Set<CloudflarePeer>();
     return {
-      peers,
+      ...adapterUtils(peers),
       handleUpgrade: async (request, env, context) => {
         const res = await hooks.callHook(
           "upgrade",

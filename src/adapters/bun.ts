@@ -9,7 +9,7 @@ import {
   defineWebSocketAdapter,
 } from "../types";
 import { AdapterHookable } from "../hooks";
-import { toBufferLike } from "../_utils";
+import { adapterUtils, toBufferLike } from "../_utils";
 
 export interface BunAdapter extends AdapterInstance {
   websocket: WebSocketHandler<ContextData>;
@@ -30,7 +30,7 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
     const hooks = new AdapterHookable(options);
     const peers = new Set<BunPeer>();
     return {
-      peers,
+      ...adapterUtils(peers),
       async handleUpgrade(request, server) {
         const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {

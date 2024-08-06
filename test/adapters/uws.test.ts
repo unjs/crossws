@@ -24,6 +24,14 @@ describe("uws", () => {
       const url = req.getUrl();
       if (url === "/peers") {
         resBody = JSON.stringify({ peers: [...ws.peers].map((p) => p.id) });
+      } else if (url === "/publish") {
+        const q = new URLSearchParams(req.getQuery());
+        const topic = q.get("topic") || "";
+        const message = q.get("message") || "";
+        if (topic && message) {
+          ws.publish(topic, message);
+          resBody = "published";
+        }
       }
 
       if (aborted) {

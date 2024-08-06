@@ -79,5 +79,10 @@ export function handleDemoRoutes(
         peers: [...ws.peers].map((p) => p.id),
       }),
     );
+  } else if (url.pathname === "/publish") {
+    const topic = url.searchParams.get("topic") || "";
+    const message = url.searchParams.get("message") || "";
+    ws.publish(topic, message);
+    return new Response("published");
   }
 }

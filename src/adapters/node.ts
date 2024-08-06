@@ -19,7 +19,7 @@ import {
   defineWebSocketAdapter,
 } from "../types";
 import { AdapterHookable } from "../hooks";
-import { toBufferLike } from "../_utils";
+import { adapterUtils, toBufferLike } from "../_utils";
 
 type AugmentedReq = IncomingMessage & { _upgradeHeaders?: HeadersInit };
 
@@ -103,7 +103,7 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
     });
 
     return {
-      peers,
+      ...adapterUtils(peers),
       handleUpgrade: async (req, socket, head) => {
         const res = await hooks.callHook("upgrade", new NodeReqProxy(req));
         if (res instanceof Response) {

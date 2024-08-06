@@ -10,7 +10,7 @@ import {
 import { Peer } from "../peer";
 import { Message } from "../message";
 import { AdapterHookable } from "../hooks";
-import { toBufferLike } from "../_utils";
+import { adapterUtils, toBufferLike } from "../_utils";
 
 declare class DurableObjectPub extends DurableObject {
   public ctx: DurableObject["ctx"];
@@ -65,7 +65,7 @@ export default defineWebSocketAdapter<
   const hooks = new AdapterHookable(opts);
   const peers = new Set<CloudflareDurablePeer>();
   return {
-    peers,
+    ...adapterUtils(peers),
     handleUpgrade: async (req, env, _context) => {
       const bindingName = opts?.bindingName ?? "$DurableObject";
       const instanceName = opts?.instanceName ?? "crossws";

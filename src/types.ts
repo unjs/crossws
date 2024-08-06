@@ -6,6 +6,7 @@ import type { Peer } from "./peer.ts";
 
 export interface AdapterInstance {
   readonly peers: Set<Peer>;
+  readonly publish: Peer["publish"];
 }
 
 export interface AdapterOptions {
