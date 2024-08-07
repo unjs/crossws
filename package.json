@@ -68,7 +68,7 @@
     "play:bun": "bun test/fixture/bun.ts",
     "play:cf": "wrangler dev --port 3001 -c test/fixture/wrangler.toml",
     "play:cf-durable": "wrangler dev --port 3001 -c test/fixture/wrangler-durable.toml",
-    "play:deno": "deno run -A test/fixture/deno.ts",
+    "play:deno": "deno run --unstable-byonm -A test/fixture/deno.ts",
     "play:node": "jiti test/fixture/node.ts",
     "play:sse": "bun test/fixture/sse.ts",
     "play:uws": "jiti test/fixture/uws.ts",
@@ -78,6 +78,9 @@
   },
   "resolutions": {
     "crossws": "workspace:*"
+  },
+  "dependencies": {
+    "uncrypto": "^0.1.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240729.0",

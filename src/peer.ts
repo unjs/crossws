@@ -1,3 +1,5 @@
+import { randomUUID } from "uncrypto";
+
 // https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
 type ReadyState = 0 | 1 | 2 | 3;
 const ReadyStateMap = {
@@ -16,17 +18,18 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   protected _internal: Internal;
   protected _topics: Set<string>;
 
-  private static _idCounter = 0;
-  private _id: string;
+  private _id?: string;
 
   constructor(internal: Internal) {
-    this._id = ++Peer._idCounter + "";
     this._topics = new Set();
     this._internal = internal;
   }
 
   get id(): string {
-    return this._id.toString();
+    if (!this._id) {
+      this._id = randomUUID();
+    }
+    return this._id;
   }
 
   get addr(): string | undefined {
@@ -66,7 +69,7 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   }
 
   toString() {
-    return `#${this.id}`;
+    return this.id;
   }
 
   [Symbol.for("nodejs.util.inspect.custom")]() {
