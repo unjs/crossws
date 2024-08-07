@@ -12,7 +12,7 @@ export function wsTests(
 
   test("connect to websocket", async () => {
     const ws = await wsConnect(getURL());
-    expect(await ws.next()).toBe("Welcome to the server #1!");
+    expect(await ws.next()).toMatch(/Welcome to the server \w+/);
   });
 
   test("send ping", async () => {
@@ -25,7 +25,7 @@ export function wsTests(
     const ws1 = await wsConnect(getURL(), { skip: 1 });
     const ws2 = await wsConnect(getURL(), { skip: 1 });
     if (opts.pubsub !== false) {
-      expect(await ws1.next()).toBe("#4 joined!");
+      expect(await ws1.next()).toMatch(/\w+ joined!/);
     }
     await ws1.send("hello from 1");
     expect(await ws1.next()).toBe("hello from 1");

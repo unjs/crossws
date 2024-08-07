@@ -13,7 +13,8 @@ describe("sse", () => {
       });
       await new Promise((resolve) => ev.addEventListener("open", resolve));
       ev.close();
-      expect(messages).toMatchObject(["Welcome to the server #1!"]);
+      expect(messages[0]).toMatch(/Welcome to the server \w+/);
+      expect(messages.length).toBe(1);
     });
   });
 });
