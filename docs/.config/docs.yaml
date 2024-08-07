@@ -1,9 +1,8 @@
 # yaml-language-server: $schema=https://unpkg.com/undocs/schema/config.json
 
 name: crossws
-shortDescription: runtime agnostic websocket servers
-description: Unified WebSocket API for Node.js, Deno, Bun and Cloudflare
-  Workers.
+shortDescription: Unified WebSocket Servers
+description: elegant, typed, and simple toolkit to implement cross-platform WebSocket servers.
 github: unjs/crossws
 landing:
   heroLinks:
@@ -12,17 +11,11 @@ landing:
       icon: i-heroicons-play
       to: https://stackblitz.com/github/unjs/crossws/tree/main/examples/h3?file=app.ts
   features:
-    - title: Runtime Agnostic
-      description:
-        Seamlessly integrates with Bun, Deno, Cloudflare Workers and Node.js
-        (ws or uWebSockets.js)
-    - title: Made for Performance
-      description:
-        High-performance server hooks API designed to avoid creating callbacks
-        per client but once.
-    - title: Lightweight
-      description:
-        Zero Dependency with bundled support for Node.js support. Extremely lightweight
-        and tree-shakable packaging with ESM and CJS support.
-    - title: Developer Friendly
-      description: Typed Hooks API and human friendly logging support.
+    - title: 🧩 Pluggable
+      description: Seamlessly integrates with [Bun](https://crossws.unjs.io/adapters/bun), [Cloudflare Workers](https://crossws.unjs.io/adapters/cloudflare), [Deno](https://crossws.unjs.io/adapters/deno) and [Node.js](https://crossws.unjs.io/adapters/node) and any compatible web framework.
+    - title: 📦 Lightweight
+      description: Extremely lightweight and tree-shakable conditional ESM exports. Prebundled with [ws](https://github.com/websockets/ws) for Node.js support.
+    - title: 🚀 Made for Performance
+      description: High-performance and simple hooks API, without per-connection callback creation.
+    - title: 🌟 Developer Friendly
+      description: Typed hooks API and developer-friendly object inspection.

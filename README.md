@@ -1,4 +1,4 @@
-# ⛨ CrossWS
+# crossws
 
 <!-- automd:badges -->
 
@@ -7,24 +7,23 @@
 
 <!-- /automd -->
 
-Elegant, typed, and simple interface to implement platform-agnostic WebSocket servers.
+Elegant, typed, and simple toolkit to implement cross-platform WebSocket servers.
 
 👉 [📖 documentation](https://crossws.unjs.io)
 
 ## Features
 
-🧩 Seamlessly integrates with, [Bun](https://bun.sh/), [Deno](https://deno.com/), [Cloudflare Workers](https://workers.cloudflare.com/) and [Node.js](https://nodejs.org/en) ([ws](https://github.com/websockets/ws) || [uWebSockets](https://github.com/uNetworking/uWebSockets.js)).
+🧩 Seamlessly integrates with [Bun](https://crossws.unjs.io/adapters/bun), [Cloudflare Workers](https://crossws.unjs.io/adapters/cloudflare), [Deno](https://crossws.unjs.io/adapters/deno) and [Node.js](https://crossws.unjs.io/adapters/node) and any compatible web framework.
 
-🚀 High-performance server hooks, avoiding heavy per-connection events API ([why](https://bun.sh/docs/api/websockets#lcYFjkFYJC-summary))
+✅ Prebundled with [ws](https://github.com/websockets/ws) for Node.js support with alternative/much faster [uWebSockets](https://crossws.unjs.io/adapters/node#uwebsockets) adapter.
 
-📦 No external dependencies, includes [ws](https://github.com/websockets/ws) for Node.js support
+📦 Extremely lightweight and tree-shakable conditional ESM exports.
 
-💡 Extremely lightweight and tree-shakable packaging with ESM and CJS support
+🚀 High-performance and simple hooks API, without per-connection callback creation.
 
-🔍 Developer-friendly object logging
+🌟 Typed hooks API and developer-friendly object inspection.
 
-> [!IMPORTANT]
-> This project and API are under development.
+[^1]: crossws supports Node.js via [npm:ws](https://github.com/websockets/ws) (prebundled) or [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js).
 
 ## Contribution
 
