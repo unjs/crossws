@@ -8,57 +8,52 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
     },
     "./websocket": {
-      "types": {
-        "import": "./dist/websocket/index.d.mts",
-        "require": "./dist/websocket/index.d.cts"
-      },
+      "types": "./dist/websocket/index.d.mts",
       "browser": "./dist/websocket/index.mjs",
       "worker": "./dist/websocket/index.mjs",
       "bun": "./dist/websocket/index.mjs",
       "deno": "./dist/websocket/index.mjs",
       "edge-light": "./dist/websocket/index.mjs",
       "workerd": "./dist/websocket/index.mjs",
-      "node": {
-        "import": "./dist/websocket/node.mjs",
-        "require": "./dist/websocket/node.cjs"
-      },
-      "import": "./dist/websocket/index.mjs",
-      "require": "./dist/websocket/index.cjs"
+      "node": "./dist/websocket/node.mjs",
+      "default": "./dist/websocket/index.mjs"
     },
     "./adapters/bun": {
-      "types": "./dist/adapters/bun.d.ts",
-      "import": "./dist/adapters/bun.mjs",
-      "require": "./dist/adapters/bun.cjs"
+      "types": "./dist/adapters/bun.d.mts",
+      "default": "./dist/adapters/bun.mjs"
     },
     "./adapters/deno": {
-      "types": "./dist/adapters/deno.d.ts",
-      "import": "./dist/adapters/deno.mjs",
-      "require": "./dist/adapters/deno.cjs"
+      "types": "./dist/adapters/deno.d.mts",
+      "default": "./dist/adapters/deno.mjs"
     },
     "./adapters/cloudflare": {
-      "types": "./dist/adapters/cloudflare.d.ts",
-      "import": "./dist/adapters/cloudflare.mjs",
-      "require": "./dist/adapters/cloudflare.cjs"
+      "types": "./dist/adapters/cloudflare.d.mts",
+      "default": "./dist/adapters/cloudflare.mjs"
+    },
+    "./adapters/cloudflare-durable": {
+      "types": "./dist/adapters/cloudflare-durable.d.mts",
+      "default": "./dist/adapters/cloudflare-durable.mjs"
+    },
+    "./adapters/sse": {
+      "types": "./dist/adapters/sse.d.mts",
+      "default": "./dist/adapters/sse.mjs"
     },
     "./adapters/node": {
-      "types": "./dist/adapters/node.d.ts",
-      "import": "./dist/adapters/node.mjs",
-      "require": "./dist/adapters/node.cjs"
+      "types": "./dist/adapters/node.d.mts",
+      "default": "./dist/adapters/node.mjs"
     },
     "./adapters/uws": {
-      "types": "./dist/adapters/uws.d.ts",
-      "import": "./dist/adapters/uws.mjs",
-      "require": "./dist/adapters/uws.cjs"
+      "types": "./dist/adapters/uws.d.mts",
+      "default": "./dist/adapters/uws.mjs"
     }
   },
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
   "files": [
     "dist",
     "adapters",
@@ -107,7 +102,7 @@
     "prettier": "^3.3.3",
     "typescript": "^5.5.4",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.44.0",
-    "unbuild": "^2.0.0",
+    "unbuild": "^3.0.0-rc.7",
     "vitest": "^2.0.5",
     "wrangler": "^3.68.0",
     "ws": "^8.18.0"
