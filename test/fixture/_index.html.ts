@@ -60,6 +60,8 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           format();
         };
 
+        let _send = () => {};
+
         let ws;
         const connectWS = async () => {
           const isSecure = location.protocol === "https:";
@@ -67,6 +69,7 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           if (ws) {
             log("ws", "Closing previous connection before reconnecting...");
             ws.close();
+            _send = () => {};
             clear();
           }
 
@@ -85,24 +88,55 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           });
 
           await new Promise((resolve) => ws.addEventListener("open", resolve));
+          _send = (message) => ws.send(message);
           log("ws", "Connected!");
         };
 
         let sse;
         const connectSSE = async () => {
-          const url = "/sse";
+          const url = "/_sse";
           if (sse) {
             log("sse", "Closing previous connection before reconnecting...");
             sse.close();
             clear();
+            send = () => {};
           }
 
           log("sse", "Connecting to", url, "...");
           sse = new EventSource(url);
 
+          sse.addEventListener("crossws-id", (event) => {
+            const peerId = event.data;
+
+            const sendWithFetch = _send = (message) => fetch(url, {
+              method: 'POST',
+              headers: { 'x-crossws-id': peerId },
+              body: message,
+            }).catch((error) => {
+              log("sse", "Cannot send message:", error);
+            });
+
+            fetch(url, {
+               method: 'POST',
+               duplex: 'half',
+               headers: {
+                'content-type': 'application/octet-stream',
+                'x-crossws-id': event.data
+               },
+               body: new ReadableStream({
+                  start(controller) {
+                    _send = (message) => {
+                      controller.enqueue(message);
+                    }
+                  },
+               }).pipeThrough(new TextEncoderStream()),
+            }).catch((error) => {
+              _send = sendWithFetch;
+            });
+          });
+
           sse.addEventListener("message", async (event) => {
-            console.log(event)
-            const data = typeof event.data === "string" ? event.data : await event.data.text();
+            const data = event.data;
             const { user = "system", message = "" } = data.startsWith("{")
               ? JSON.parse(data)
               : { message: data };
@@ -125,14 +159,14 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
         const send = () => {
           console.log("sending message...");
           if (store.message) {
-            ws.send(store.message);
+            _send(store.message);
           }
           store.message = "";
         };
 
         const ping = () => {
           log("ws", "Sending ping");
-          ws.send("ping");
+          _send("ping");
         };
 
         createApp({

@@ -30,6 +30,19 @@ export function toBufferLike(val: any): BufferLike {
   return val;
 }
 
+export function toString(val: any): string {
+  if (typeof val === "string") {
+    return val;
+  }
+  const data = toBufferLike(val);
+  if (typeof data === "string") {
+    return data;
+  }
+  // eslint-disable-next-line unicorn/prefer-code-point
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+  return `data:application/octet-stream;base64,${base64}`;
+}
+
 // Forked from sindresorhus/is-plain-obj (MIT)
 // Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)
 // From https://github.com/unjs/defu/blob/main/src/_utils.ts
