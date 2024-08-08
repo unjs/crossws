@@ -60,6 +60,8 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           format();
         };
 
+        let _send = () => {};
+
         let ws;
         const connectWS = async () => {
           const isSecure = location.protocol === "https:";
@@ -67,6 +69,7 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           if (ws) {
             log("ws", "Closing previous connection before reconnecting...");
             ws.close();
+            _send = () => {};
             clear();
           }
 
@@ -85,6 +88,7 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           });
 
           await new Promise((resolve) => ws.addEventListener("open", resolve));
+          _send = (message) => ws.send(message);
           log("ws", "Connected!");
         };
 
@@ -95,17 +99,16 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
             log("sse", "Closing previous connection before reconnecting...");
             sse.close();
             clear();
+            send = () => {};
           }
 
           log("sse", "Connecting to", url, "...");
           sse = new EventSource(url);
 
-          ws = { send: () => {} }
-
           sse.addEventListener("crossws-id", (event) => {
             const peerId = event.data;
 
-            ws.send = (message) => fetch(url, {
+            const sendWithFetch = _send = (message) => fetch(url, {
               method: 'POST',
               headers: { 'x-crossws-id': peerId },
               body: message,
@@ -113,7 +116,6 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
               log("sse", "Cannot send message:", error);
             });
 
-            // Try to initiate a half-duplex connection
             fetch(url, {
                method: 'POST',
                duplex: 'half',
@@ -123,13 +125,13 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
                },
                body: new ReadableStream({
                   start(controller) {
-                    ws.send = (message) => {
+                    _send = (message) => {
                       controller.enqueue(message);
                     }
                   },
                }).pipeThrough(new TextEncoderStream()),
             }).catch((error) => {
-              log("sse", "Cannot initialize bidirectional messaging:", error);
+              _send = sendWithFetch;
             });
           });
 
@@ -157,14 +159,14 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
         const send = () => {
           console.log("sending message...");
           if (store.message) {
-            ws.send(store.message);
+            _send(store.message);
           }
           store.message = "";
         };
 
         const ping = () => {
           log("ws", "Sending ping");
-          ws.send("ping");
+          _send("ping");
         };
 
         createApp({

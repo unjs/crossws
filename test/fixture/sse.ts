@@ -7,25 +7,28 @@ const ws = createDemo(sseAdapter, { bidir: true });
 
 const port = Number.parseInt(Deno.env.get("PORT") || "") || 3001;
 
-Deno.serve(
-  { hostname: "localhost", port, ...getCert() },
-  async (request, _info) => {
-    const response = handleDemoRoutes(ws, request);
-    if (response) {
-      return response;
-    }
+const handler = async (request: Request) => {
+  const response = handleDemoRoutes(ws, request);
+  if (response) {
+    return response;
+  }
 
-    // Handle SSE
-    const url = new URL(request.url);
-    if (url.pathname === "/_sse") {
-      return ws.fetch(request);
-    }
+  // Handle SSE
+  const url = new URL(request.url);
+  if (url.pathname === "/_sse") {
+    return ws.fetch(request);
+  }
 
-    return new Response(await getIndexHTML({ sse: true }), {
-      headers: { "Content-Type": "text/html" },
-    });
-  },
-);
+  return new Response(await getIndexHTML({ sse: true }), {
+    headers: { "Content-Type": "text/html" },
+  });
+};
+
+// Start HTTP server
+Deno.serve({ hostname: "localhost", port }, handler);
+
+// Start TLS server
+Deno.serve({ hostname: "localhost", port: port + 1, ...getCert() }, handler);
 
 function getCert() {
   return {
