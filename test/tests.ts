@@ -51,10 +51,12 @@ export function wsTests(
     "upgrade response headers",
     async () => {
       const ws = await wsConnect(getURL());
-      expect(ws.upgradeHeaders["x-powered-by"]).toBe("cross-ws");
-      expect(ws.upgradeHeaders["set-cookie"]).toMatchObject([
-        "cross-ws=1; SameSite=None; Secure",
-      ]);
+      expect(ws.inspector.headers).toMatchObject({
+        connection: expect.stringMatching(/^upgrade$/i),
+        "sec-websocket-accept": expect.any(String),
+        "set-cookie": "cross-ws=1; SameSite=None; Secure",
+        "x-powered-by": "cross-ws",
+      });
     },
   );
 
@@ -65,7 +67,7 @@ export function wsTests(
     });
     await ws.send("debug");
     const { headers } = await ws.next();
-    expect(headers["connection"]).toBe("Upgrade");
+    expect(headers["connection"]).toMatch(/^upgrade$/i);
     expect(headers["x-test"]).toBe("1");
   });
 
@@ -79,12 +81,14 @@ export function wsTests(
   });
 
   test("upgrade fail response", async () => {
-    await expect(wsConnect(getURL() + "?unauthorized")).rejects.toMatchObject({
-      cause: {
-        status: 401,
-        statusText: "Unauthorized",
-        body: "unauthorized",
-        headers: { "x-error": "unauthorized" },
+    const ws = await wsConnect(getURL() + "?unauthorized");
+    expect(ws.error).toBeDefined();
+    expect(ws.inspector).toMatchObject({
+      status: 401,
+      statusText: "Unauthorized",
+      headers: {
+        "content-type": expect.stringMatching(/^text\/plain/),
+        "x-error": "unauthorized",
       },
     });
   });
