@@ -49,6 +49,10 @@
       "workerd": "./dist/websocket/native.mjs",
       "node": "./dist/websocket/node.mjs",
       "default": "./dist/websocket/native.mjs"
+    },
+    "./websocket/sse": {
+      "types": "./dist/websocket/sse.d.mts",
+      "default": "./dist/websocket/sse.mjs"
     }
   },
   "main": "./dist/index.mjs",

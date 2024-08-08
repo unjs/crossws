@@ -14,8 +14,10 @@ const handler = async (request: Request) => {
   }
 
   // Handle SSE
-  const url = new URL(request.url);
-  if (url.pathname === "/_sse") {
+  if (
+    request.headers.get("accept") === "text/event-stream" ||
+    request.headers.has("x-crossws-id")
+  ) {
     return ws.fetch(request);
   }
 

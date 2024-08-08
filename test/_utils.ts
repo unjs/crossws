@@ -1,4 +1,4 @@
-import { Agent, WebSocket } from "undici";
+import { Agent, WebSocket as WebSocketUndici } from "undici";
 import { afterAll, beforeAll, afterEach } from "vitest";
 import { execa, ResultPromise as ExecaRes } from "execa";
 import { fileURLToPath } from "node:url";
@@ -20,7 +20,9 @@ export function wsConnect(
   opts?: { skip?: number; headers?: HeadersInit },
 ) {
   const inspector = new WebSocketInspector();
-  const ws = new WebSocket(url, {
+  const _WebSocket = globalThis.WebSocket || WebSocketUndici;
+  const ws = new _WebSocket(url, {
+    // @ts-expect-error
     headers: opts?.headers,
     dispatcher: inspector,
   });
@@ -76,6 +78,7 @@ export function wsConnect(
   const connectPromise = new Promise((resolve, reject) => {
     ws.addEventListener("open", () => resolve(res));
     ws.addEventListener("error", (error) => {
+      // @ts-expect-error
       res.error = error;
       resolve(res);
     });
