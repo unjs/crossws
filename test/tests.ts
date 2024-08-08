@@ -67,8 +67,12 @@ export function wsTests(
     });
     await ws.send("debug");
     const { headers } = await ws.next();
-    expect(headers["connection"]).toMatch(/^upgrade$/i);
-    expect(headers["x-test"]).toBe("1");
+    if (opts.adapter === "sse") {
+      expect(headers["connection"]).toBe("keep-alive");
+    } else {
+      expect(headers["connection"]).toMatch(/^upgrade$/i);
+      expect(headers["x-test"]).toBe("1");
+    }
   });
 
   test("upgrade request url", async () => {
@@ -80,7 +84,7 @@ export function wsTests(
     expect(url.search).toBe("?foo=bar");
   });
 
-  test("upgrade fail response", async () => {
+  test.skipIf(opts.adapter === "sse")("upgrade fail response", async () => {
     const ws = await wsConnect(getURL() + "?unauthorized");
     expect(ws.error).toBeDefined();
     expect(ws.inspector).toMatchObject({
