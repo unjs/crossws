@@ -37,9 +37,9 @@ describe("node", () => {
     await waitForPort(port);
   });
 
-  afterAll(async () => {
+  afterAll(() => {
     ws.closeAll();
-    await new Promise<void>((resolve) => server.close(() => resolve()));
+    server.close();
   });
 
   wsTests(() => url, {

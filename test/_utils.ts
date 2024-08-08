@@ -1,9 +1,8 @@
-import type { OutgoingHttpHeaders } from "node:http";
+import { Agent, WebSocket } from "undici";
 import { afterAll, beforeAll, afterEach } from "vitest";
 import { execa, ResultPromise as ExecaRes } from "execa";
 import { fileURLToPath } from "node:url";
 import { getRandomPort, waitForPort } from "get-port-please";
-import { WebSocket } from "ws";
 import { wsTests } from "./tests";
 
 const fixtureDir = fileURLToPath(new URL("fixture", import.meta.url));
@@ -18,12 +17,14 @@ afterEach(() => {
 
 export function wsConnect(
   url: string,
-  opts?: { skip?: number; headers?: OutgoingHttpHeaders },
+  opts?: { skip?: number; headers?: HeadersInit },
 ) {
-  const ws = new WebSocket(url, { headers: opts?.headers });
+  const inspector = new WebSocketInspector();
+  const ws = new WebSocket(url, {
+    headers: opts?.headers,
+    dispatcher: inspector,
+  });
   websockets.add(ws);
-
-  const upgradeHeaders: Record<string, string> = Object.create(null);
 
   const send = async (data: any): Promise<any> => {
     ws.send(
@@ -48,13 +49,11 @@ export function wsConnect(
     nextIndex += count;
   };
 
-  ws.once("upgrade", (req) => {
-    Object.assign(upgradeHeaders, req.headers);
-  });
-
-  ws.on("message", (data: any) => {
+  ws.addEventListener("message", (event) => {
     const str =
-      typeof data === "string" ? data : new TextDecoder().decode(data);
+      typeof event.data === "string"
+        ? event.data
+        : new TextDecoder().decode(event.data);
     const payload = str[0] === "{" ? JSON.parse(str) : str;
     messages.push(payload);
     const index = messages.length - 1;
@@ -70,37 +69,57 @@ export function wsConnect(
     next,
     skip,
     messages,
-    upgradeHeaders,
+    inspector,
+    error: undefined as Error | undefined,
   };
 
   const connectPromise = new Promise((resolve, reject) => {
-    ws.once("open", () => resolve(res));
-    ws.once("error", reject);
-    ws.once("unexpected-response", (_req, res) => {
-      const bodyChunks: any[] = [];
-      res.on("data", (chunk) => {
-        bodyChunks.push(chunk);
-      });
-      res.once("end", () => {
-        const body = Buffer.concat(bodyChunks).toString();
-        reject(
-          new Error(
-            `Unexpected response: ${res.statusCode} ${res.statusMessage} (body:${body})`,
-            {
-              cause: {
-                status: res.statusCode!,
-                statusText: res.statusMessage!,
-                headers: res.headers,
-                body,
-              },
-            },
-          ),
-        );
-      });
+    ws.addEventListener("open", () => resolve(res));
+    ws.addEventListener("error", (error) => {
+      res.error = error;
+      resolve(res);
     });
   });
 
   return Object.assign(connectPromise, res) as Promise<typeof res>;
+}
+
+class WebSocketInspector extends Agent {
+  status?: number;
+  statusText?: string;
+  headers?: Record<string, string>;
+  error?: Error;
+
+  _normalizeHeaders(rawHeaders: string[] | Buffer[] | null) {
+    const headerEntries: [string, string][] = [];
+    for (let i = 0; i < rawHeaders!.length; i += 2) {
+      headerEntries.push([
+        decodeURIComponent(rawHeaders![i].toString()).toLowerCase(),
+        decodeURIComponent(rawHeaders![i + 1].toString()),
+      ]);
+    }
+    return Object.fromEntries(headerEntries);
+  }
+
+  dispatch(opts: any, handler: any) {
+    return super.dispatch(opts, {
+      ...handler,
+      onHeaders: (statusCode, headers, resume, statusText) => {
+        this.status = statusCode;
+        this.statusText = statusText;
+        this.headers = this._normalizeHeaders(headers);
+        return handler.onHeaders(statusCode, headers, resume, statusText);
+      },
+      onError: (error) => {
+        this.error = error;
+        return handler.onError(error);
+      },
+      onUpgrade: (statusCode, rawHeaders = [], socket) => {
+        this.headers = this._normalizeHeaders(rawHeaders);
+        return handler.onUpgrade(statusCode, rawHeaders, socket);
+      },
+    });
+  }
 }
 
 export function wsTestsExec(
