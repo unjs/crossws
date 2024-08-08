@@ -1,7 +1,8 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
-import { toBufferLike } from "../utils.ts";
+import { toString } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
+import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
 
 // --- types ---
@@ -10,43 +11,86 @@ export interface SSEAdapter extends AdapterInstance {
   fetch(req: Request): Promise<Response>;
 }
 
-export interface SSEOptions extends AdapterOptions {}
+export interface SSEOptions extends AdapterOptions {
+  bidir?: boolean;
+}
 
 // --- adapter ---
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
-export default defineWebSocketAdapter<SSEAdapter, SSEOptions>(
-  (options = {}) => {
-    const hooks = new AdapterHookable(options);
-    const peers = new Set<SSEPeer>();
+export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
+  const hooks = new AdapterHookable(opts);
+  const peers = new Set<SSEPeer>();
+  const peersMap = opts.bidir ? new Map<string, SSEPeer>() : undefined;
 
-    return {
-      ...adapterUtils(peers),
-      fetch: async (request: Request) => {
-        const _res = await hooks.callHook("upgrade", request);
-        if (_res instanceof Response) {
-          return _res;
+  return {
+    ...adapterUtils(peers),
+    fetch: async (request: Request) => {
+      const _res = await hooks.callHook("upgrade", request);
+      if (_res instanceof Response) {
+        return _res;
+      }
+
+      let peer: SSEPeer;
+
+      if (opts.bidir && request.body && request.headers.has("x-crossws-id")) {
+        // Accept bidirectional streaming request
+        const id = request.headers.get("x-crossws-id")!;
+        peer = peersMap?.get(id) as SSEPeer;
+        if (!peer) {
+          return new Response("invalid peer id", { status: 400 });
         }
-
-        const peer = new SSEPeer({ peers, sse: { request, hooks } });
-
-        let headers: HeadersInit = {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        };
-        if (_res?.headers) {
-          headers = new Headers(headers);
-          for (const [key, value] of new Headers(_res.headers)) {
-            headers.set(key, value);
+        const stream = request.body.pipeThrough(new TextDecoderStream());
+        try {
+          for await (const chunk of stream) {
+            hooks.callHook("message", peer, new Message(chunk));
           }
+        } catch {
+          await stream.cancel().catch(() => {});
         }
+        // eslint-disable-next-line unicorn/no-null
+        return new Response(null, {});
+      } else {
+        // Add a new peer
+        peer = new SSEPeer({
+          peers,
+          sse: {
+            request,
+            hooks,
+            onClose: () => {
+              peers.delete(peer);
+              if (opts.bidir) {
+                peersMap!.delete(peer.id);
+              }
+            },
+          },
+        });
+        peers.add(peer);
+        if (opts.bidir) {
+          peersMap!.set(peer.id, peer);
+          peer._sendEvent("crossws-id", peer.id);
+        }
+      }
 
-        return new Response(peer._sseStream, { ..._res, headers });
-      },
-    };
-  },
-);
+      let headers: HeadersInit = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      };
+      if (opts.bidir) {
+        headers["x-crossws-id"] = peer.id;
+      }
+      if (_res?.headers) {
+        headers = new Headers(headers);
+        for (const [key, value] of new Headers(_res.headers)) {
+          headers.set(key, value);
+        }
+      }
+
+      return new Response(peer._sseStream, { ..._res, headers });
+    },
+  };
+});
 
 // --- peer ---
 
@@ -55,10 +99,12 @@ class SSEPeer extends Peer<{
   sse: {
     request: Request;
     hooks: AdapterHookable;
+    onClose: (peer: SSEPeer) => void;
   };
 }> {
   _sseStream: ReadableStream;
   _sseStreamController?: ReadableStreamDefaultController;
+
   constructor(internal: SSEPeer["_internal"]) {
     super(internal);
     this._sseStream = new ReadableStream({
@@ -67,9 +113,10 @@ class SSEPeer extends Peer<{
         this._internal.sse.hooks.callHook("open", this);
       },
       cancel: () => {
+        this._internal.sse.onClose(this);
         this._internal.sse.hooks.callHook("close", this);
       },
-    });
+    }).pipeThrough(new TextEncoderStream());
   }
 
   get url() {
@@ -80,21 +127,23 @@ class SSEPeer extends Peer<{
     return this._internal.sse.request.headers;
   }
 
+  _sendEvent(event: string, data: string) {
+    const lines = data.split("\n");
+    this._sseStreamController?.enqueue(
+      `event: ${event}\n${lines.map((l) => `data: ${l}`)}\n\n`,
+    );
+  }
+
   send(message: any) {
-    let data = toBufferLike(message);
-    if (typeof data !== "string") {
-      // eslint-disable-next-line unicorn/prefer-code-point
-      data = btoa(String.fromCharCode(...new Uint8Array(data)));
-    }
-    this._sseStreamController?.enqueue(`event: message\ndata: ${data}\n\n`);
+    this._sendEvent("message", toString(message));
     return 0;
   }
 
   publish(topic: string, message: any) {
-    const data = toBufferLike(message);
+    const data = toString(message);
     for (const peer of this._internal.peers) {
       if (peer !== this && peer._topics.has(topic)) {
-        peer._sseStreamController?.enqueue(data);
+        peer._sendEvent("message", data);
       }
     }
   }

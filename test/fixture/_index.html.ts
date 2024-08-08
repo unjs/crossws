@@ -90,7 +90,7 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
 
         let sse;
         const connectSSE = async () => {
-          const url = "/sse";
+          const url = "/_sse";
           if (sse) {
             log("sse", "Closing previous connection before reconnecting...");
             sse.close();
@@ -100,9 +100,41 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           log("sse", "Connecting to", url, "...");
           sse = new EventSource(url);
 
+          ws = { send: () => {} }
+
+          sse.addEventListener("crossws-id", (event) => {
+            const peerId = event.data;
+
+            ws.send = (message) => fetch(url, {
+              method: 'POST',
+              headers: { 'x-crossws-id': peerId },
+              body: message,
+            }).catch((error) => {
+              log("sse", "Cannot send message:", error);
+            });
+
+            // Try to initiate a half-duplex connection
+            fetch(url, {
+               method: 'POST',
+               duplex: 'half',
+               headers: {
+                'content-type': 'application/octet-stream',
+                'x-crossws-id': event.data
+               },
+               body: new ReadableStream({
+                  start(controller) {
+                    ws.send = (message) => {
+                      controller.enqueue(message);
+                    }
+                  },
+               }).pipeThrough(new TextEncoderStream()),
+            }).catch((error) => {
+              log("sse", "Cannot initialize bidirectional messaging:", error);
+            });
+          });
+
           sse.addEventListener("message", async (event) => {
-            console.log(event)
-            const data = typeof event.data === "string" ? event.data : await event.data.text();
+            const data = event.data;
             const { user = "system", message = "" } = data.startsWith("{")
               ? JSON.parse(data)
               : { message: data };
