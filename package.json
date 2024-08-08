@@ -11,17 +11,6 @@
       "types": "./dist/index.d.mts",
       "default": "./dist/index.mjs"
     },
-    "./websocket": {
-      "types": "./dist/websocket/index.d.mts",
-      "browser": "./dist/websocket/index.mjs",
-      "worker": "./dist/websocket/index.mjs",
-      "bun": "./dist/websocket/index.mjs",
-      "deno": "./dist/websocket/index.mjs",
-      "edge-light": "./dist/websocket/index.mjs",
-      "workerd": "./dist/websocket/index.mjs",
-      "node": "./dist/websocket/node.mjs",
-      "default": "./dist/websocket/index.mjs"
-    },
     "./adapters/bun": {
       "types": "./dist/adapters/bun.d.mts",
       "default": "./dist/adapters/bun.mjs"
@@ -49,6 +38,17 @@
     "./adapters/uws": {
       "types": "./dist/adapters/uws.d.mts",
       "default": "./dist/adapters/uws.mjs"
+    },
+    "./websocket": {
+      "types": "./dist/websocket/native.d.mts",
+      "browser": "./dist/websocket/native.mjs",
+      "worker": "./dist/websocket/native.mjs",
+      "bun": "./dist/websocket/native.mjs",
+      "deno": "./dist/websocket/native.mjs",
+      "edge-light": "./dist/websocket/native.mjs",
+      "workerd": "./dist/websocket/native.mjs",
+      "node": "./dist/websocket/node.mjs",
+      "default": "./dist/websocket/native.mjs"
     }
   },
   "main": "./dist/index.mjs",
