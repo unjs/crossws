@@ -162,7 +162,7 @@ export class Message implements Partial<MessageEvent> {
    * Message data (value varies based on `peer.websocket.binaryType`).
    */
   get data() {
-    switch (this.peer?.webSocket?.binaryType as string) {
+    switch (this.peer?.websocket?.binaryType as string) {
       case "arraybuffer": {
         return this.arrayBuffer();
       }

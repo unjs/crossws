@@ -51,14 +51,16 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
         ...options.uws,
         close(ws, code, message) {
           const peer = getPeer(ws, peers);
-          (peer.webSocket as UwsWebSocketProxy).readyState = 2 /* CLOSING */;
+          ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
+            2 /* CLOSING */;
           peers.delete(peer);
           hooks.callAdapterHook("uws:close", peer, ws, code, message);
           hooks.callHook("close", peer, {
             code,
             reason: message?.toString(),
           });
-          (peer.webSocket as UwsWebSocketProxy).readyState = 3 /* CLOSED */;
+          ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
+            3 /* CLOSED */;
         },
         drain(ws) {
           const peer = getPeer(ws, peers);
@@ -181,7 +183,7 @@ class UWSPeer extends Peer<{
       const addr = new TextDecoder().decode(
         this._internal.uws.getRemoteAddressAsText(),
       );
-      return addr.replace(/(0000:)+/, "");
+      return addr;
     } catch {
       // Error: Invalid access of closed uWS.WebSocket/SSLWebSocket.
     }

@@ -19,7 +19,9 @@ declare global {
 }
 
 type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
-type ServeHandlerInfo = unknown; // TODO
+type ServeHandlerInfo = {
+  remoteAddr?: { transport: string; hostname: string; port: number };
+};
 
 // --- adapter ---
 
@@ -32,7 +34,7 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
     const peers = new Set<DenoPeer>();
     return {
       ...adapterUtils(peers),
-      handleUpgrade: async (request, _info) => {
+      handleUpgrade: async (request, info) => {
         const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {
           return res;
@@ -42,9 +44,10 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
           headers: res?.headers,
         });
         const peer = new DenoPeer({
-          peers,
           ws: upgrade.socket,
           request,
+          peers,
+          denoInfo: info,
         });
         peers.add(peer);
         upgrade.socket.addEventListener("open", () => {
@@ -74,13 +77,13 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
 // --- peer ---
 
 class DenoPeer extends Peer<{
-  peers: Set<DenoPeer>;
   ws: WebSocketUpgrade["socket"];
   request: Request;
+  peers: Set<DenoPeer>;
+  denoInfo: ServeHandlerInfo;
 }> {
   get remoteAddress() {
-    return (this._internal.ws as unknown as { remoteAddress: string })
-      .remoteAddress;
+    return this._internal.denoInfo.remoteAddr?.hostname;
   }
 
   send(data: unknown) {

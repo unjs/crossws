@@ -27,18 +27,18 @@ export function createDemo<T extends Adapter<any, any>>(
         case "debug": {
           peer.send({
             id: peer.id,
-            ip: peer.remoteAddress,
-            protocol: peer.protocol,
-            extensions: peer.extensions,
+            remoteAddress: peer.remoteAddress,
             request: {
               url: peer.request?.url,
               headers: Object.fromEntries(peer.request?.headers || []),
             },
-            webSocket: {
-              readyState: peer.webSocket.readyState,
-              protocol: peer.webSocket.protocol,
-              extensions: peer.webSocket.extensions,
-              url: peer.webSocket.url,
+            websocket: {
+              readyState: peer.websocket.readyState,
+              protocol: peer.websocket.protocol,
+              extensions: peer.websocket.extensions,
+              url: peer.websocket.url,
+              binaryType: peer.websocket.binaryType,
+              bufferedAmount: peer.websocket.bufferedAmount,
             },
           });
           break;

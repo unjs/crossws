@@ -1,3 +1,4 @@
+import type * as web from "../types/web.ts";
 import { randomUUID } from "uncrypto";
 
 export interface AdapterInternal {
@@ -10,6 +11,7 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   protected _internal: Internal;
   protected _topics: Set<string>;
   #id?: string;
+  #ws?: Partial<web.WebSocket>;
 
   constructor(internal: Internal) {
     this._topics = new Set();
@@ -36,30 +38,26 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
     return this._internal.request;
   }
 
+  /**
+   * Get the [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) instance.
+   *
+   * **Note:** crossws adds polyfill for the following properties if native values are not available:
+   * - `protocol`: Extracted from the `sec-websocket-protocol` header.
+   * - `extensions`: Extracted from the `sec-websocket-extensions` header.
+   * - `url`: Extracted from the request URL (http -> ws).
+   * */
+  get websocket(): Partial<web.WebSocket> {
+    if (!this.#ws) {
+      const _ws = this._internal.ws as Partial<web.WebSocket>;
+      const _request = this._internal.request;
+      this.#ws = _request ? createWsProxy(_ws, _request) : _ws;
+    }
+    return this.#ws;
+  }
+
   /** All connected peers to the server */
   get peers(): Set<Peer> {
     return this._internal.peers || new Set();
-  }
-
-  /** Get the [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) instance. */
-  get webSocket(): WebSocket | Partial<WebSocket> {
-    return this._internal.ws as WebSocket | Partial<WebSocket>;
-  }
-
-  get protocol(): string | undefined {
-    return (
-      this.webSocket.protocol ||
-      this.request?.headers?.get("sec-websocket-protocol") ||
-      undefined
-    );
-  }
-
-  get extensions(): string | undefined {
-    return (
-      this.webSocket.extensions ||
-      this.request?.headers?.get("sec-websocket-extensions") ||
-      undefined
-    );
   }
 
   abstract close(code?: number, reason?: string): void;
@@ -112,8 +110,33 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
         ["id", this.id],
         ["remoteAddress", this.remoteAddress],
         ["peers", this.peers],
-        ["webSocket", this.webSocket],
+        ["webSocket", this.websocket],
       ].filter((p) => p[1]),
     );
   }
+}
+
+function createWsProxy(
+  ws: Partial<web.WebSocket>,
+  request: Partial<Request>,
+): Partial<web.WebSocket> {
+  return new Proxy(ws, {
+    get: (target, prop) => {
+      const value = Reflect.get(target, prop);
+      if (!value) {
+        switch (prop) {
+          case "protocol": {
+            return request?.headers?.get("sec-websocket-protocol") || "";
+          }
+          case "extensions": {
+            return request?.headers?.get("sec-websocket-extensions") || "";
+          }
+          case "url": {
+            return request?.url?.replace(/^http/, "ws") || undefined;
+          }
+        }
+      }
+      return value;
+    },
+  });
 }

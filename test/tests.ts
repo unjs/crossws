@@ -1,10 +1,13 @@
 import { expect, test } from "vitest";
 import { wsConnect } from "./_utils";
 
-export function wsTests(
-  getURL: () => string,
-  opts: { adapter: string; pubsub?: boolean; resHeaders?: boolean },
-) {
+export interface WSTestOpts {
+  adapter: string;
+  pubsub?: boolean;
+  resHeaders?: boolean;
+}
+
+export function wsTests(getURL: () => string, opts: WSTestOpts) {
   test("http works", async () => {
     const response = await fetch(getURL().replace("ws", "http"));
     expect(response.status).toBe(200);
@@ -60,13 +63,13 @@ export function wsTests(
     },
   );
 
-  test("peer.request (headers, url)", async () => {
+  test("peer.request (headers, url, remoteAddress)", async () => {
     const ws = await wsConnect(getURL() + "?foo=bar", {
       skip: 1,
       headers: { "x-test": "1" },
     });
     await ws.send("debug");
-    const { request } = await ws.next();
+    const { request, remoteAddress } = await ws.next();
 
     // Headers
     if (opts.adapter === "sse") {
@@ -80,9 +83,14 @@ export function wsTests(
     expect(request.url).toMatch(/^http:\/\/localhost:\d+\/\?foo=bar$/);
     const url = new URL(request.url);
     expect(url.search).toBe("?foo=bar");
+
+    // Remote address
+    if (!/sse|cloudflare/.test(opts.adapter)) {
+      expect(remoteAddress).toMatch(/:{2}1|(?:0{4}:){7}0{3}1|127\.0\.\0\.1/);
+    }
   });
 
-  test("peer.webSocket", async () => {
+  test("peer.websocket", async () => {
     const ws = await wsConnect(getURL() + "?foo=bar", {
       skip: 1,
       headers: {
@@ -90,10 +98,15 @@ export function wsTests(
       },
     });
     await ws.send("debug");
-    const { webSocket, protocol, extensions } = await ws.next();
-    expect(webSocket.readyState).toBe(1);
-    // expect(protocol).toBe("crossws");
-    // expect(extensions).toBe("permessage-deflate; client_max_window_bits");
+    const { websocket } = await ws.next();
+    expect(websocket).toMatchObject({
+      readyState: 1,
+      protocol: /ss/.test(opts.adapter) ? "" : "crossws",
+      extensions: /sse|cloudflare/.test(opts.adapter)
+        ? ""
+        : "permessage-deflate; client_max_window_bits",
+      url: getURL() + "?foo=bar",
+    });
   });
 
   test.skipIf(opts.adapter === "sse")("upgrade fail response", async () => {

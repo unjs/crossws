@@ -1,4 +1,4 @@
-// You can run this demo using `deno run -A ./deno.ts` or  `npm run play:deno` in repo
+// You can run this demo using `npm run play:deno` in repo
 
 import denoAdapter from "../../src/adapters/deno.ts";
 
