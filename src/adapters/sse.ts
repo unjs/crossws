@@ -100,22 +100,22 @@ class SSEPeer extends Peer<{
   _sseStream: ReadableStream; // server -> client
   _sseStreamController?: ReadableStreamDefaultController;
 
-  constructor(internal: SSEPeer["_internal"]) {
-    super(internal);
-    this._internal.ws.readyState = 0 /* CONNECTING */;
+  constructor(_internal: SSEPeer["_internal"]) {
+    super(_internal);
+    _internal.ws.readyState = 0 /* CONNECTING */;
     this._sseStream = new ReadableStream({
       start: (controller) => {
-        this._internal.ws.readyState = 1 /* OPEN */;
+        _internal.ws.readyState = 1 /* OPEN */;
         this._sseStreamController = controller;
-        this._internal.hooks.callHook("open", this);
+        _internal.hooks.callHook("open", this);
       },
       cancel: () => {
-        this._internal.ws.readyState = 2 /* CLOSING */;
-        this._internal.peers.delete(this);
-        this._internal.peersMap?.delete(this.id);
+        _internal.ws.readyState = 2 /* CLOSING */;
+        _internal.peers.delete(this);
+        _internal.peersMap?.delete(this.id);
         Promise.resolve(this._internal.hooks.callHook("close", this)).finally(
           () => {
-            this._internal.ws.readyState = 3 /* CLOSED */;
+            _internal.ws.readyState = 3 /* CLOSED */;
           },
         );
       },

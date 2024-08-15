@@ -142,11 +142,6 @@ class NodePeer extends Peer<{
     return this._internal.nodeReq.socket?.remoteAddress;
   }
 
-  constructor(ctx: NodePeer["_internal"]) {
-    super(ctx);
-    ctx.ws._peer = this;
-  }
-
   send(data: unknown, options?: { compress?: boolean }) {
     const dataBuff = toBufferLike(data);
     const isBinary = typeof data !== "string";
