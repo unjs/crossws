@@ -1,5 +1,4 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
-import type { WebSocket } from "../../types/web.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
