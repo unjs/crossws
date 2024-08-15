@@ -101,6 +101,6 @@ class DenoPeer extends Peer<{
   }
 
   terminate(): void {
-    this._internal.ws.terminate();
+    (this._internal.ws as any).terminate();
   }
 }
