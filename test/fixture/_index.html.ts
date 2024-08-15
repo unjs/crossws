@@ -77,12 +77,9 @@ export default function indexTemplate(opts: { sse?: boolean } = {}) {
           ws = new WebSocket(url);
 
           ws.addEventListener("message", async (event) => {
-            const data = typeof event.data === "string" ? event.data : await event.data.text();
-            const { user = "system", message = "" } = data.startsWith("{")
-              ? JSON.parse(data)
-              : { message: data };
+            const message = typeof event.data === "string" ? event.data : await event.data.text();
             log(
-              user,
+              "",
               typeof message === "string" ? message : JSON.stringify(message),
             );
           });
