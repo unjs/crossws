@@ -1,4 +1,5 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { WebSocket } from "../../types/web.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
@@ -11,14 +12,16 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer as _WebSocketServer } from "ws";
 import type {
   ServerOptions,
-  RawData,
   WebSocketServer,
   WebSocket as WebSocketT,
 } from "../../types/ws";
 
 // --- types ---
 
-type AugmentedReq = IncomingMessage & { _upgradeHeaders?: HeadersInit };
+type AugmentedReq = IncomingMessage & {
+  _request: NodeReqProxy;
+  _upgradeHeaders?: HeadersInit;
+};
 
 export interface NodeAdapter extends AdapterInstance {
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
@@ -46,18 +49,19 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
         ...(options.serverOptions as any),
       }) as WebSocketServer);
 
-    wss.on("connection", (ws, req) => {
-      const peer = new NodePeer({ peers, node: { ws, req, server: wss } });
+    wss.on("connection", (ws, nodeReq) => {
+      const request = new NodeReqProxy(nodeReq);
+      const peer = new NodePeer({ ws, request, peers, nodeReq });
       peers.add(peer);
       hooks.callHook("open", peer);
 
       // Managed socket-level events
-      ws.on("message", (data: RawData, isBinary: boolean) => {
+      ws.on("message", (data: unknown, isBinary: boolean) => {
         hooks.callAdapterHook("node:message", peer, data, isBinary);
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
-        hooks.callHook("message", peer, new Message(data, isBinary));
+        hooks.callHook("message", peer, new Message(data, peer));
       });
       ws.on("error", (error: Error) => {
         peers.delete(peer);
@@ -94,7 +98,7 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       });
     });
 
-    wss.on("headers", function (outgoingHeaders, req) {
+    wss.on("headers", (outgoingHeaders, req) => {
       const upgradeHeaders = (req as AugmentedReq)._upgradeHeaders;
       if (upgradeHeaders) {
         for (const [key, value] of new Headers(upgradeHeaders)) {
@@ -105,14 +109,16 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
 
     return {
       ...adapterUtils(peers),
-      handleUpgrade: async (req, socket, head) => {
-        const res = await hooks.callHook("upgrade", new NodeReqProxy(req));
+      handleUpgrade: async (nodeReq, socket, head) => {
+        const request = new NodeReqProxy(nodeReq);
+        const res = await hooks.callHook("upgrade", request);
         if (res instanceof Response) {
           return sendResponse(socket, res);
         }
-        (req as AugmentedReq)._upgradeHeaders = res?.headers;
-        wss.handleUpgrade(req, socket, head, (ws) => {
-          wss.emit("connection", ws, req);
+        (nodeReq as AugmentedReq)._request = request;
+        (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
+        wss.handleUpgrade(nodeReq, socket, head, (ws) => {
+          wss.emit("connection", ws, nodeReq);
         });
       },
       closeAll: (code, data) => {
@@ -128,49 +134,18 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
 
 class NodePeer extends Peer<{
   peers: Set<NodePeer>;
-  node: {
-    server: WebSocketServer;
-    req: IncomingMessage;
-    ws: WebSocketT & { _peer?: NodePeer };
-  };
+  request: NodeReqProxy;
+  nodeReq: IncomingMessage;
+  ws: WebSocketT & { _peer?: NodePeer };
 }> {
-  _req: NodeReqProxy;
-  constructor(ctx: NodePeer["_internal"]) {
-    super(ctx);
-    this._req = new NodeReqProxy(ctx.node.req);
-    ctx.node.ws._peer = this;
+  get remoteAddress() {
+    return this._internal.nodeReq.socket?.remoteAddress;
   }
 
-  get addr() {
-    const socket = this._internal.node.req.socket;
-    if (!socket) {
-      return undefined;
-    }
-    const headers = this._internal.node.req.headers;
-    let addr = headers["x-forwarded-for"] || socket.remoteAddress || "??";
-    if (addr.includes(":")) {
-      addr = `[${addr}]`;
-    }
-    const port = headers["x-forwarded-port"] || socket.remotePort || "??";
-    return `${addr}:${port}`;
-  }
-
-  get url() {
-    return this._req.url;
-  }
-
-  get headers() {
-    return this._req.headers;
-  }
-
-  get readyState() {
-    return this._internal.node.ws.readyState;
-  }
-
-  send(message: any, options?: { compress?: boolean }) {
-    const data = toBufferLike(message);
+  send(data: unknown, options?: { compress?: boolean }) {
+    const dataBuff = toBufferLike(data);
     const isBinary = typeof data !== "string";
-    this._internal.node.ws.send(data, {
+    this._internal.ws.send(dataBuff, {
       compress: options?.compress,
       binary: isBinary,
       ...options,
@@ -178,8 +153,12 @@ class NodePeer extends Peer<{
     return 0;
   }
 
-  publish(topic: string, message: any, options?: { compress?: boolean }): void {
-    const data = toBufferLike(message);
+  publish(
+    topic: string,
+    data: unknown,
+    options?: { compress?: boolean },
+  ): void {
+    const dataBuff = toBufferLike(data);
     const isBinary = typeof data !== "string";
     const sendOptions = {
       compress: options?.compress,
@@ -188,17 +167,17 @@ class NodePeer extends Peer<{
     };
     for (const peer of this._internal.peers) {
       if (peer !== this && peer._topics.has(topic)) {
-        peer._internal.node.ws.send(data, sendOptions);
+        peer._internal.ws.send(dataBuff, sendOptions);
       }
     }
   }
 
   close(code?: number, data?: string | Buffer) {
-    this._internal.node.ws.close(code, data);
+    this._internal.ws.close(code, data);
   }
 
   terminate() {
-    this._internal.node.ws.terminate();
+    this._internal.ws.terminate();
   }
 }
 

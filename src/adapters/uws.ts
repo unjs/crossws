@@ -1,28 +1,23 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { WebSocket } from "../../types/web.ts";
+import type uws from "uWebSockets.js";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
 
-import type {
-  WebSocketBehavior,
-  WebSocket,
-  HttpRequest,
-  HttpResponse,
-  RecognizedString,
-} from "uWebSockets.js";
-
 // --- types ---
 
 type UserData = {
-  _peer?: any;
-  req: HttpRequest;
-  res: HttpResponse;
-  context: any;
+  peer?: UWSPeer;
+  req: uws.HttpRequest;
+  res: uws.HttpResponse;
+  protocol: string;
+  extensions: string;
 };
 
-type WebSocketHandler = WebSocketBehavior<UserData>;
+type WebSocketHandler = uws.WebSocketBehavior<UserData>;
 
 export interface UWSAdapter extends AdapterInstance {
   websocket: WebSocketHandler;
@@ -30,7 +25,7 @@ export interface UWSAdapter extends AdapterInstance {
 
 export interface UWSOptions extends AdapterOptions {
   uws?: Exclude<
-    WebSocketBehavior<any>,
+    uws.WebSocketBehavior<any>,
     | "close"
     | "drain"
     | "message"
@@ -56,12 +51,16 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
         ...options.uws,
         close(ws, code, message) {
           const peer = getPeer(ws, peers);
+          ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
+            2 /* CLOSING */;
           peers.delete(peer);
           hooks.callAdapterHook("uws:close", peer, ws, code, message);
           hooks.callHook("close", peer, {
             code,
             reason: message?.toString(),
           });
+          ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
+            3 /* CLOSED */;
         },
         drain(ws) {
           const peer = getPeer(ws, peers);
@@ -70,8 +69,7 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
         message(ws, message, isBinary) {
           const peer = getPeer(ws, peers);
           hooks.callAdapterHook("uws:message", peer, ws, message, isBinary);
-          const msg = new Message(message, isBinary);
-          hooks.callHook("message", peer, msg);
+          hooks.callHook("message", peer, new Message(message, peer));
         },
         open(ws) {
           const peer = getPeer(ws, peers);
@@ -131,16 +129,21 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
               res.writeHeader(key, value);
             }
           }
+
           res.cork(() => {
+            const key = req.getHeader("sec-websocket-key");
+            const protocol = req.getHeader("sec-websocket-protocol");
+            const extensions = req.getHeader("sec-websocket-extensions");
             res.upgrade(
               {
                 req,
                 res,
-                context,
+                protocol,
+                extensions,
               },
-              req.getHeader("sec-websocket-key"),
-              req.getHeader("sec-websocket-protocol"),
-              req.getHeader("sec-websocket-extensions"),
+              key,
+              protocol,
+              extensions,
               context,
             );
           });
@@ -152,73 +155,63 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
 
 // --- peer ---
 
-function getPeer(ws: WebSocket<UserData>, peers: Set<UWSPeer>): UWSPeer {
-  const userData = ws.getUserData();
-  if (userData._peer) {
-    return userData._peer as UWSPeer;
+function getPeer(uws: uws.WebSocket<UserData>, peers: Set<UWSPeer>): UWSPeer {
+  const uwsData = uws.getUserData();
+  if (uwsData.peer) {
+    return uwsData.peer;
   }
-  const peer = new UWSPeer({ peers, uws: { ws, userData } });
-  userData._peer = peer;
+  const peer = new UWSPeer({
+    peers,
+    uws,
+    ws: new UwsWebSocketProxy(uws),
+    request: new UWSReqProxy(uwsData.req),
+    uwsData,
+  });
+  uwsData.peer = peer;
   return peer;
 }
 
 class UWSPeer extends Peer<{
   peers: Set<UWSPeer>;
-  uws: {
-    ws: WebSocket<UserData>;
-    userData: UserData;
-  };
+  request: UWSReqProxy;
+  uws: uws.WebSocket<UserData>;
+  ws: UwsWebSocketProxy;
+  uwsData: UserData;
 }> {
-  _decoder = new TextDecoder();
-  _req: UWSReqProxy;
-
-  constructor(ctx: UWSPeer["_internal"]) {
-    super(ctx);
-    this._req = new UWSReqProxy(ctx.uws.userData.req);
-  }
-
-  get addr() {
+  get remoteAddress() {
     try {
-      const addr = this._decoder.decode(
-        this._internal.uws.ws?.getRemoteAddressAsText(),
+      const addr = new TextDecoder().decode(
+        this._internal.uws.getRemoteAddressAsText(),
       );
-      return addr.replace(/(0000:)+/, "");
+      return addr;
     } catch {
       // Error: Invalid access of closed uWS.WebSocket/SSLWebSocket.
     }
   }
 
-  get url() {
-    return this._req.url;
-  }
-
-  get headers() {
-    return this._req.headers;
-  }
-
-  send(message: any, options?: { compress?: boolean }) {
-    const data = toBufferLike(message);
+  send(data: unknown, options?: { compress?: boolean }) {
+    const dataBuff = toBufferLike(data);
     const isBinary = typeof data !== "string";
-    return this._internal.uws.ws.send(data, isBinary, options?.compress);
+    return this._internal.uws.send(dataBuff, isBinary, options?.compress);
   }
 
   subscribe(topic: string): void {
-    this._internal.uws.ws.subscribe(topic);
+    this._internal.uws.subscribe(topic);
   }
 
   publish(topic: string, message: string, options?: { compress?: boolean }) {
     const data = toBufferLike(message);
     const isBinary = typeof data !== "string";
-    this._internal.uws.ws.publish(topic, data, isBinary, options?.compress);
+    this._internal.uws.publish(topic, data, isBinary, options?.compress);
     return 0;
   }
 
-  close(code?: number, reason?: RecognizedString) {
-    this._internal.uws.ws.end(code, reason);
+  close(code?: number, reason?: uws.RecognizedString) {
+    this._internal.uws.end(code, reason);
   }
 
   terminate(): void {
-    this._internal.uws.ws.close();
+    this._internal.uws.close();
   }
 }
 
@@ -227,11 +220,10 @@ class UWSPeer extends Peer<{
 class UWSReqProxy {
   private _headers?: Headers;
   private _rawHeaders: [string, string][] = [];
+
   url: string;
 
-  constructor(_req: HttpRequest) {
-    // We need to precompute values since uws doesn't provide them after handler.
-
+  constructor(_req: uws.HttpRequest) {
     // Headers
     let host = "localhost";
     let proto = "http";
@@ -244,7 +236,6 @@ class UWSReqProxy {
       }
       this._rawHeaders.push([key, value]);
     });
-
     // URL
     const query = _req.getQuery();
     const pathname = _req.getUrl();
@@ -256,5 +247,23 @@ class UWSReqProxy {
       this._headers = new Headers(this._rawHeaders);
     }
     return this._headers;
+  }
+}
+
+class UwsWebSocketProxy implements Partial<WebSocket> {
+  readyState?: number = 1 /* OPEN */;
+
+  constructor(private _uws: uws.WebSocket<UserData>) {}
+
+  get bufferedAmount() {
+    return this._uws?.getBufferedAmount();
+  }
+
+  get protocol() {
+    return this._uws?.getUserData().protocol;
+  }
+
+  get extensions() {
+    return this._uws?.getUserData().extensions;
   }
 }

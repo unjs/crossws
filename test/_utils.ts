@@ -26,6 +26,8 @@ export function wsConnect(
     headers: opts?.headers,
     dispatcher: inspector,
   });
+  ws.binaryType = "arraybuffer";
+
   websockets.add(ws);
 
   const send = async (data: any): Promise<any> => {
@@ -51,13 +53,22 @@ export function wsConnect(
     nextIndex += count;
   };
 
-  ws.addEventListener("message", (event) => {
-    const str =
-      typeof event.data === "string"
-        ? event.data
-        : new TextDecoder().decode(event.data);
-    const payload = str[0] === "{" ? JSON.parse(str) : str;
+  ws.addEventListener("message", async (event) => {
+    let text: string;
+    if (typeof event.data === "string") {
+      text = event.data;
+    } else {
+      let rawData = event.data;
+      if (rawData instanceof Blob) {
+        rawData = await event.data.arrayBuffer();
+      } else if (rawData instanceof Uint8Array) {
+        rawData = rawData.buffer;
+      }
+      text = new TextDecoder().decode(rawData);
+    }
+    const payload = text[0] === "{" ? JSON.parse(text) : text;
     messages.push(payload);
+
     const index = messages.length - 1;
     if (waitCallbacks[index]) {
       waitCallbacks[index](payload);

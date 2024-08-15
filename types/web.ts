@@ -255,7 +255,7 @@ export interface WebSocket extends EventTarget {
    *
    * [MDN Reference](https://developer.mozilla.org/docs/Web/API/WebSocket/binaryType)
    */
-  binaryType: BinaryType;
+  binaryType: BinaryType | (string & {});
   /**
    * Returns the number of bytes of application data (UTF-8 text and binary data) that have been queued using send() but not yet been transmitted to the network.
    *

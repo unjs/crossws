@@ -19,7 +19,9 @@ declare global {
 }
 
 type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
-type ServeHandlerInfo = unknown; // TODO
+type ServeHandlerInfo = {
+  remoteAddr?: { transport: string; hostname: string; port: number };
+};
 
 // --- adapter ---
 
@@ -42,8 +44,10 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
           headers: res?.headers,
         });
         const peer = new DenoPeer({
+          ws: upgrade.socket,
+          request,
           peers,
-          deno: { ws: upgrade.socket, request, info },
+          denoInfo: info,
         });
         peers.add(peer);
         upgrade.socket.addEventListener("open", () => {
@@ -52,7 +56,7 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
         });
         upgrade.socket.addEventListener("message", (event) => {
           hooks.callAdapterHook("deno:message", peer, event);
-          hooks.callHook("message", peer, new Message(event.data));
+          hooks.callHook("message", peer, new Message(event.data, peer, event));
         });
         upgrade.socket.addEventListener("close", () => {
           peers.delete(peer);
@@ -73,50 +77,33 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
 // --- peer ---
 
 class DenoPeer extends Peer<{
+  ws: WebSocketUpgrade["socket"];
+  request: Request;
   peers: Set<DenoPeer>;
-  deno: {
-    ws: WebSocketUpgrade["socket"];
-    request: Request;
-    info: ServeHandlerInfo;
-  };
+  denoInfo: ServeHandlerInfo;
 }> {
-  get addr() {
-    // @ts-expect-error types missing
-    return this._internal.deno.ws.remoteAddress;
+  get remoteAddress() {
+    return this._internal.denoInfo.remoteAddr?.hostname;
   }
 
-  get readyState() {
-    return this._internal.deno.ws.readyState as -1 | 0 | 1 | 2 | 3;
+  send(data: unknown) {
+    return this._internal.ws.send(toBufferLike(data));
   }
 
-  get url() {
-    return this._internal.deno.request.url;
-  }
-
-  get headers() {
-    return this._internal.deno.request.headers || new Headers();
-  }
-
-  send(message: any) {
-    this._internal.deno.ws.send(toBufferLike(message));
-    return 0;
-  }
-
-  publish(topic: string, message: any) {
-    const data = toBufferLike(message);
+  publish(topic: string, data: unknown) {
+    const dataBuff = toBufferLike(data);
     for (const peer of this._internal.peers) {
       if (peer !== this && peer._topics.has(topic)) {
-        peer._internal.deno.ws.send(data);
+        peer._internal.ws.send(dataBuff);
       }
     }
   }
 
   close(code?: number, reason?: string) {
-    this._internal.deno.ws.close(code, reason);
+    this._internal.ws.close(code, reason);
   }
 
   terminate(): void {
-    // @ts-ignore (terminate is Deno-only api)
-    this._internal.deno.ws.terminate();
+    (this._internal.ws as any).terminate();
   }
 }
