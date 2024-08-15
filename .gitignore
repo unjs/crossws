@@ -9,4 +9,5 @@ dist
 .wrangler
 
 /adapters
+/websocket
 websocket.d.ts
