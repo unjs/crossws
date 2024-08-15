@@ -60,28 +60,40 @@ export function wsTests(
     },
   );
 
-  test("upgrade request headers", async () => {
-    const ws = await wsConnect(getURL(), {
+  test("peer.request (headers, url)", async () => {
+    const ws = await wsConnect(getURL() + "?foo=bar", {
       skip: 1,
       headers: { "x-test": "1" },
     });
     await ws.send("debug");
-    const { headers } = await ws.next();
+    const { request } = await ws.next();
+
+    // Headers
     if (opts.adapter === "sse") {
-      expect(headers["connection"]).toBe("keep-alive");
+      expect(request.headers["connection"]).toBe("keep-alive");
     } else {
-      expect(headers["connection"]).toMatch(/^upgrade$/i);
-      expect(headers["x-test"]).toBe("1");
+      expect(request.headers["connection"]).toMatch(/^upgrade$/i);
+      expect(request.headers["x-test"]).toBe("1");
     }
+
+    // URL
+    expect(request.url).toMatch(/^http:\/\/localhost:\d+\/\?foo=bar$/);
+    const url = new URL(request.url);
+    expect(url.search).toBe("?foo=bar");
   });
 
-  test("upgrade request url", async () => {
-    const ws = await wsConnect(getURL() + "?foo=bar", { skip: 1 });
+  test("peer.webSocket", async () => {
+    const ws = await wsConnect(getURL() + "?foo=bar", {
+      skip: 1,
+      headers: {
+        "Sec-WebSocket-Protocol": "crossws",
+      },
+    });
     await ws.send("debug");
-    const info = await ws.next();
-    expect(info.url).toMatch(/^http:\/\/localhost:\d+\/\?foo=bar$/);
-    const url = new URL(info.url);
-    expect(url.search).toBe("?foo=bar");
+    const { webSocket, protocol, extensions } = await ws.next();
+    expect(webSocket.readyState).toBe(1);
+    // expect(protocol).toBe("crossws");
+    // expect(extensions).toBe("permessage-deflate; client_max_window_bits");
   });
 
   test.skipIf(opts.adapter === "sse")("upgrade fail response", async () => {

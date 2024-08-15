@@ -44,8 +44,12 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
         const client = pair[0];
         const server = pair[1];
         const peer = new CloudflarePeer({
+          ws: client,
           peers,
-          cloudflare: { client, server, request, env, context },
+          wsServer: server,
+          request: request as unknown as Request,
+          cfEnv: env,
+          cfCtx: context,
         });
         peers.add(peer);
         server.accept();
@@ -53,7 +57,11 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
         hooks.callHook("open", peer);
         server.addEventListener("message", (event) => {
           hooks.callAdapterHook("cloudflare:message", peer, event);
-          hooks.callHook("message", peer, new Message(event.data));
+          hooks.callHook(
+            "message",
+            peer,
+            new Message(event.data, peer, event as MessageEvent),
+          );
         });
         server.addEventListener("error", (event) => {
           peers.delete(peer);
@@ -79,51 +87,23 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
 // --- peer ---
 
 class CloudflarePeer extends Peer<{
+  ws: _cf.WebSocket;
+  request: Request;
   peers: Set<CloudflarePeer>;
-  cloudflare: {
-    client: _cf.WebSocket;
-    server: _cf.WebSocket;
-    request: _cf.Request;
-    env: unknown;
-    context: _cf.ExecutionContext;
-  };
+  wsServer: _cf.WebSocket;
+  cfEnv: unknown;
+  cfCtx: _cf.ExecutionContext;
 }> {
-  get addr() {
-    return undefined;
-  }
-
-  get url() {
-    return this._internal.cloudflare.request.url;
-  }
-
-  get headers() {
-    return this._internal.cloudflare.request.headers as unknown as Headers;
-  }
-
-  get readyState() {
-    return this._internal.cloudflare.client.readyState as -1 | 0 | 1 | 2 | 3;
-  }
-
-  send(message: any) {
-    this._internal.cloudflare.server.send(toBufferLike(message));
+  send(data: unknown) {
+    this._internal.wsServer.send(toBufferLike(data));
     return 0;
   }
 
   publish(_topic: string, _message: any): void {
-    // Not supported
-    // Throws: A hanging Promise was canceled
-    // for (const peer of this._internal.peers) {
-    //   if (peer !== this && peer._topics.has(_topic)) {
-    //     peer.publish(_topic, _message);
-    //   }
-    // }
+    // not supported
   }
 
   close(code?: number, reason?: string) {
-    this._internal.cloudflare.client.close(code, reason);
-  }
-
-  terminate(): void {
-    this.close();
+    this._internal.ws.close(code, reason);
   }
 }

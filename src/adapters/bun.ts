@@ -1,5 +1,4 @@
 import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
-
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
@@ -17,9 +16,8 @@ export interface BunAdapter extends AdapterInstance {
 export interface BunOptions extends AdapterOptions {}
 
 type ContextData = {
-  _peer?: BunPeer;
-  request?: Request;
-  requestUrl?: string;
+  peer?: BunPeer;
+  request: Request;
   server?: Server;
 };
 
@@ -41,7 +39,6 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
           data: {
             server,
             request,
-            requestUrl: request.url,
           } satisfies ContextData,
           headers: res?.headers,
         });
@@ -52,7 +49,7 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
       websocket: {
         message: (ws, message) => {
           const peer = getPeer(ws, peers);
-          hooks.callHook("message", peer, new Message(message));
+          hooks.callHook("message", peer, new Message(message, peer));
         },
         open: (ws) => {
           const peer = getPeer(ws, peers);
@@ -89,66 +86,51 @@ function getPeer(
   ws: ServerWebSocket<ContextData>,
   peers: Set<BunPeer>,
 ): BunPeer {
-  if (ws.data?._peer) {
-    return ws.data._peer;
+  if (ws.data?.peer) {
+    return ws.data.peer;
   }
-  const peer = new BunPeer({ peers, bun: { ws } });
+  const peer = new BunPeer({ ws, request: ws.data.request, peers });
   ws.data = {
     ...ws.data,
-    _peer: peer,
+    peer,
   };
   return peer;
 }
 
 class BunPeer extends Peer<{
+  ws: ServerWebSocket<ContextData>;
+  request: Request;
   peers: Set<BunPeer>;
-  bun: { ws: ServerWebSocket<ContextData> };
 }> {
-  get addr() {
-    let addr = this._internal.bun.ws.remoteAddress;
-    if (addr.includes(":")) {
-      addr = `[${addr}]`;
-    }
-    return addr;
+  get remoteAddress() {
+    return this._internal.ws.remoteAddress;
   }
 
-  get readyState() {
-    return this._internal.bun.ws.readyState as any;
+  send(data: unknown, options?: { compress?: boolean }) {
+    return this._internal.ws.send(toBufferLike(data), options?.compress);
   }
 
-  get url() {
-    return this._internal.bun.ws.data.requestUrl || "/";
-  }
-
-  get headers() {
-    return this._internal.bun.ws.data.request?.headers;
-  }
-
-  send(message: any, options?: { compress?: boolean }) {
-    return this._internal.bun.ws.send(toBufferLike(message), options?.compress);
-  }
-
-  publish(topic: string, message: any, options?: { compress?: boolean }) {
-    return this._internal.bun.ws.publish(
+  publish(topic: string, data: unknown, options?: { compress?: boolean }) {
+    return this._internal.ws.publish(
       topic,
-      toBufferLike(message),
+      toBufferLike(data),
       options?.compress,
     );
   }
 
   subscribe(topic: string): void {
-    this._internal.bun.ws.subscribe(topic);
+    this._internal.ws.subscribe(topic);
   }
 
   unsubscribe(topic: string): void {
-    this._internal.bun.ws.unsubscribe(topic);
+    this._internal.ws.unsubscribe(topic);
   }
 
   close(code?: number, reason?: string) {
-    this._internal.bun.ws.close(code, reason);
+    this._internal.ws.close(code, reason);
   }
 
   terminate() {
-    this._internal.bun.ws.terminate();
+    this._internal.ws.terminate();
   }
 }

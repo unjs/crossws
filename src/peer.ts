@@ -1,111 +1,119 @@
 import { randomUUID } from "uncrypto";
 
-// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState
-type ReadyState = 0 | 1 | 2 | 3;
-const ReadyStateMap = {
-  "-1": "unknown",
-  0: "connecting",
-  1: "open",
-  2: "closing",
-  3: "closed",
-} as const;
-
 export interface AdapterInternal {
+  ws: unknown;
+  request?: Request | Partial<Request>;
   peers?: Set<Peer>;
 }
 
 export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   protected _internal: Internal;
   protected _topics: Set<string>;
-
-  private _id?: string;
+  #id?: string;
 
   constructor(internal: Internal) {
     this._topics = new Set();
     this._internal = internal;
   }
 
+  /**
+   * Unique random [uuid v4](https://developer.mozilla.org/en-US/docs/Glossary/UUID) identifier for the peer.
+   */
   get id(): string {
-    if (!this._id) {
-      this._id = randomUUID();
+    if (!this.#id) {
+      this.#id = randomUUID();
     }
-    return this._id;
+    return this.#id;
   }
 
-  get addr(): string | undefined {
+  /** IP address of the peer */
+  get remoteAddress(): string | undefined {
     return undefined;
   }
 
-  get url(): string {
-    return "";
+  /** upgrade request */
+  get request(): Request | Partial<Request> | undefined {
+    return this._internal.request;
   }
 
-  get headers(): Headers | undefined {
-    return undefined;
-  }
-
-  get readyState(): ReadyState | -1 {
-    return -1;
-  }
-
+  /** All connected peers to the server */
   get peers(): Set<Peer> {
     return this._internal.peers || new Set();
   }
 
-  abstract send(message: any, options?: { compress?: boolean }): number;
+  /** Get the [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) instance. */
+  get webSocket(): WebSocket | Partial<WebSocket> {
+    return this._internal.ws as WebSocket | Partial<WebSocket>;
+  }
 
-  abstract publish(
-    topic: string,
-    message: any,
-    options?: { compress?: boolean },
-  ): void;
+  get protocol(): string | undefined {
+    return (
+      this.webSocket.protocol ||
+      this.request?.headers?.get("sec-websocket-protocol") ||
+      undefined
+    );
+  }
 
+  get extensions(): string | undefined {
+    return (
+      this.webSocket.extensions ||
+      this.request?.headers?.get("sec-websocket-extensions") ||
+      undefined
+    );
+  }
+
+  abstract close(code?: number, reason?: string): void;
+
+  /** Abruptly close the connection */
+  terminate() {
+    this.close();
+  }
+
+  /** Subscribe to a topic */
   subscribe(topic: string) {
     this._topics.add(topic);
   }
 
+  /** Unsubscribe from a topic */
   unsubscribe(topic: string) {
     this._topics.delete(topic);
   }
+
+  /** Send a message to the peer. */
+  abstract send(
+    data: unknown,
+    options?: { compress?: boolean },
+  ): number | void | undefined;
+
+  /** Send message to subscribes of topic */
+  abstract publish(
+    topic: string,
+    data: unknown,
+    options?: { compress?: boolean },
+  ): void;
+
+  // --- inspect ---
 
   toString() {
     return this.id;
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")]() {
-    const _id = this.toString();
-    const _addr = this.addr ? ` (${this.addr})` : "";
-    const _state =
-      this.readyState === 1 || this.readyState === -1
-        ? ""
-        : ` [${ReadyStateMap[this.readyState]}]`;
-
-    return `${_id}${_addr}${_state}`;
+  [Symbol.toPrimitive]() {
+    return this.id;
   }
 
-  /**
-   * Closes the connection.
-   *
-   * Here is a list of close codes:
-   *
-   * - `1000` means "normal closure" (default)
-   * - `1009` means a message was too big and was rejected
-   * - `1011` means the server encountered an error
-   * - `1012` means the server is restarting
-   * - `1013` means the server is too busy or the client is rate-limited
-   * - `4000` through `4999` are reserved for applications (you can use it!)
-   *
-   * To close the connection abruptly, use `terminate()`.
-   *
-   * @param code The close code to send
-   * @param reason The close reason to send
-   */
-  abstract close(code?: number, reason?: string): void;
+  [Symbol.toStringTag]() {
+    return "WebSocket";
+  }
 
-  /**
-   * Abruptly close the connection.
-   *
-   * To gracefully close the connection, use `close()`.
-   */
-  abstract terminate(): void;
+  [Symbol.for("nodejs.util.inspect.custom")]() {
+    return Object.fromEntries(
+      [
+        ["id", this.id],
+        ["remoteAddress", this.remoteAddress],
+        ["peers", this.peers],
+        ["webSocket", this.webSocket],
+      ].filter((p) => p[1]),
+    );
+  }
 }

@@ -1,4 +1,5 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type * as web from "../../types/web.ts";
 import { toString } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
@@ -43,7 +44,7 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
         const stream = request.body.pipeThrough(new TextDecoderStream());
         try {
           for await (const chunk of stream) {
-            hooks.callHook("message", peer, new Message(chunk));
+            hooks.callHook("message", peer, new Message(chunk, peer));
           }
         } catch {
           await stream.cancel().catch(() => {});
@@ -52,18 +53,13 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
         return new Response(null, {});
       } else {
         // Add a new peer
+        const ws = new SSEWebSocketStub();
         peer = new SSEPeer({
           peers,
-          sse: {
-            request,
-            hooks,
-            onClose: () => {
-              peers.delete(peer);
-              if (opts.bidir) {
-                peersMap!.delete(peer.id);
-              }
-            },
-          },
+          peersMap,
+          request,
+          hooks,
+          ws,
         });
         peers.add(peer);
         if (opts.bidir) {
@@ -96,35 +92,34 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
 
 class SSEPeer extends Peer<{
   peers: Set<SSEPeer>;
-  sse: {
-    request: Request;
-    hooks: AdapterHookable;
-    onClose: (peer: SSEPeer) => void;
-  };
+  peersMap?: Map<string, SSEPeer>;
+  request: Request;
+  ws: SSEWebSocketStub;
+  hooks: AdapterHookable;
 }> {
-  _sseStream: ReadableStream;
+  _sseStream: ReadableStream; // server -> client
   _sseStreamController?: ReadableStreamDefaultController;
 
   constructor(internal: SSEPeer["_internal"]) {
     super(internal);
+    this._internal.ws.readyState = 0 /* CONNECTING */;
     this._sseStream = new ReadableStream({
       start: (controller) => {
+        this._internal.ws.readyState = 1 /* OPEN */;
         this._sseStreamController = controller;
-        this._internal.sse.hooks.callHook("open", this);
+        this._internal.hooks.callHook("open", this);
       },
       cancel: () => {
-        this._internal.sse.onClose(this);
-        this._internal.sse.hooks.callHook("close", this);
+        this._internal.ws.readyState = 2 /* CLOSING */;
+        this._internal.peers.delete(this);
+        this._internal.peersMap?.delete(this.id);
+        Promise.resolve(this._internal.hooks.callHook("close", this)).finally(
+          () => {
+            this._internal.ws.readyState = 3 /* CLOSED */;
+          },
+        );
       },
     }).pipeThrough(new TextEncoderStream());
-  }
-
-  get url() {
-    return this._internal.sse.request.url;
-  }
-
-  get headers() {
-    return this._internal.sse.request.headers;
   }
 
   _sendEvent(event: string, data: string) {
@@ -134,16 +129,16 @@ class SSEPeer extends Peer<{
     );
   }
 
-  send(message: any) {
-    this._sendEvent("message", toString(message));
+  send(data: unknown) {
+    this._sendEvent("message", toString(data));
     return 0;
   }
 
-  publish(topic: string, message: any) {
-    const data = toString(message);
+  publish(topic: string, data: unknown) {
+    const dataBuff = toString(data);
     for (const peer of this._internal.peers) {
       if (peer !== this && peer._topics.has(topic)) {
-        peer._sendEvent("message", data);
+        peer._sendEvent("message", dataBuff);
       }
     }
   }
@@ -151,8 +146,10 @@ class SSEPeer extends Peer<{
   close() {
     this._sseStreamController?.close();
   }
+}
 
-  terminate() {
-    this.close();
-  }
+// --- web compat ---
+
+class SSEWebSocketStub implements Partial<web.WebSocket> {
+  readyState?: number | undefined;
 }
