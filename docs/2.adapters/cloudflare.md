@@ -77,6 +77,11 @@ export default {
 };
 
 export class $DurableObject extends DurableObject {
+  constructor(state, env) {
+    super(state, env);
+    ws.handleDurableInit(this, state, env);
+  }
+
   fetch(request) {
     return ws.handleDurableUpgrade(this, request);
   }

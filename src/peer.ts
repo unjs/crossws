@@ -10,7 +10,8 @@ export interface AdapterInternal {
 export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   protected _internal: Internal;
   protected _topics: Set<string>;
-  #id?: string;
+  protected _id?: string;
+
   #ws?: Partial<web.WebSocket>;
 
   constructor(internal: Internal) {
@@ -22,10 +23,10 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
    * Unique random [uuid v4](https://developer.mozilla.org/en-US/docs/Glossary/UUID) identifier for the peer.
    */
   get id(): string {
-    if (!this.#id) {
-      this.#id = randomUUID();
+    if (!this._id) {
+      this._id = randomUUID();
     }
-    return this.#id;
+    return this._id;
   }
 
   /** IP address of the peer */
