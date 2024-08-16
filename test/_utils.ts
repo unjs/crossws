@@ -138,7 +138,7 @@ class WebSocketInspector extends Agent {
 
 export function wsTestsExec(
   cmd: string,
-  opts: Parameters<typeof wsTests>[1],
+  opts: Parameters<typeof wsTests>[1] & { silent?: boolean },
   tests = wsTests,
 ) {
   let childProc: ExecaRes;
@@ -156,9 +156,12 @@ export function wsTestsExec(
         console.error(error);
       }
     });
-    childProc.stderr!.on("data", (chunk) => {
-      console.log(chunk.toString());
-    });
+    if (process.env.TEST_DEBUG || !opts.silent) {
+      console.log("hooking stderr");
+      childProc.stderr!.on("data", (chunk) => {
+        console.log(chunk.toString());
+      });
+    }
     if (process.env.TEST_DEBUG) {
       childProc.stdout!.on("data", (chunk) => {
         console.log(chunk.toString());
