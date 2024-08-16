@@ -53,10 +53,8 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       const request = new NodeReqProxy(nodeReq);
       const peer = new NodePeer({ ws, request, peers, nodeReq });
       peers.add(peer);
-      ws.on("open", () => {
-        hooks.callHook("open", peer);
-      });
-      ws.on("message", (data: unknown, isBinary: boolean) => {
+      hooks.callHook("open", peer); // ws is already open
+      ws.on("message", (data: unknown) => {
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
