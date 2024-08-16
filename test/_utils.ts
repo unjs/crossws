@@ -157,7 +157,6 @@ export function wsTestsExec(
       }
     });
     if (process.env.TEST_DEBUG || !opts.silent) {
-      console.log("hooking stderr");
       childProc.stderr!.on("data", (chunk) => {
         console.log(chunk.toString());
       });
