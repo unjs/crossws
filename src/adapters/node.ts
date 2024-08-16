@@ -53,11 +53,10 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       const request = new NodeReqProxy(nodeReq);
       const peer = new NodePeer({ ws, request, peers, nodeReq });
       peers.add(peer);
-      hooks.callHook("open", peer);
-
-      // Managed socket-level events
+      ws.on("open", () => {
+        hooks.callHook("open", peer);
+      });
       ws.on("message", (data: unknown, isBinary: boolean) => {
-        hooks.callAdapterHook("node:message", peer, data, isBinary);
         if (Array.isArray(data)) {
           data = Buffer.concat(data);
         }
@@ -65,36 +64,14 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       });
       ws.on("error", (error: Error) => {
         peers.delete(peer);
-        hooks.callAdapterHook("node:error", peer, error);
         hooks.callHook("error", peer, new WSError(error));
       });
       ws.on("close", (code: number, reason: Buffer) => {
         peers.delete(peer);
-        hooks.callAdapterHook("node:close", peer, code, reason);
         hooks.callHook("close", peer, {
           code,
           reason: reason?.toString(),
         });
-      });
-      ws.on("open", () => {
-        hooks.callAdapterHook("node:open", peer);
-      });
-
-      // Unmanaged socket-level events
-      ws.on("ping", (data: Buffer) => {
-        hooks.callAdapterHook("node:ping", peer, data);
-      });
-      ws.on("pong", (data: Buffer) => {
-        hooks.callAdapterHook("node:pong", peer, data);
-      });
-      ws.on(
-        "unexpected-response",
-        (req: ClientRequest, res: IncomingMessage) => {
-          hooks.callAdapterHook("node:unexpected-response", peer, req, res);
-        },
-      );
-      ws.on("upgrade", (req: IncomingMessage) => {
-        hooks.callAdapterHook("node:upgrade", peer, req);
       });
     });
 

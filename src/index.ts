@@ -1,6 +1,6 @@
 // Hooks
 export { defineHooks } from "./hooks.ts";
-export type { Hooks, AdapterHooks, ResolveHooks } from "./hooks.ts";
+export type { Hooks, ResolveHooks } from "./hooks.ts";
 
 // Adapter
 export { defineWebSocketAdapter } from "./adapter.ts";

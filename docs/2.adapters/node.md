@@ -27,17 +27,6 @@ const server = createServer((req, res) => {
 server.on("upgrade", ws.handleUpgrade);
 ```
 
-## Adapter Hooks
-
-- `node:open (peer)`
-- `node:message (peer, data, isBinary)`
-- `node:close (peer, code, reason)`
-- `node:error (peer, error)`
-- `node:ping (peer)`
-- `node:pong (peer)`
-- `node:unexpected-response (peer, req, res)`
-- `node:upgrade (peer, req)`
-
 ::read-more
 See [`test/fixture/node.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/node.ts) for demo and [`src/adapters/node.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/node.ts) for implementation.
 ::

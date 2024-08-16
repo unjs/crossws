@@ -54,26 +54,12 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
         open: (ws) => {
           const peer = getPeer(ws, peers);
           peers.add(peer);
-          hooks.callAdapterHook("bun:open", peer, ws);
           hooks.callHook("open", peer);
         },
         close: (ws) => {
           const peer = getPeer(ws, peers);
           peers.delete(peer);
-          hooks.callAdapterHook("bun:close", peer, ws);
           hooks.callHook("close", peer, {});
-        },
-        drain: (ws) => {
-          const peer = getPeer(ws, peers);
-          hooks.callAdapterHook("bun:drain", peer);
-        },
-        ping(ws, data) {
-          const peer = getPeer(ws, peers);
-          hooks.callAdapterHook("bun:ping", peer, ws, data);
-        },
-        pong(ws, data) {
-          const peer = getPeer(ws, peers);
-          hooks.callAdapterHook("bun:pong", peer, ws, data);
         },
       },
     };

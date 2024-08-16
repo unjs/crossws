@@ -45,7 +45,6 @@ export default defineWebSocketAdapter<
       );
       peers.add(peer);
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
-      await hooks.callAdapterHook("cloudflare:accept", peer);
       await hooks.callHook("open", peer);
       // eslint-disable-next-line unicorn/no-null
       return new Response(null, {
@@ -56,14 +55,12 @@ export default defineWebSocketAdapter<
     },
     handleDurableMessage: async (obj, ws, message) => {
       const peer = CloudflareDurablePeer._restore(obj, ws as CF.WebSocket);
-      await hooks.callAdapterHook("cloudflare:message", peer, message);
       await hooks.callHook("message", peer, new Message(message, peer));
     },
     handleDurableClose: async (obj, ws, code, reason, wasClean) => {
       const peer = CloudflareDurablePeer._restore(obj, ws as CF.WebSocket);
       peers.delete(peer);
       const details = { code, reason, wasClean };
-      await hooks.callAdapterHook("cloudflare:close", peer, details);
       await hooks.callHook("close", peer, details);
     },
   };

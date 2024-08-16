@@ -1,4 +1,4 @@
-import type { AdapterHooks, Hooks, ResolveHooks } from "./hooks.ts";
+import type { Hooks, ResolveHooks } from "./hooks.ts";
 import type { Peer } from "./peer.ts";
 
 export function adapterUtils(peers: Set<Peer>) {
@@ -24,7 +24,6 @@ export interface AdapterInstance {
 export interface AdapterOptions {
   resolve?: ResolveHooks;
   hooks?: Hooks;
-  adapterHooks?: AdapterHooks;
 }
 
 export type Adapter<

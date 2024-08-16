@@ -53,10 +53,8 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
         });
         peers.add(peer);
         server.accept();
-        hooks.callAdapterHook("cloudflare:accept", peer);
         hooks.callHook("open", peer);
         server.addEventListener("message", (event) => {
-          hooks.callAdapterHook("cloudflare:message", peer, event);
           hooks.callHook(
             "message",
             peer,
@@ -65,12 +63,10 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
         });
         server.addEventListener("error", (event) => {
           peers.delete(peer);
-          hooks.callAdapterHook("cloudflare:error", peer, event);
           hooks.callHook("error", peer, new WSError(event.error));
         });
         server.addEventListener("close", (event) => {
           peers.delete(peer);
-          hooks.callAdapterHook("cloudflare:close", peer, event);
           hooks.callHook("close", peer, event);
         });
         // eslint-disable-next-line unicorn/no-null
