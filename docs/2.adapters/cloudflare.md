@@ -33,13 +33,6 @@ export default {
 };
 ```
 
-## Adapter Hooks
-
-- `cloudflare:accept (peer)`
-- `cloudflare:message (peer, event)`
-- `cloudflare:error (peer, event)`
-- `cloudflare:close (peer, event)`
-
 ::read-more
 See [`test/fixture/cloudflare.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/cloudflare.ts) for demo and [`src/adapters/cloudflare.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/cloudflare.ts) for implementation.
 ::

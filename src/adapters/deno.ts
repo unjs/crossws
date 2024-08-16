@@ -51,21 +51,17 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
         });
         peers.add(peer);
         upgrade.socket.addEventListener("open", () => {
-          hooks.callAdapterHook("deno:open", peer);
           hooks.callHook("open", peer);
         });
         upgrade.socket.addEventListener("message", (event) => {
-          hooks.callAdapterHook("deno:message", peer, event);
           hooks.callHook("message", peer, new Message(event.data, peer, event));
         });
         upgrade.socket.addEventListener("close", () => {
           peers.delete(peer);
-          hooks.callAdapterHook("deno:close", peer);
           hooks.callHook("close", peer, {});
         });
         upgrade.socket.addEventListener("error", (error) => {
           peers.delete(peer);
-          hooks.callAdapterHook("deno:error", peer, error);
           hooks.callHook("error", peer, new WSError(error));
         });
         return upgrade.response;

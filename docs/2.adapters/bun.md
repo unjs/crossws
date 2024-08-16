@@ -32,16 +32,6 @@ Bun.serve({
 });
 ```
 
-## Adapter Hooks
-
-- `bun:message (peer, ws, message)`
-- `bun:open (peer, ws)`
-- `bun:close (peer, ws)`
-- `bun:drain (peer)`
-- `bun:error (peer, ws, error)`
-- `bun:ping (peer, ws, data)`
-- `bun:pong (peer, ws, data)`
-
 ::read-more
 See [`test/fixture/bun.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/bun.ts) for demo and [`src/adapters/bun.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/bun.ts) for implementation.
 ::

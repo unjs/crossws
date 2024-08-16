@@ -39,13 +39,6 @@ export class AdapterHookable {
       },
     ) as Promise<any>;
   }
-
-  callAdapterHook<N extends keyof AdapterHooks>(
-    name: N,
-    ...args: Parameters<AdapterHooks[N]>
-  ): ReturnType<AdapterHooks[N]> {
-    return this.options.adapterHooks?.[name]?.apply(undefined, args);
-  }
 }
 
 // --- types ---
@@ -92,49 +85,4 @@ export interface Hooks {
 
   /** An error occurs */
   error: (peer: Peer, error: WSError) => MaybePromise<void>;
-}
-
-export interface AdapterHooks extends Record<string, HookFn<any[], any>> {
-  // Bun
-  "bun:message": HookFn<[ws: any, message: any]>;
-  "bun:open": HookFn<[ws: any]>;
-  "bun:close": HookFn<[ws: any]>;
-  "bun:drain": HookFn<[]>;
-  "bun:error": HookFn<[ws: any, error: any]>;
-  "bun:ping": HookFn<[ws: any, data: any]>;
-  "bun:pong": HookFn<[ws: any, data: any]>;
-
-  // Cloudflare
-  "cloudflare:accept": HookFn<[]>;
-  "cloudflare:message": HookFn<[event: any]>;
-  "cloudflare:error": HookFn<[event: any]>;
-  "cloudflare:close": HookFn<[event: any]>;
-
-  // Deno
-  "deno:open": HookFn<[]>;
-  "deno:message": HookFn<[event: any]>;
-  "deno:close": HookFn<[]>;
-  "deno:error": HookFn<[error: any]>;
-
-  // ws (Node)
-  "node:open": HookFn<[]>;
-  "node:message": HookFn<[data: any, isBinary: boolean]>;
-  "node:close": HookFn<[code: number, reason: Buffer]>;
-  "node:error": HookFn<[error: any]>;
-  "node:ping": HookFn<[data: Buffer]>;
-  "node:pong": HookFn<[data: Buffer]>;
-  "node:unexpected-response": HookFn<[req: any, res: any]>;
-  "node:upgrade": HookFn<[req: any]>;
-
-  // uws (Node)
-  "uws:open": HookFn<[ws: any]>;
-  "uws:message": HookFn<[ws: any, message: any, isBinary: boolean]>;
-  "uws:close": HookFn<[ws: any, code: number, message: any]>;
-  "uws:ping": HookFn<[ws: any, message: any]>;
-  "uws:pong": HookFn<[ws: any, message: any]>;
-  "uws:drain": HookFn<[ws: any]>;
-  "uws:upgrade": HookFn<[res: any, req: any, context: any]>;
-  "uws:subscription": HookFn<
-    [ws: any, topic: any, newCount: number, oldCount: number]
-  >;
 }

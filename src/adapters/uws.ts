@@ -54,7 +54,6 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
             2 /* CLOSING */;
           peers.delete(peer);
-          hooks.callAdapterHook("uws:close", peer, ws, code, message);
           hooks.callHook("close", peer, {
             code,
             reason: message?.toString(),
@@ -62,39 +61,14 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
             3 /* CLOSED */;
         },
-        drain(ws) {
-          const peer = getPeer(ws, peers);
-          hooks.callAdapterHook("uws:drain", peer, ws);
-        },
         message(ws, message, isBinary) {
           const peer = getPeer(ws, peers);
-          hooks.callAdapterHook("uws:message", peer, ws, message, isBinary);
           hooks.callHook("message", peer, new Message(message, peer));
         },
         open(ws) {
           const peer = getPeer(ws, peers);
           peers.add(peer);
-          hooks.callAdapterHook("uws:open", peer, ws);
           hooks.callHook("open", peer);
-        },
-        ping(ws, message) {
-          const peer = getPeer(ws, peers);
-          hooks.callAdapterHook("uws:ping", peer, ws, message);
-        },
-        pong(ws, message) {
-          const peer = getPeer(ws, peers);
-          hooks.callAdapterHook("uws:pong", peer, ws, message);
-        },
-        subscription(ws, topic, newCount, oldCount) {
-          const peer = getPeer(ws, peers);
-          hooks.callAdapterHook(
-            "uws:subscription",
-            peer,
-            ws,
-            topic,
-            newCount,
-            oldCount,
-          );
         },
         async upgrade(res, req, context) {
           let aborted = false;
