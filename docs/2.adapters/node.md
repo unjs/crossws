@@ -61,17 +61,6 @@ server.listen(3001, () => {
 });
 ```
 
-## Adapter Hooks
-
-- `uws:open (ws)`
-- `uws:message (ws, message, isBinary)`
-- `uws:close (ws, code, message)`
-- `uws:ping (ws, message)`
-- `uws:pong (ws, message)`
-- `uws:drain (ws)`
-- `uws:upgrade (res, req, context)`
-- `uws:subscription (ws, topic, newCount, oldCount)`
-
 ::read-more
 See [`test/fixture/node-uws.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/node-uws.ts) for demo and [`src/adapters/node-uws.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/node-uws.ts) for implementation.
 ::
