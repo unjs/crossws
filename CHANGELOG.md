@@ -1,6 +1,95 @@
 # Changelog
 
 
+## v0.3.0
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.2.4...v0.3.0)
+
+### 🚀 Enhancements
+
+- **node, uws:** Automatically detect binary message type ([#53](https://github.com/unjs/crossws/pull/53))
+- **peer:** Add `peer.close()` and `peer.terminate()` support ([#36](https://github.com/unjs/crossws/pull/36))
+- Cloudflare durable objects support ([#54](https://github.com/unjs/crossws/pull/54))
+- **deno:** Support pubsub ([#58](https://github.com/unjs/crossws/pull/58))
+- Universal access to all peers ([#60](https://github.com/unjs/crossws/pull/60))
+- Global publish ([#61](https://github.com/unjs/crossws/pull/61))
+- Experimental sse adapter ([#62](https://github.com/unjs/crossws/pull/62))
+- **peer:** Use secure lazy random uuid ([#64](https://github.com/unjs/crossws/pull/64))
+- **sse:** Support bidirectional messaging ([#66](https://github.com/unjs/crossws/pull/66))
+- **sse:** Implement `WebSocketSSE` peer ([#68](https://github.com/unjs/crossws/pull/68))
+- ⚠️  Overhaul peer and message interface ([#70](https://github.com/unjs/crossws/pull/70))
+
+### 🩹 Fixes
+
+- Should not serailize binary messages ([#39](https://github.com/unjs/crossws/pull/39))
+- **cloudflare-durable:** Restore peer url and id after hibernation ([#71](https://github.com/unjs/crossws/pull/71))
+
+### 💅 Refactors
+
+- ⚠️  Overhaul internal impl ([#55](https://github.com/unjs/crossws/pull/55))
+- ⚠️  Move `peer.ctx` to `peer._internal` ([#59](https://github.com/unjs/crossws/pull/59))
+- Rename internal crossws to hooks ([bb4c917](https://github.com/unjs/crossws/commit/bb4c917))
+- Better internal organization ([2744f21](https://github.com/unjs/crossws/commit/2744f21))
+- ⚠️  Remove adapter hooks ([#72](https://github.com/unjs/crossws/pull/72))
+
+### 📖 Documentation
+
+- **pubsub:** Correct typo ([#22](https://github.com/unjs/crossws/pull/22))
+- Fix typo ([76fc105](https://github.com/unjs/crossws/commit/76fc105))
+- Fix typos ([7dacb00](https://github.com/unjs/crossws/commit/7dacb00))
+- Fix invalid link ([#46](https://github.com/unjs/crossws/pull/46))
+- Fix link ([#45](https://github.com/unjs/crossws/pull/45))
+- Fix link ([#44](https://github.com/unjs/crossws/pull/44))
+- Update links to sources ([a96dca3](https://github.com/unjs/crossws/commit/a96dca3))
+- Update contents ([898ab49](https://github.com/unjs/crossws/commit/898ab49))
+- Update ([2e49cc3](https://github.com/unjs/crossws/commit/2e49cc3))
+
+### 📦 Build
+
+- Remove `uWebSockets.js` optional dependency ([#52](https://github.com/unjs/crossws/pull/52))
+- Externalize `uWebSockets.js` ([b23b76d](https://github.com/unjs/crossws/commit/b23b76d))
+- ⚠️  Esm-only build ([#63](https://github.com/unjs/crossws/pull/63))
+
+### 🏡 Chore
+
+- Fix typo ([#47](https://github.com/unjs/crossws/pull/47))
+- Update deps ([60829ec](https://github.com/unjs/crossws/commit/60829ec))
+- Update ci ([cc47af4](https://github.com/unjs/crossws/commit/cc47af4))
+- Update to eslint v9 ([8d7cf40](https://github.com/unjs/crossws/commit/8d7cf40))
+- Update examples ([44ef76a](https://github.com/unjs/crossws/commit/44ef76a))
+- Update deps ([10e6427](https://github.com/unjs/crossws/commit/10e6427))
+- Setup coverage report ([23fc41f](https://github.com/unjs/crossws/commit/23fc41f))
+- Rename websocket native dist entry ([97c818e](https://github.com/unjs/crossws/commit/97c818e))
+- Update play scripts ([4c6e8b3](https://github.com/unjs/crossws/commit/4c6e8b3))
+- Update deps ([078b51d](https://github.com/unjs/crossws/commit/078b51d))
+- Update docs lockfile ([dbf4f66](https://github.com/unjs/crossws/commit/dbf4f66))
+- Update undocs ([440aabd](https://github.com/unjs/crossws/commit/440aabd))
+- Update undocs ([13f8f7a](https://github.com/unjs/crossws/commit/13f8f7a))
+
+### ✅ Tests
+
+- Add adater tests ([#56](https://github.com/unjs/crossws/pull/56))
+- **cloudflare:** Use random port for wrangler inspector ([a46265c](https://github.com/unjs/crossws/commit/a46265c))
+- Run tests with web standard `WebSocket` and `EventSource` ([#67](https://github.com/unjs/crossws/pull/67))
+
+#### ⚠️ Breaking Changes
+
+- ⚠️  Overhaul peer and message interface ([#70](https://github.com/unjs/crossws/pull/70))
+- ⚠️  Overhaul internal impl ([#55](https://github.com/unjs/crossws/pull/55))
+- ⚠️  Move `peer.ctx` to `peer._internal` ([#59](https://github.com/unjs/crossws/pull/59))
+- ⚠️  Remove adapter hooks ([#72](https://github.com/unjs/crossws/pull/72))
+- ⚠️  Esm-only build ([#63](https://github.com/unjs/crossws/pull/63))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+- Eduardo San Martin Morote ([@posva](http://github.com/posva))
+- Alex ([@alexzhang1030](http://github.com/alexzhang1030))
+- 39sho ([@39sho](http://github.com/39sho))
+- @beer ([@iiio2](http://github.com/iiio2))
+- Sébastien Chopin ([@atinux](http://github.com/atinux))
+- Pierre Golfier <pro@pedraal.fr>
+
 ## v0.2.4
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.2.3...v0.2.4)
