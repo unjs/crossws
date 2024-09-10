@@ -23,7 +23,7 @@ export interface AdapterInstance {
 
 export interface AdapterOptions {
   resolve?: ResolveHooks;
-  hooks?: Hooks;
+  hooks?: Partial<Hooks>;
 }
 
 export type Adapter<
