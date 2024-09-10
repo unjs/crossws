@@ -1,5 +1,95 @@
 # Changelog
 
+## v0.3.0
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.2.4...v0.3.0)
+
+## 🌟 What is new?
+
+### Better stability
+
+Crossws 0.3.x includes an overhaul of refactors, stability improvements, and new features. A new codebase and testing matrix had been implemented ([#55](https://github.com/unjs/crossws/pull/55)) to make sure all supported adapters and runtimes work as expected and are consistent with each other.
+
+### Refined Peer API
+
+The peer object allows easy interaction with connected WebSocket clients from server route hooks ([peer docs](https://crossws.unjs.io/guide/peer)).
+
+To improve Web standards compatibility, accessing upgrade URL and headers is now possible with `peer.request.url` and `peer.request.headers` (**breaking change**), and `peer.addr` is also renamed to `peer.remoteAddress` to improve readability (**breaking change**) and support is increased across providers. You can also use new lazy-generated and secure `peer.id` (UUID v4) for various purposes including temporary sessions or persistent state.
+
+Two new methods are now supported to close connected peers using `peer.close(code, reason)` and `peer.terminate()`. With this new version, you can access a standard [`WebSocket`](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) interface using `peer.websocket`.
+
+> [!NOTE]
+> Today many of the server runtimes don't provide a spec-compliant `WebSocket` API. Crossws uses an internal proxy to polyfill consistent access to `extensions`, `protocol`, and `readyState`. See [compatibility table](https://crossws.unjs.io/guide/peer#compatibility) for more details.
+
+### Refined Message API
+
+On `message` [hook](https://crossws.unjs.io/guide/hooks), you receive a message object containing data from the client ([message docs](https://crossws.unjs.io/guide/message)).
+
+Parsing incoming messages can be tricky across runtimes. Message object now has stable methods `.text()`, `.json()`, `.uint8Array()`, `.arrayBuffer()`, `.blob()` to safely read message as desired format. If you need, you can also access `.rawData`, `.peer`, `.event` (if available), and lazy generated secure UUID v4 `.id`
+
+### Authentication via `upgrade` hook
+
+When you need to authenticate and validate WebSocket clients before they can upgrade, you can now easily use the `upgrade` hook to check incoming URLs and headers/cookies and return a Web Standard [Response](https://developer.mozilla.org/en-US/docs/Web/API/Response) in case you need to abort the upgrade.
+
+### Pubsub with Deno and Cloudflare Durable Objects
+
+One of the common use cases of WebSockets is pubsub. This release adds pub-sub support to [Deno provider](https://crossws.unjs.io/adapters/deno) and also you can globally broadcast messages using `ws.publish` for advanced use cases.
+
+Normally with cloudflare workers, it is not possible to connect multiple peers with each other. Cloudflare [Durable Objects](https://developers.cloudflare.com/durable-objects/) (available on paid plans) allows building collaborative editing tools, interactive chat, multiplayer games, and applications that need coordination among multiple clients.
+
+Crossws provides a new composable method to easily integrate WebSocket handlers with Durable Objects. Hibernation is supported out of the box to reduce billing costs when connected clients are inactive. ([durable object peer docs](https://crossws.unjs.io/adapters/cloudflare#durable-objects))
+
+## Changelog
+
+### 🚀 Enhancements
+
+- ⚠️ Overhaul internal implementation ([#55](https://github.com/unjs/crossws/pull/55))
+- ⚠️ Overhaul peer and message interface ([#70](https://github.com/unjs/crossws/pull/70))
+- **node, uws:** Automatically detect binary message type ([#53](https://github.com/unjs/crossws/pull/53))
+- **peer:** Add `peer.close()` and `peer.terminate()` support ([#36](https://github.com/unjs/crossws/pull/36))
+- Cloudflare durable objects support ([#54](https://github.com/unjs/crossws/pull/54)) ([docs](https://crossws.unjs.io/adapters/cloudflare#durable-objects))
+- **deno:** Support pub/sub ([#58](https://github.com/unjs/crossws/pull/58))
+- Universal access to all peers ([#60](https://github.com/unjs/crossws/pull/60))
+- Global publish using `ws.publish` ([#61](https://github.com/unjs/crossws/pull/61))
+- Experimental SSE-based adapter to support websocket in limited runtimes ([#62](https://github.com/unjs/crossws/pull/62), [#66](https://github.com/unjs/crossws/pull/66), [#68](https://github.com/unjs/crossws/pull/68)) ([docs](https://crossws.unjs.io/adapters/sse)
+- **peer:** Use secure lazy random UUID v4 ([#64](https://github.com/unjs/crossws/pull/64))
+
+### 🩹 Fixes
+
+- Should not serailize binary messages ([#39](https://github.com/unjs/crossws/pull/39))
+- **cloudflare-durable:** Restore peer url and id after hibernation ([#71](https://github.com/unjs/crossws/pull/71))
+
+### 💅 Refactors
+
+- ⚠️ Move `peer.ctx` to `peer._internal` ([#59](https://github.com/unjs/crossws/pull/59))
+- ⚠️ Remove adapter hooks ([#72](https://github.com/unjs/crossws/pull/72))
+- Rename internal crossws to hooks ([bb4c917](https://github.com/unjs/crossws/commit/bb4c917))
+- Better internal organization ([2744f21](https://github.com/unjs/crossws/commit/2744f21))
+
+### 📖 Documentation
+
+[#22](https://github.com/unjs/crossws/pull/22), [76fc105](https://github.com/unjs/crossws/commit/76fc105), [7dacb00](https://github.com/unjs/crossws/commit/7dacb00), [#46](https://github.com/unjs/crossws/pull/46), [#45](https://github.com/unjs/crossws/pull/45), [#44](https://github.com/unjs/crossws/pull/44), [a96dca3](https://github.com/unjs/crossws/commit/a96dca3), [898ab49](https://github.com/unjs/crossws/commit/898ab49), [2e49cc3](https://github.com/unjs/crossws/commit/2e49cc3)
+
+### 📦 Build
+
+- Remove optional `uWebSockets.js` dependency ([#52](https://github.com/unjs/crossws/pull/52), [b23b76d](https://github.com/unjs/crossws/commit/b23b76d))
+- ⚠️ Esm-only build ([#63](https://github.com/unjs/crossws/pull/63))
+
+### ✅ Tests
+
+- Add adapter tests ([#56](https://github.com/unjs/crossws/pull/56))
+- **cloudflare:** Use random port for wrangler inspector ([a46265c](https://github.com/unjs/crossws/commit/a46265c))
+- Run tests with web standard `WebSocket` and `EventSource` ([#67](https://github.com/unjs/crossws/pull/67))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+- Eduardo San Martin Morote ([@posva](http://github.com/posva))
+- Alex ([@alexzhang1030](http://github.com/alexzhang1030))
+- 39sho ([@39sho](http://github.com/39sho))
+- @beer ([@iiio2](http://github.com/iiio2))
+- Sébastien Chopin ([@atinux](http://github.com/atinux))
+- Pierre Golfier <pro@pedraal.fr>
 
 ## v0.2.4
 
@@ -81,7 +171,7 @@
 
 ### 💅 Refactors
 
-- ⚠️  Improve types and api ([2ebacd3](https://github.com/unjs/crossws/commit/2ebacd3))
+- ⚠️ Improve types and api ([2ebacd3](https://github.com/unjs/crossws/commit/2ebacd3))
 
 ### 🏡 Chore
 
@@ -90,7 +180,7 @@
 
 #### ⚠️ Breaking Changes
 
-- ⚠️  Improve types and api ([2ebacd3](https://github.com/unjs/crossws/commit/2ebacd3))
+- ⚠️ Improve types and api ([2ebacd3](https://github.com/unjs/crossws/commit/2ebacd3))
 
 ### ❤️ Contributors
 
@@ -169,7 +259,6 @@
 
 ## v0.0.1
 
-
 ### 🏡 Chore
 
 - Update readme ([af705a6](https://github.com/unjs/crossws/commit/af705a6))
@@ -178,4 +267,3 @@
 ### ❤️ Contributors
 
 - Pooya Parsa ([@pi0](http://github.com/pi0))
-
