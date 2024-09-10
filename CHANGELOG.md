@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.3.1
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.3.0...v0.3.1)
+
+### 🩹 Fixes
+
+- **types:** `AdapterOptions` type ([#80](https://github.com/unjs/crossws/pull/80))
+
+### 🏡 Chore
+
+- **release:** V0.3.0 ([4a5e168](https://github.com/unjs/crossws/commit/4a5e168))
+- Update deps ([567c9fe](https://github.com/unjs/crossws/commit/567c9fe))
+- Update changelog ([1f5411a](https://github.com/unjs/crossws/commit/1f5411a))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+- Hayatosc ([@hayatosc](http://github.com/hayatosc))
+
 ## v0.3.0
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.2.4...v0.3.0)
