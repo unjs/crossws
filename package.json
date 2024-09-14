@@ -91,10 +91,10 @@
     "@deno/types": "^0.0.1",
     "@types/bun": "^1.1.9",
     "@types/eventsource": "^1.1.15",
-    "@types/node": "^22.5.4",
-    "@types/web": "^0.0.162",
+    "@types/node": "^22.5.5",
+    "@types/web": "^0.0.163",
     "@types/ws": "^8.5.12",
-    "@vitest/coverage-v8": "^2.0.5",
+    "@vitest/coverage-v8": "^2.1.1",
     "automd": "^0.3.8",
     "changelogen": "^0.5.5",
     "consola": "^3.2.3",
@@ -111,9 +111,9 @@
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.44.0",
     "unbuild": "3.0.0-rc.7",
     "undici": "^6.19.8",
-    "vitest": "^2.0.5",
-    "wrangler": "^3.76.0",
+    "vitest": "^2.1.1",
+    "wrangler": "^3.78.2",
     "ws": "^8.18.0"
   },
-  "packageManager": "pnpm@9.9.0"
+  "packageManager": "pnpm@9.10.0"
 }
