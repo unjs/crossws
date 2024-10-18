@@ -20,7 +20,7 @@ const ws = crossws({
 Bun.serve({
   port: 3000,
   websocket: ws.websocket,
-  fetch(req, server) {
+  fetch(request, server) {
     if (request.headers.get("upgrade") === "websocket") {
       return ws.handleUpgrade(request, server);
     }
