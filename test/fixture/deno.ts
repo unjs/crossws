@@ -2,9 +2,6 @@
 
 import denoAdapter from "../../src/adapters/deno.ts";
 
-// @ts-ignore
-import type * as _Deno from "../types/lib.deno.d.ts";
-
 import { createDemo, getIndexHTML, handleDemoRoutes } from "./_shared.ts";
 
 const ws = createDemo(denoAdapter);

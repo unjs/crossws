@@ -8,7 +8,7 @@
     "strict": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "types": ["node", "@cloudflare/workers-types"]
+    "types": ["node", "@cloudflare/workers-types", "deno"]
   },
-  "include": ["src", "test"],
+  "include": ["src", "test"]
 }

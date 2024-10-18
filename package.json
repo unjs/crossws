@@ -88,8 +88,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241011.0",
-    "@deno/types": "^0.0.1",
     "@types/bun": "^1.1.11",
+    "@types/deno": "^2.0.0",
     "@types/eventsource": "^1.1.15",
     "@types/node": "^22.7.6",
     "@types/web": "^0.0.173",

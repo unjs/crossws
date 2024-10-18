@@ -14,11 +14,7 @@ export interface DenoAdapter extends AdapterInstance {
 
 export interface DenoOptions extends AdapterOptions {}
 
-declare global {
-  const Deno: typeof import("@deno/types").Deno;
-}
-
-type WebSocketUpgrade = import("@deno/types").Deno.WebSocketUpgrade;
+type WebSocketUpgrade = Deno.WebSocketUpgrade;
 type ServeHandlerInfo = {
   remoteAddr?: { transport: string; hostname: string; port: number };
 };
