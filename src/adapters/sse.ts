@@ -2,7 +2,7 @@ import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import type * as web from "../../types/web.ts";
 import { toString } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
-import { AdapterHookable } from "../hooks.ts";
+import { AdapterHookable, formatRejection, Reasons } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
 
@@ -27,63 +27,79 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
   return {
     ...adapterUtils(peers),
     fetch: async (request: Request) => {
-      const _res = await hooks.callHook("upgrade", request);
-      if (_res instanceof Response) {
-        return _res;
-      }
 
-      let peer: SSEPeer;
+      let _res: Response | undefined;
 
-      if (opts.bidir && request.body && request.headers.has("x-crossws-id")) {
-        // Accept bidirectional streaming request
-        const id = request.headers.get("x-crossws-id")!;
-        peer = peersMap?.get(id) as SSEPeer;
-        if (!peer) {
-          return new Response("invalid peer id", { status: 400 });
-        }
-        const stream = request.body.pipeThrough(new TextDecoderStream());
-        try {
-          for await (const chunk of stream) {
-            hooks.callHook("message", peer, new Message(chunk, peer));
+      /** Accept the Websocket upgrade request. */
+      async function accept(params?: { headers?: HeadersInit }): Promise<void> {
+        let peer: SSEPeer;
+
+        if (opts.bidir && request.body && request.headers.has("x-crossws-id")) {
+          // Accept bidirectional streaming request
+          const id = request.headers.get("x-crossws-id")!;
+          peer = peersMap?.get(id) as SSEPeer;
+          if (!peer) {
+            _res = new Response("invalid peer id", { status: 400 });
           }
-        } catch {
-          await stream.cancel().catch(() => {});
+          const stream = request.body.pipeThrough(new TextDecoderStream());
+          try {
+            for await (const chunk of stream) {
+              hooks.callHook("message", peer, new Message(chunk, peer));
+            }
+          } catch {
+            await stream.cancel().catch(() => { });
+          }
+          // eslint-disable-next-line unicorn/no-null
+          _res = new Response(null, {});
+        } else {
+          // Add a new peer
+          const ws = new SSEWebSocketStub();
+          peer = new SSEPeer({
+            peers,
+            peersMap,
+            request,
+            hooks,
+            ws,
+          });
+          peers.add(peer);
+          if (opts.bidir) {
+            peersMap!.set(peer.id, peer);
+            peer._sendEvent("crossws-id", peer.id);
+          }
         }
-        // eslint-disable-next-line unicorn/no-null
-        return new Response(null, {});
-      } else {
-        // Add a new peer
-        const ws = new SSEWebSocketStub();
-        peer = new SSEPeer({
-          peers,
-          peersMap,
-          request,
-          hooks,
-          ws,
-        });
-        peers.add(peer);
+
+        let headers: HeadersInit = {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        };
         if (opts.bidir) {
-          peersMap!.set(peer.id, peer);
-          peer._sendEvent("crossws-id", peer.id);
+          headers["x-crossws-id"] = peer.id;
         }
+        if (params?.headers) {
+          headers = new Headers(headers);
+          for (const [key, value] of new Headers(params.headers)) {
+            headers.set(key, value);
+          }
+        }
+
+        _res = new Response(peer._sseStream, { headers });
       }
 
-      let headers: HeadersInit = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      };
-      if (opts.bidir) {
-        headers["x-crossws-id"] = peer.id;
-      }
-      if (_res?.headers) {
-        headers = new Headers(headers);
-        for (const [key, value] of new Headers(_res.headers)) {
-          headers.set(key, value);
-        }
+      /** Reject the Websocket upgrade request */
+      function reject(reason: Reasons): void {
+        _res = formatRejection({ reason, type: "Response" })
       }
 
-      return new Response(peer._sseStream, { ..._res, headers });
+
+      await hooks.callHook("upgrade", request,
+        {
+          accept,
+          reject
+        }
+      );
+
+      return _res ?? new Response("Upgrade failed", { status: 500 });
     },
   };
 });

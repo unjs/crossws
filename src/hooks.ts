@@ -60,16 +60,93 @@ type HookFn<ArgsT extends any[] = any, RT = void> = (
   ...args: ArgsT
 ) => MaybePromise<RT>;
 
+export const ReasonMap = {
+  "BadRequest": {
+    Response: 400,
+    Socket: 1002 // Protocol Error
+  },
+  "InvalidData": {
+    Response: 400,
+    Socket: 1007 // Invalid Frame Payload Data
+  },
+  "Unauthorized": {
+    Response: 401,
+    Socket: 3000 // Unauthorized
+  },
+  "Forbidden": {
+    Response: 403,
+    Socket: 1008 // Policy Violation
+  },
+  "PayloadTooLarge": {
+    Response: 413,
+    Socket: 1009 // Message Too Big
+  },
+  "UnsupportedMediaType": {
+    Response: 415,
+    Socket: 1003 // Unsupported Data
+  },
+  "UpgradeRequired": {
+    Response: 426,
+    Socket: 1010 // Mandatory Extension
+  },
+  "BadGateway": {
+    Response: 502,
+    Socket: 1014 // Bad Gateway
+  },
+  "ServiceUnavailable": {
+    Response: 503,
+    Socket: 1012 // Service Restart
+  },
+  "TryAgainLater": {
+    Response: 503,
+    Socket: 1013 // Try Again Later
+  },
+  "TLSHandshake": {
+    Response: 426,
+    Socket: 1015 // TLS Handshake
+  },
+  "InternalError": {
+    Response: 500,
+    Socket: 1006 // Abnormal Closure
+  },
+  "ServerError": {
+    Response: 500,
+    Socket: 1011 // Internal Error
+  },
+};
+
+export type Reasons = keyof typeof ReasonMap
+type ResponseTypes = "Response" | "Event"
+type RejectionResponses<T> = 
+ T extends "Response" ? Response :
+ T extends "Event" ? { code: number, data: string } :
+ undefined
+
+export function formatRejection<T extends ResponseTypes>({ reason , type }: { reason: Reasons, type: T }): RejectionResponses<T> {
+  switch (type) {
+    case "Response":
+      return new Response(reason, { status: ReasonMap[reason].Response, statusText: reason }) as RejectionResponses<T>
+    case "Event":
+      return { code: ReasonMap[reason].Socket, data: reason } as RejectionResponses<T>
+    default:
+      return undefined as RejectionResponses<T>
+  }
+}
+
 export interface Hooks {
   /** Upgrading */
   upgrade: (
     request:
       | Request
       | {
-          url: string;
-          headers: Headers;
-        },
-  ) => MaybePromise<Response | ResponseInit | void>;
+        url: string;
+        headers: Headers;
+      },
+    socket: {
+      accept: (params?: { headers?: HeadersInit }) => void,
+      reject: (reason: Reasons) => void,
+    },
+  ) => MaybePromise<void>;
 
   /** A message is received */
   message: (peer: Peer, message: Message) => MaybePromise<void>;

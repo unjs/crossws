@@ -2,7 +2,7 @@ import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
-import { AdapterHookable } from "../hooks.ts";
+import { AdapterHookable, formatRejection, Reasons } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
 
@@ -13,7 +13,7 @@ export interface BunAdapter extends AdapterInstance {
   handleUpgrade(req: Request, server: Server): Promise<Response | undefined>;
 }
 
-export interface BunOptions extends AdapterOptions {}
+export interface BunOptions extends AdapterOptions { }
 
 type ContextData = {
   peer?: BunPeer;
@@ -31,19 +31,29 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
     return {
       ...adapterUtils(peers),
       async handleUpgrade(request, server) {
-        const res = await hooks.callHook("upgrade", request);
-        if (res instanceof Response) {
-          return res;
+        let response: Response | undefined;
+
+        /** Accept the Websocket upgrade request. */
+        function accept(params?: { headers?: HeadersInit }): void {
+          if (!server.upgrade(request, {
+            headers: params?.headers,
+            data: {
+              server,
+              request,
+            } satisfies ContextData,
+          })) {
+            response = new Response("Upgrade failed", { status: 500 });
+          };
         }
-        const upgradeOK = server.upgrade(request, {
-          data: {
-            server,
-            request,
-          } satisfies ContextData,
-          headers: res?.headers,
-        });
-        if (!upgradeOK) {
-          return new Response("Upgrade failed", { status: 500 });
+
+        /** Reject the Websocket upgrade request */
+        function reject(reason: Reasons): void {
+          response = formatRejection({ reason, type: "Response" })
+        }
+
+        await hooks.callHook("upgrade", request, { accept, reject });
+        if (response instanceof Response) {
+          return response;
         }
       },
       websocket: {

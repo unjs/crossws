@@ -109,6 +109,12 @@ importers:
         specifier: ^1.7.1
         version: 1.9.0
 
+  examples/node:
+    dependencies:
+      crossws:
+        specifier: workspace:*
+        version: link:../..
+
 packages:
 
   '@ampproject/remapping@2.3.0':

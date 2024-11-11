@@ -1,7 +1,7 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
-import { AdapterHookable } from "../hooks.ts";
+import { AdapterHookable, formatRejection, Reasons } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
@@ -12,7 +12,7 @@ export interface DenoAdapter extends AdapterInstance {
   handleUpgrade(req: Request, info: ServeHandlerInfo): Promise<Response>;
 }
 
-export interface DenoOptions extends AdapterOptions {}
+export interface DenoOptions extends AdapterOptions { }
 
 type WebSocketUpgrade = Deno.WebSocketUpgrade;
 type ServeHandlerInfo = {
@@ -31,36 +31,59 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
     return {
       ...adapterUtils(peers),
       handleUpgrade: async (request, info) => {
-        const res = await hooks.callHook("upgrade", request);
-        if (res instanceof Response) {
-          return res;
+        let response: Response | undefined;
+
+        /** Accept the Websocket upgrade request. */
+        function accept(params?: { headers?: HeadersInit }): void {
+
+          const upgrade = Deno.upgradeWebSocket(request, {
+            // @ts-expect-error https://github.com/denoland/deno/pull/22242
+            headers,
+          });
+
+          const peer = new DenoPeer({
+            ws: upgrade.socket,
+            request,
+            peers,
+            denoInfo: info,
+          });
+
+          peers.add(peer);
+
+          upgrade.socket.addEventListener("open", () => {
+            hooks.callHook("open", peer);
+          });
+
+          upgrade.socket.addEventListener("message", (event) => {
+            hooks.callHook("message", peer, new Message(event.data, peer, event));
+          });
+
+          upgrade.socket.addEventListener("close", () => {
+            peers.delete(peer);
+            hooks.callHook("close", peer, {});
+          });
+
+          upgrade.socket.addEventListener("error", (error) => {
+            peers.delete(peer);
+            hooks.callHook("error", peer, new WSError(error));
+          });
+
+          response = upgrade.response;
         }
-        const upgrade = Deno.upgradeWebSocket(request, {
-          // @ts-expect-error https://github.com/denoland/deno/pull/22242
-          headers: res?.headers,
-        });
-        const peer = new DenoPeer({
-          ws: upgrade.socket,
-          request,
-          peers,
-          denoInfo: info,
-        });
-        peers.add(peer);
-        upgrade.socket.addEventListener("open", () => {
-          hooks.callHook("open", peer);
-        });
-        upgrade.socket.addEventListener("message", (event) => {
-          hooks.callHook("message", peer, new Message(event.data, peer, event));
-        });
-        upgrade.socket.addEventListener("close", () => {
-          peers.delete(peer);
-          hooks.callHook("close", peer, {});
-        });
-        upgrade.socket.addEventListener("error", (error) => {
-          peers.delete(peer);
-          hooks.callHook("error", peer, new WSError(error));
-        });
-        return upgrade.response;
+
+        /** Reject the Websocket upgrade request */
+        function reject(reason: Reasons): void {
+          response = formatRejection({ reason, type: "Response" })
+        }
+
+        await hooks.callHook("upgrade", request,
+          {
+            accept,
+            reject
+          }
+        );
+
+        return response ?? new Response("Upgrade failed", { status: 500 });
       },
     };
   },
