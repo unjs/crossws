@@ -1,14 +1,14 @@
 import { defineHooks } from "crossws";
-import {createServer} from 'node:http'
+import { createServer } from 'node:http'
 import crossws from "crossws/adapters/node";
 import { readFileSync } from "node:fs";
 
 const ws = crossws({
   hooks: defineHooks({
     upgrade(req, socket) {
-      if(!authorizedCheck(req)){
+      if (!authorizedCheck(req)) {
         socket.reject("Unauthorized")
-      }else{
+      } else {
         socket.accept()
       }
     },
