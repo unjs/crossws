@@ -6,11 +6,12 @@ import { readFileSync } from "node:fs";
 const ws = crossws({
   hooks: defineHooks({
     upgrade(req, socket) {
-      if (!authorizedCheck(req)) {
+      // if (!authorizedCheck(req)) {
         socket.reject("Unauthorized")
-      } else {
-        socket.accept()
-      }
+      // } else {
+        // socket.accept()
+
+      // }
     },
 
     open(peer) {
@@ -43,6 +44,7 @@ const port = 3000;
 const index = readFileSync("./public/index.html");
 
 const server = createServer((req, res) => {
+  console.log('hit');
   res.writeHead(200);
   res.end(index);
 })

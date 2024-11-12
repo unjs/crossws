@@ -34,7 +34,7 @@ export class AdapterHookable {
       ([globalRes, hook]) => {
         const hookResPromise = hook?.(arg1 as any, arg2 as any);
         return hookResPromise instanceof Promise
-          ? hookResPromise.then((hookRes) => hookRes ?? globalRes)
+          ? hookResPromise.then((hookRes) => hookRes || globalRes)
           : hookResPromise || globalRes;
       },
     ) as Promise<any>;
@@ -146,7 +146,7 @@ export interface Hooks {
       accept: (params?: { headers?: HeadersInit }) => void,
       reject: (reason: Reasons) => void,
     },
-  ) => MaybePromise<void>;
+  ) => MaybePromise<void | Response>;
 
   /** A message is received */
   message: (peer: Peer, message: Message) => MaybePromise<void>;
