@@ -2,7 +2,7 @@ import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import type * as web from "../../types/web.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
-import { AdapterHookable } from "../hooks.ts";
+import { AdapterHookable, formatRejection, Reasons } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
 
@@ -31,27 +31,40 @@ export default defineWebSocketAdapter<
       // placeholder
     },
     handleDurableUpgrade: async (obj, request) => {
-      const res = await hooks.callHook("upgrade", request as Request);
-      if (res instanceof Response) {
-        return res;
+      let response: Response | undefined;
+
+      async function accept(params?: { headers?: HeadersInit }): Promise<void> {
+        const pair = new WebSocketPair();
+        const client = pair[0];
+        const server = pair[1];
+        const peer = CloudflareDurablePeer._restore(
+          obj,
+          server as unknown as CF.WebSocket,
+          request,
+        );
+        peers.add(peer);
+        (obj as DurableObjectPub).ctx.acceptWebSocket(server);
+        await hooks.callHook("open", peer);
+        // eslint-disable-next-line unicorn/no-null
+        response = new Response(null, {
+          status: 101,
+          webSocket: client,
+          headers: params?.headers,
+        });
       }
-      const pair = new WebSocketPair();
-      const client = pair[0];
-      const server = pair[1];
-      const peer = CloudflareDurablePeer._restore(
-        obj,
-        server as unknown as CF.WebSocket,
-        request,
+
+      function reject(reason: Reasons): void {
+        response = formatRejection({ reason, type: "Response" })
+      }
+
+      await hooks.callHook("upgrade", request as Request,
+        {
+          accept,
+          reject
+        }
       );
-      peers.add(peer);
-      (obj as DurableObjectPub).ctx.acceptWebSocket(server);
-      await hooks.callHook("open", peer);
-      // eslint-disable-next-line unicorn/no-null
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-        headers: res?.headers,
-      });
+
+      return response ?? new Response("Upgrade failed", { status: 500 });
     },
     handleDurableMessage: async (obj, ws, message) => {
       const peer = CloudflareDurablePeer._restore(obj, ws as CF.WebSocket);
