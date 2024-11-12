@@ -52,9 +52,7 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
         }
 
         await hooks.callHook("upgrade", request, { accept, reject });
-        if (response instanceof Response) {
-          return response;
-        }
+        return response ?? new Response("Upgrade failed", { status: 500 });
       },
       websocket: {
         message: (ws, message) => {

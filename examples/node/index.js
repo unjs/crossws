@@ -5,11 +5,12 @@ import { readFileSync } from "node:fs";
 
 const ws = crossws({
   hooks: defineHooks({
-    upgrade(peer, req) {
-      // return new Response({"error": "not supported"}, {status: 400});
-      
-      console.log("[ws] upgrade");
-      return {headers: {"x-custom-header": "custom-value"}};
+    upgrade(req, socket) {
+      if(!authorizedCheck(req)){
+        socket.reject("Unauthorized")
+      }else{
+        socket.accept()
+      }
     },
 
     open(peer) {
