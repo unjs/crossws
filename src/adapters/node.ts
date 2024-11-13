@@ -88,25 +88,20 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
         const request = new NodeReqProxy(nodeReq);
 
         let res: Response | undefined;
-        let convertedError: { code: number; reason: string } | undefined;
         
         try {
           res = await hooks.callHook("upgrade", request);
         } catch (error) {
           if (error instanceof Response) {
-            convertedError = convertResponseToCloseEvent(error);
+            return sendResponse(socket, error);
           }
           throw error;
         }
 
+        (nodeReq as AugmentedReq)._request = request;
+        (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
         wss.handleUpgrade(nodeReq, socket, head, (ws) => {
-          if (convertedError) {
-            ws.close(convertedError.code, convertedError.reason);
-          } else {
-            (nodeReq as AugmentedReq)._request = request;
-            (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
-            wss.emit("connection", ws, nodeReq);
-          }
+          wss.emit("connection", ws, nodeReq);
         });
       },
       closeAll: (code, data) => {

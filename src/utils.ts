@@ -70,15 +70,3 @@ export function isPlainObject(value: unknown): boolean {
 
   return true;
 }
-
-
-// Convert a Response to a WS Close Event
-export function convertResponseToCloseEvent(response: Response): {
-  code: number;
-  reason: string;
-} {
-  return {
-    code: response.status,
-    reason: response.statusText,
-  };
-}
