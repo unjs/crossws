@@ -32,7 +32,6 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
       ...adapterUtils(peers),
       handleUpgrade: async (request, info) => {
         let res: Response | undefined;
-        let convertedError: { code: number; reason: string } | undefined;
 
         try {
           res = await hooks.callHook("upgrade", request);
