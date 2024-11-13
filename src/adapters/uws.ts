@@ -75,31 +75,43 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           res.onAborted(() => {
             aborted = true;
           });
-          const _res = await hooks.callHook("upgrade", new UWSReqProxy(req));
+
+          let upgradeHeaders: Headers | undefined;
+          
+          try {
+            const result = await hooks.callHook("upgrade", new UWSReqProxy(req));
+            if (result instanceof Response) {
+              // Normal response = headers for upgrade
+              upgradeHeaders = result.headers;
+            }
+          } catch (error) {
+            if (error instanceof Response) {
+              // Thrown response = error
+              res.writeStatus(`${error.status} ${error.statusText}`);
+              for (const [key, value] of error.headers) {
+                res.writeHeader(key, value);
+              }
+              if (error.body) {
+                for await (const chunk of error.body) {
+                  if (aborted) break;
+                  res.write(chunk);
+                }
+              }
+              if (!aborted) {
+                res.end();
+              }
+              return;
+            }
+            throw error;
+          }
+
           if (aborted) {
             return;
           }
-          if (_res instanceof Response) {
-            res.writeStatus(`${_res.status} ${_res.statusText}`);
-            for (const [key, value] of _res.headers) {
-              res.writeHeader(key, value);
-            }
-            if (_res.body) {
-              for await (const chunk of _res.body) {
-                if (aborted) {
-                  break;
-                }
-                res.write(chunk);
-              }
-            }
-            if (!aborted) {
-              res.end();
-            }
-            return;
-          }
+
           res.writeStatus("101 Switching Protocols");
-          if (_res?.headers) {
-            for (const [key, value] of new Headers(_res.headers)) {
+          if (upgradeHeaders) {
+            for (const [key, value] of upgradeHeaders) {
               res.writeHeader(key, value);
             }
           }

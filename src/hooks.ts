@@ -62,6 +62,11 @@ type HookFn<ArgsT extends any[] = any, RT = void> = (
 
 export interface Hooks {
   /** Upgrading */
+  /**
+   * 
+   * @param request
+   * @throws {Response}
+   */
   upgrade: (
     request:
       | Request
@@ -69,7 +74,7 @@ export interface Hooks {
           url: string;
           headers: Headers;
         },
-  ) => MaybePromise<Response | ResponseInit | void>;
+  ) => MaybePromise<Response>;
 
   /** A message is received */
   message: (peer: Peer, message: Message) => MaybePromise<void>;

@@ -1,6 +1,6 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import type { WebSocket } from "../../types/web.ts";
-import { toBufferLike } from "../utils.ts";
+import { convertResponseToCloseEvent, toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
@@ -86,14 +86,27 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       ...adapterUtils(peers),
       handleUpgrade: async (nodeReq, socket, head) => {
         const request = new NodeReqProxy(nodeReq);
-        const res = await hooks.callHook("upgrade", request);
-        if (res instanceof Response) {
-          return sendResponse(socket, res);
+
+        let res: Response | undefined;
+        let convertedError: { code: number; reason: string } | undefined;
+        
+        try {
+          res = await hooks.callHook("upgrade", request);
+        } catch (error) {
+          if (error instanceof Response) {
+            convertedError = convertResponseToCloseEvent(error);
+          }
+          throw error;
         }
-        (nodeReq as AugmentedReq)._request = request;
-        (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
+
         wss.handleUpgrade(nodeReq, socket, head, (ws) => {
-          wss.emit("connection", ws, nodeReq);
+          if (convertedError) {
+            ws.close(convertedError.code, convertedError.reason);
+          } else {
+            (nodeReq as AugmentedReq)._request = request;
+            (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
+            wss.emit("connection", ws, nodeReq);
+          }
         });
       },
       closeAll: (code, data) => {

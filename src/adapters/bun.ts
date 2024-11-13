@@ -31,17 +31,29 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
     return {
       ...adapterUtils(peers),
       async handleUpgrade(request, server) {
-        const res = await hooks.callHook("upgrade", request);
-        if (res instanceof Response) {
-          return res;
+        let upgradeHeaders: Headers | undefined;
+        
+        try {
+          const result = await hooks.callHook("upgrade", request);
+          if (result instanceof Response) {
+            // Normal response = headers for upgrade
+            upgradeHeaders = result.headers;
+          }
+        } catch (error) {
+          if (error instanceof Response) {
+            return error;
+          }
+          throw error;
         }
+
         const upgradeOK = server.upgrade(request, {
           data: {
             server,
             request,
           } satisfies ContextData,
-          headers: res?.headers,
+          headers: upgradeHeaders,
         });
+        
         if (!upgradeOK) {
           return new Response("Upgrade failed", { status: 500 });
         }

@@ -33,13 +33,24 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
     return {
       ...adapterUtils(peers),
       handleUpgrade: async (request, env, context) => {
-        const res = await hooks.callHook(
-          "upgrade",
-          request as unknown as Request,
-        );
-        if (res instanceof Response) {
-          return res;
+        let upgradeHeaders: Headers | undefined;
+        
+        try {
+          const result = await hooks.callHook(
+            "upgrade",
+            request as unknown as Request,
+          );
+          if (result instanceof Response) {
+            // Normal response = headers for upgrade
+            upgradeHeaders = result.headers;
+          }
+        } catch (error) {
+          if (error instanceof Response) {
+            return error;
+          }
+          throw error;
         }
+
         const pair = new WebSocketPair();
         const client = pair[0];
         const server = pair[1];
@@ -73,7 +84,7 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
         return new Response(null, {
           status: 101,
           webSocket: client,
-          headers: res?.headers,
+          headers: upgradeHeaders,
         });
       },
     };
