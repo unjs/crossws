@@ -63,7 +63,7 @@ type HookFn<ArgsT extends any[] = any, RT = void> = (
 export interface Hooks {
   /** Upgrading */
   /**
-   * 
+   *
    * @param request
    * @throws {Response}
    */
