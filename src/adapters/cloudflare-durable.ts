@@ -32,7 +32,7 @@ export default defineWebSocketAdapter<
     },
     handleDurableUpgrade: async (obj, request) => {
       let upgradeHeaders: Headers | undefined;
-
+      
       try {
         const result = await hooks.callHook("upgrade", request as Request);
         if (result instanceof Response) {
@@ -57,7 +57,7 @@ export default defineWebSocketAdapter<
       peers.add(peer);
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
       await hooks.callHook("open", peer);
-
+      
       // eslint-disable-next-line unicorn/no-null
       return new Response(null, {
         status: 101,

@@ -1,6 +1,6 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import type { WebSocket } from "../../types/web.ts";
-import { convertResponseToCloseEvent, toBufferLike } from "../utils.ts";
+import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
@@ -88,7 +88,7 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
         const request = new NodeReqProxy(nodeReq);
 
         let res: Response | undefined;
-
+        
         try {
           res = await hooks.callHook("upgrade", request);
         } catch (error) {
