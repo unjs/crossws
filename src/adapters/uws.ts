@@ -77,9 +77,12 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           });
 
           let upgradeHeaders: Headers | undefined;
-          
+
           try {
-            const result = await hooks.callHook("upgrade", new UWSReqProxy(req));
+            const result = await hooks.callHook(
+              "upgrade",
+              new UWSReqProxy(req),
+            );
             if (result instanceof Response) {
               // Normal response = headers for upgrade
               upgradeHeaders = result.headers;

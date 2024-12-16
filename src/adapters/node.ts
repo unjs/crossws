@@ -88,7 +88,7 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
         const request = new NodeReqProxy(nodeReq);
 
         let res: Response | undefined;
-        
+
         try {
           res = await hooks.callHook("upgrade", request);
         } catch (error) {
