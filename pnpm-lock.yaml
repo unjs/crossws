@@ -55,8 +55,8 @@ importers:
         specifier: ^0.4.2
         version: 0.4.2(eslint@9.17.0(jiti@2.4.2))(typescript@5.7.2)
       eventsource:
-        specifier: ^2.0.2
-        version: 2.0.2
+        specifier: ^3.0.2
+        version: 3.0.2
       execa:
         specifier: ^9.5.2
         version: 9.5.2
@@ -1792,9 +1792,13 @@ packages:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
 
-  eventsource@2.0.2:
-    resolution: {integrity: sha512-IzUmBGPR3+oUG9dUeXynyNmf91/3zUSJg1lCktzKw47OXuhco54U3r9B7O4XX+Rb1Itm9OZ2b0RkTs10bICOxA==}
-    engines: {node: '>=12.0.0'}
+  eventsource-parser@3.0.0:
+    resolution: {integrity: sha512-T1C0XCUimhxVQzW4zFipdx0SficT651NnkR0ZSH3yQwh+mFMdLfgjABVi4YtMTtaL4s168593DaoaRLMqryavA==}
+    engines: {node: '>=18.0.0'}
+
+  eventsource@3.0.2:
+    resolution: {integrity: sha512-YolzkJNxsTL3tCJMWFxpxtG2sCjbZ4LQUBUrkdaJK0ub0p6lmJt+2+1SwhKjLc652lpH9L/79Ptez972H9tphw==}
+    engines: {node: '>=18.0.0'}
 
   execa@8.0.1:
     resolution: {integrity: sha512-VyhnebXciFV2DESc+p6B+y0LjSm0krU4OgJN44qFAhBY0TJ+1V61tYD2+wHusZ6F9n5K+vl8k0sTy7PEfV4qpg==}
@@ -4798,7 +4802,11 @@ snapshots:
 
   esutils@2.0.3: {}
 
-  eventsource@2.0.2: {}
+  eventsource-parser@3.0.0: {}
+
+  eventsource@3.0.2:
+    dependencies:
+      eventsource-parser: 3.0.0
 
   execa@8.0.1:
     dependencies:
