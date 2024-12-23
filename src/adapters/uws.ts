@@ -3,7 +3,7 @@ import type { WebSocket } from "../../types/web.ts";
 import type uws from "uWebSockets.js";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
-import { AdapterHookable } from "../hooks.ts";
+import { AdapterHookable, formatRejection, Reasons } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
 
@@ -75,17 +75,46 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           res.onAborted(() => {
             aborted = true;
           });
-          const _res = await hooks.callHook("upgrade", new UWSReqProxy(req));
-          if (aborted) {
-            return;
+
+          /** Accept the Websocket upgrade request. */
+          async function accept(params?: { headers?: HeadersInit }): Promise<void> {
+            if (aborted) {
+              return;
+            }
+            res.writeStatus("101 Switching Protocols");
+            if (params?.headers) {
+              for (const [key, value] of new Headers(params.headers)) {
+                res.writeHeader(key, value);
+              }
+            }
+
+            res.cork(() => {
+              const key = req.getHeader("sec-websocket-key");
+              const protocol = req.getHeader("sec-websocket-protocol");
+              const extensions = req.getHeader("sec-websocket-extensions");
+              res.upgrade(
+                {
+                  req,
+                  res,
+                  protocol,
+                  extensions,
+                },
+                key,
+                protocol,
+                extensions,
+                context,
+              );
+            });
           }
-          if (_res instanceof Response) {
-            res.writeStatus(`${_res.status} ${_res.statusText}`);
-            for (const [key, value] of _res.headers) {
+
+          async function reject(reason: Reasons): Promise<void> {
+            const formatedRejection = formatRejection({ reason, type: "Response" })
+            res.writeStatus(`${formatedRejection.status} ${formatedRejection.statusText}`);
+            for (const [key, value] of formatedRejection.headers) {
               res.writeHeader(key, value);
             }
-            if (_res.body) {
-              for await (const chunk of _res.body) {
+            if (formatedRejection.body) {
+              for await (const chunk of formatedRejection.body) {
                 if (aborted) {
                   break;
                 }
@@ -97,30 +126,13 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
             }
             return;
           }
-          res.writeStatus("101 Switching Protocols");
-          if (_res?.headers) {
-            for (const [key, value] of new Headers(_res.headers)) {
-              res.writeHeader(key, value);
-            }
-          }
 
-          res.cork(() => {
-            const key = req.getHeader("sec-websocket-key");
-            const protocol = req.getHeader("sec-websocket-protocol");
-            const extensions = req.getHeader("sec-websocket-extensions");
-            res.upgrade(
-              {
-                req,
-                res,
-                protocol,
-                extensions,
-              },
-              key,
-              protocol,
-              extensions,
-              context,
-            );
-          });
+          await hooks.callHook("upgrade", new UWSReqProxy(req),
+            {
+              accept,
+              reject
+            }
+          );
         },
       },
     };
@@ -227,7 +239,7 @@ class UWSReqProxy {
 class UwsWebSocketProxy implements Partial<WebSocket> {
   readyState?: number = 1 /* OPEN */;
 
-  constructor(private _uws: uws.WebSocket<UserData>) {}
+  constructor(private _uws: uws.WebSocket<UserData>) { }
 
   get bufferedAmount() {
     return this._uws?.getBufferedAmount();

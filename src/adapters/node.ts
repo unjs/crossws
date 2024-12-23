@@ -2,7 +2,7 @@ import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import type { WebSocket } from "../../types/web.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
-import { AdapterHookable } from "../hooks.ts";
+import { AdapterHookable, formatRejection, type Reasons } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
@@ -86,14 +86,28 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       ...adapterUtils(peers),
       handleUpgrade: async (nodeReq, socket, head) => {
         const request = new NodeReqProxy(nodeReq);
-        const res = await hooks.callHook("upgrade", request);
-        if (res instanceof Response) {
-          return sendResponse(socket, res);
+
+        /** Accept the Websocket upgrade request. */
+        function accept(): void {
+          wss.handleUpgrade(nodeReq, socket, head, (ws) => {
+            wss.emit("connection", ws, nodeReq);
+          });
         }
-        (nodeReq as AugmentedReq)._request = request;
-        (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
-        wss.handleUpgrade(nodeReq, socket, head, (ws) => {
-          wss.emit("connection", ws, nodeReq);
+
+        /** Reject the Websocket upgrade request with an optional close code and reason.  
+         * @param code - The close code to send. If not specified, defaults to 1005.
+         * @param data - The close reason to send. If not specified, defaults to "No reason".
+        */
+        function reject(reason: Reasons): void {
+          const rejection = formatRejection({ reason, type: "Event" })
+          wss.handleUpgrade(nodeReq, socket, head, (ws) => {
+            ws.close(rejection.code, rejection.data);
+          });
+        }
+
+        await hooks.callHook("upgrade", request, {
+          accept,
+          reject,
         });
       },
       closeAll: (code, data) => {
@@ -185,23 +199,4 @@ class NodeReqProxy {
     }
     return this._headers;
   }
-}
-
-async function sendResponse(socket: Duplex, res: Response) {
-  const head = [
-    `HTTP/1.1 ${res.status || 200} ${res.statusText || ""}`,
-    ...[...res.headers.entries()].map(
-      ([key, value]) =>
-        `${encodeURIComponent(key)}: ${encodeURIComponent(value)}`,
-    ),
-  ];
-  socket.write(head.join("\r\n") + "\r\n\r\n");
-  if (res.body) {
-    for await (const chunk of res.body) {
-      socket.write(chunk);
-    }
-  }
-  return new Promise<void>((resolve) => {
-    socket.end(resolve);
-  });
 }

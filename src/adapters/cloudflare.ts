@@ -1,7 +1,7 @@
 import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
 import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
-import { AdapterHookable } from "../hooks.ts";
+import { AdapterHookable, formatRejection, Reasons } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
@@ -21,7 +21,7 @@ export interface CloudflareAdapter extends AdapterInstance {
   ): Promise<_cf.Response>;
 }
 
-export interface CloudflareOptions extends AdapterOptions {}
+export interface CloudflareOptions extends AdapterOptions { }
 
 // --- adapter ---
 
@@ -33,48 +33,62 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
     return {
       ...adapterUtils(peers),
       handleUpgrade: async (request, env, context) => {
-        const res = await hooks.callHook(
+        let response
+
+        /** Accept the Websocket upgrade request. */
+        function accept(params?: { headers?: HeadersInit }): void {
+          const pair = new WebSocketPair();
+          const client = pair[0];
+          const server = pair[1];
+          const peer = new CloudflarePeer({
+            ws: client,
+            peers,
+            wsServer: server,
+            request: request as unknown as Request,
+            cfEnv: env,
+            cfCtx: context,
+          });
+          peers.add(peer);
+          server.accept();
+          hooks.callHook("open", peer);
+          server.addEventListener("message", (event) => {
+            hooks.callHook(
+              "message",
+              peer,
+              new Message(event.data, peer, event as MessageEvent),
+            );
+          });
+          server.addEventListener("error", (event) => {
+            peers.delete(peer);
+            hooks.callHook("error", peer, new WSError(event.error));
+          });
+          server.addEventListener("close", (event) => {
+            peers.delete(peer);
+            hooks.callHook("close", peer, event);
+          });
+          // eslint-disable-next-line unicorn/no-null
+          response = new Response(null, {
+            status: 101,
+            webSocket: client,
+            headers: params?.headers,
+          });
+        }
+
+        /** Reject the Websocket upgrade request */
+        function reject(reason: Reasons): void {
+          response = formatRejection({ reason, type: "Response" })
+        }
+
+        await hooks.callHook(
           "upgrade",
           request as unknown as Request,
+          {
+            accept,
+            reject
+          }
         );
-        if (res instanceof Response) {
-          return res;
-        }
-        const pair = new WebSocketPair();
-        const client = pair[0];
-        const server = pair[1];
-        const peer = new CloudflarePeer({
-          ws: client,
-          peers,
-          wsServer: server,
-          request: request as unknown as Request,
-          cfEnv: env,
-          cfCtx: context,
-        });
-        peers.add(peer);
-        server.accept();
-        hooks.callHook("open", peer);
-        server.addEventListener("message", (event) => {
-          hooks.callHook(
-            "message",
-            peer,
-            new Message(event.data, peer, event as MessageEvent),
-          );
-        });
-        server.addEventListener("error", (event) => {
-          peers.delete(peer);
-          hooks.callHook("error", peer, new WSError(event.error));
-        });
-        server.addEventListener("close", (event) => {
-          peers.delete(peer);
-          hooks.callHook("close", peer, event);
-        });
-        // eslint-disable-next-line unicorn/no-null
-        return new Response(null, {
-          status: 101,
-          webSocket: client,
-          headers: res?.headers,
-        });
+
+        return response ?? new Response("Upgrade failed", { status: 500 });
       },
     };
   },
