@@ -87,11 +87,11 @@
     "uncrypto": "^0.1.3"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241224.0",
+    "@cloudflare/workers-types": "^4.20241230.0",
     "@types/bun": "^1.1.14",
     "@types/deno": "^2.0.0",
     "@types/eventsource": "^1.1.15",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.10.4",
     "@types/web": "^0.0.188",
     "@types/ws": "^8.5.13",
     "@vitest/coverage-v8": "^2.1.8",
