@@ -61,6 +61,11 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
     return this._internal.peers || new Set();
   }
 
+  /** All subscribed topics for this peer */
+  get topics(): Set<string> {
+    return this._topics;
+  }
+
   abstract close(code?: number, reason?: string): void;
 
   /** Abruptly close the connection */
