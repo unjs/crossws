@@ -109,7 +109,7 @@
     "prettier": "^3.4.2",
     "typescript": "^5.7.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.44.0",
-    "unbuild": "^2.0.0",
+    "unbuild": "^3.3.1",
     "undici": "^6.21.0",
     "vitest": "^2.1.8",
     "wrangler": "^3.99.0",
