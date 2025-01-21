@@ -80,7 +80,6 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
             new UWSReqProxy(req),
           );
           if (endResponse) {
-            // Thrown response = error
             res.writeStatus(`${endResponse.status} ${endResponse.statusText}`);
             for (const [key, value] of endResponse.headers) {
               res.writeHeader(key, value);
