@@ -37,7 +37,7 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
           request as unknown as Request,
         );
         if (endResponse) {
-          return endResponse;
+          return endResponse as unknown as _cf.Response;
         }
 
         const pair = new WebSocketPair();
