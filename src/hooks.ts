@@ -49,7 +49,7 @@ export class AdapterHookable {
       if (!res) {
         return {};
       }
-      if (!(res as Response).ok) {
+      if ((res as Response).ok === false) {
         return { endResponse: res as Response };
       }
       if (res.headers) {
