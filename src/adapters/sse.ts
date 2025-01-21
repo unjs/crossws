@@ -27,22 +27,9 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
   return {
     ...adapterUtils(peers),
     fetch: async (request: Request) => {
-      let upgradeHeaders: Headers | undefined;
-
-      try {
-        const result = await hooks.callHook("upgrade", request);
-        if (result instanceof Response) {
-          if (!result.ok) {
-            return result;
-          }
-          // Normal response = headers for upgrade
-          upgradeHeaders = result.headers;
-        }
-      } catch (error) {
-        if (error instanceof Response) {
-          return error;
-        }
-        throw error;
+      const { upgradeHeaders, endResponse } = await hooks.upgrade(request);
+      if (endResponse) {
+        return endResponse;
       }
 
       let peer: SSEPeer;

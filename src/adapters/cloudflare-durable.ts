@@ -31,22 +31,11 @@ export default defineWebSocketAdapter<
       // placeholder
     },
     handleDurableUpgrade: async (obj, request) => {
-      let upgradeHeaders: Headers | undefined;
-
-      try {
-        const result = await hooks.callHook("upgrade", request as Request);
-        if (result instanceof Response) {
-          if (!result.ok) {
-            return result;
-          }
-          // Normal response = headers for upgrade
-          upgradeHeaders = result.headers;
-        }
-      } catch (error) {
-        if (error instanceof Response) {
-          return error;
-        }
-        throw error;
+      const { upgradeHeaders, endResponse } = await hooks.upgrade(
+        request as Request,
+      );
+      if (endResponse) {
+        return endResponse;
       }
 
       const pair = new WebSocketPair();

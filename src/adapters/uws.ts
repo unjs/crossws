@@ -76,39 +76,25 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
             aborted = true;
           });
 
-          let upgradeHeaders: Headers | undefined;
-
-          try {
-            const result = await hooks.callHook(
-              "upgrade",
-              new UWSReqProxy(req),
-            );
-            if (result instanceof Response) {
-              if (!result.ok) {
-                return result;
-              }
-              // Normal response = headers for upgrade
-              upgradeHeaders = result.headers;
+          const { upgradeHeaders, endResponse } = await hooks.upgrade(
+            new UWSReqProxy(req),
+          );
+          if (endResponse) {
+            // Thrown response = error
+            res.writeStatus(`${endResponse.status} ${endResponse.statusText}`);
+            for (const [key, value] of endResponse.headers) {
+              res.writeHeader(key, value);
             }
-          } catch (error) {
-            if (error instanceof Response) {
-              // Thrown response = error
-              res.writeStatus(`${error.status} ${error.statusText}`);
-              for (const [key, value] of error.headers) {
-                res.writeHeader(key, value);
+            if (endResponse.body) {
+              for await (const chunk of endResponse.body) {
+                if (aborted) break;
+                res.write(chunk);
               }
-              if (error.body) {
-                for await (const chunk of error.body) {
-                  if (aborted) break;
-                  res.write(chunk);
-                }
-              }
-              if (!aborted) {
-                res.end();
-              }
-              return;
             }
-            throw error;
+            if (!aborted) {
+              res.end();
+            }
+            return;
           }
 
           if (aborted) {
@@ -117,7 +103,9 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
 
           res.writeStatus("101 Switching Protocols");
           if (upgradeHeaders) {
-            for (const [key, value] of upgradeHeaders) {
+            // prettier-ignore
+            const headers = upgradeHeaders instanceof Headers ? upgradeHeaders : new Headers(upgradeHeaders);
+            for (const [key, value] of headers) {
               res.writeHeader(key, value);
             }
           }

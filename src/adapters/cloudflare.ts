@@ -33,25 +33,11 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
     return {
       ...adapterUtils(peers),
       handleUpgrade: async (request, env, context) => {
-        let upgradeHeaders: Headers | undefined;
-
-        try {
-          const result = await hooks.callHook(
-            "upgrade",
-            request as unknown as Request,
-          );
-          if (result instanceof Response) {
-            if (!result.ok) {
-              return result;
-            }
-            // Normal response = headers for upgrade
-            upgradeHeaders = result.headers;
-          }
-        } catch (error) {
-          if (error instanceof Response) {
-            return error;
-          }
-          throw error;
+        const { upgradeHeaders, endResponse } = await hooks.upgrade(
+          request as unknown as Request,
+        );
+        if (endResponse) {
+          return endResponse;
         }
 
         const pair = new WebSocketPair();
