@@ -98,6 +98,10 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
           throw error;
         }
 
+        if (!res.ok) {
+          return sendResponse(socket, res);
+        }
+
         (nodeReq as AugmentedReq)._request = request;
         (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
         wss.handleUpgrade(nodeReq, socket, head, (ws) => {
