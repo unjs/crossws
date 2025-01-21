@@ -14,8 +14,11 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
 
   #ws?: Partial<web.WebSocket>;
 
+  readonly context: Record<string, unknown>;
+
   constructor(internal: Internal) {
     this._topics = new Set();
+    this.context = {};
     this._internal = internal;
   }
 
