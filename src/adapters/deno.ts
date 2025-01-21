@@ -35,6 +35,9 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
 
         try {
           res = await hooks.callHook("upgrade", request);
+          if (!res.ok) {
+            return res;
+          }
         } catch (error) {
           if (error instanceof Response) {
             return error;

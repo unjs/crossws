@@ -41,6 +41,9 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
             request as unknown as Request,
           );
           if (result instanceof Response) {
+            if (!result.ok) {
+              return result;
+            }
             // Normal response = headers for upgrade
             upgradeHeaders = result.headers;
           }

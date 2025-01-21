@@ -36,6 +36,9 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
         try {
           const result = await hooks.callHook("upgrade", request);
           if (result instanceof Response) {
+            if (!result.ok) {
+              return result;
+            }
             // Normal response = headers for upgrade
             upgradeHeaders = result.headers;
           }
