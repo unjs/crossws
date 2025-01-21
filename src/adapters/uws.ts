@@ -75,20 +75,18 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           res.onAborted(() => {
             aborted = true;
           });
-          const _res = await hooks.callHook("upgrade", new UWSReqProxy(req));
-          if (aborted) {
-            return;
-          }
-          if (_res instanceof Response) {
-            res.writeStatus(`${_res.status} ${_res.statusText}`);
-            for (const [key, value] of _res.headers) {
+
+          const { upgradeHeaders, endResponse } = await hooks.upgrade(
+            new UWSReqProxy(req),
+          );
+          if (endResponse) {
+            res.writeStatus(`${endResponse.status} ${endResponse.statusText}`);
+            for (const [key, value] of endResponse.headers) {
               res.writeHeader(key, value);
             }
-            if (_res.body) {
-              for await (const chunk of _res.body) {
-                if (aborted) {
-                  break;
-                }
+            if (endResponse.body) {
+              for await (const chunk of endResponse.body) {
+                if (aborted) break;
                 res.write(chunk);
               }
             }
@@ -97,9 +95,16 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
             }
             return;
           }
+
+          if (aborted) {
+            return;
+          }
+
           res.writeStatus("101 Switching Protocols");
-          if (_res?.headers) {
-            for (const [key, value] of new Headers(_res.headers)) {
+          if (upgradeHeaders) {
+            // prettier-ignore
+            const headers = upgradeHeaders instanceof Headers ? upgradeHeaders : new Headers(upgradeHeaders);
+            for (const [key, value] of headers) {
               res.writeHeader(key, value);
             }
           }

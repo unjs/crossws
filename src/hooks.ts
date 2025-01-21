@@ -39,6 +39,32 @@ export class AdapterHookable {
       },
     ) as Promise<any>;
   }
+
+  async upgrade(request: UpgradeRequest): Promise<{
+    upgradeHeaders?: HeadersInit;
+    endResponse?: Response;
+  }> {
+    try {
+      const res = await this.callHook("upgrade", request);
+      if (!res) {
+        return {};
+      }
+      if ((res as Response).ok === false) {
+        return { endResponse: res as Response };
+      }
+      if (res.headers) {
+        return {
+          upgradeHeaders: res.headers,
+        };
+      }
+    } catch (error) {
+      if (error instanceof Response) {
+        return { endResponse: error };
+      }
+      throw error;
+    }
+    return {};
+  }
 }
 
 // --- types ---
@@ -60,16 +86,23 @@ type HookFn<ArgsT extends any[] = any, RT = void> = (
   ...args: ArgsT
 ) => MaybePromise<RT>;
 
+export type UpgradeRequest =
+  | Request
+  | {
+      url: string;
+      headers: Headers;
+    };
+
 export interface Hooks {
   /** Upgrading */
+  /**
+   *
+   * @param request
+   * @throws {Response}
+   */
   upgrade: (
-    request:
-      | Request
-      | {
-          url: string;
-          headers: Headers;
-        },
-  ) => MaybePromise<Response | ResponseInit | void>;
+    request: UpgradeRequest,
+  ) => MaybePromise<Response | ResponseInit | undefined>;
 
   /** A message is received */
   message: (peer: Peer, message: Message) => MaybePromise<void>;

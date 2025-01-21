@@ -31,13 +31,14 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
     return {
       ...adapterUtils(peers),
       handleUpgrade: async (request, info) => {
-        const res = await hooks.callHook("upgrade", request);
-        if (res instanceof Response) {
-          return res;
+        const { upgradeHeaders, endResponse } = await hooks.upgrade(request);
+        if (endResponse) {
+          return endResponse;
         }
+
         const upgrade = Deno.upgradeWebSocket(request, {
           // @ts-expect-error https://github.com/denoland/deno/pull/22242
-          headers: res?.headers,
+          headers: upgradeHeaders,
         });
         const peer = new DenoPeer({
           ws: upgrade.socket,

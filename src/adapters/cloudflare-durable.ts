@@ -31,10 +31,13 @@ export default defineWebSocketAdapter<
       // placeholder
     },
     handleDurableUpgrade: async (obj, request) => {
-      const res = await hooks.callHook("upgrade", request as Request);
-      if (res instanceof Response) {
-        return res;
+      const { upgradeHeaders, endResponse } = await hooks.upgrade(
+        request as Request,
+      );
+      if (endResponse) {
+        return endResponse;
       }
+
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
@@ -46,11 +49,12 @@ export default defineWebSocketAdapter<
       peers.add(peer);
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
       await hooks.callHook("open", peer);
+
       // eslint-disable-next-line unicorn/no-null
       return new Response(null, {
         status: 101,
         webSocket: client,
-        headers: res?.headers,
+        headers: upgradeHeaders,
       });
     },
     handleDurableMessage: async (obj, ws, message) => {

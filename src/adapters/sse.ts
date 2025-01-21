@@ -27,9 +27,9 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
   return {
     ...adapterUtils(peers),
     fetch: async (request: Request) => {
-      const _res = await hooks.callHook("upgrade", request);
-      if (_res instanceof Response) {
-        return _res;
+      const { upgradeHeaders, endResponse } = await hooks.upgrade(request);
+      if (endResponse) {
+        return endResponse;
       }
 
       let peer: SSEPeer;
@@ -73,17 +73,19 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       };
+
       if (opts.bidir) {
         headers["x-crossws-id"] = peer.id;
       }
-      if (_res?.headers) {
+
+      if (upgradeHeaders) {
         headers = new Headers(headers);
-        for (const [key, value] of new Headers(_res.headers)) {
+        for (const [key, value] of new Headers(upgradeHeaders)) {
           headers.set(key, value);
         }
       }
 
-      return new Response(peer._sseStream, { ..._res, headers });
+      return new Response(peer._sseStream, { headers });
     },
   };
 });
