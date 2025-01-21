@@ -84,6 +84,9 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
               new UWSReqProxy(req),
             );
             if (result instanceof Response) {
+              if (!result.ok) {
+                return result;
+              }
               // Normal response = headers for upgrade
               upgradeHeaders = result.headers;
             }
