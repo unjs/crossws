@@ -80,7 +80,7 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
 
       if (upgradeHeaders) {
         headers = new Headers(headers);
-        for (const [key, value] of upgradeHeaders) {
+        for (const [key, value] of new Headers(upgradeHeaders)) {
           headers.set(key, value);
         }
       }
