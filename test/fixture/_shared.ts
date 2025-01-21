@@ -28,6 +28,7 @@ export function createDemo<T extends Adapter<any, any>>(
           peer.send({
             id: peer.id,
             remoteAddress: peer.remoteAddress,
+            context: peer.context,
             request: {
               url: peer.request?.url,
               headers: Object.fromEntries(peer.request?.headers || []),
@@ -63,6 +64,7 @@ export function createDemo<T extends Adapter<any, any>>(
           headers: { "x-error": "unauthorized" },
         });
       }
+      req.context.test = "1";
       return {
         headers: {
           "x-powered-by": "cross-ws",

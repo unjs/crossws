@@ -31,7 +31,8 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
     return {
       ...adapterUtils(peers),
       handleUpgrade: async (request, info) => {
-        const { upgradeHeaders, endResponse } = await hooks.upgrade(request);
+        const { upgradeHeaders, endResponse, context } =
+          await hooks.upgrade(request);
         if (endResponse) {
           return endResponse;
         }
@@ -45,6 +46,7 @@ export default defineWebSocketAdapter<DenoAdapter, DenoOptions>(
           request,
           peers,
           denoInfo: info,
+          context,
         });
         peers.add(peer);
         upgrade.socket.addEventListener("open", () => {
@@ -74,6 +76,7 @@ class DenoPeer extends Peer<{
   request: Request;
   peers: Set<DenoPeer>;
   denoInfo: ServeHandlerInfo;
+  context: Peer["context"];
 }> {
   get remoteAddress() {
     return this._internal.denoInfo.remoteAddr?.hostname;

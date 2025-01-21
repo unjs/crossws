@@ -40,30 +40,38 @@ export class AdapterHookable {
     ) as Promise<any>;
   }
 
-  async upgrade(request: UpgradeRequest): Promise<{
+  async upgrade(
+    request: UpgradeRequest & { context?: Peer["context"] },
+  ): Promise<{
     upgradeHeaders?: HeadersInit;
     endResponse?: Response;
+    context: Peer["context"];
   }> {
+    const context = (request.context ??= {});
     try {
-      const res = await this.callHook("upgrade", request);
+      const res = await this.callHook(
+        "upgrade",
+        request as UpgradeRequest & { context: Peer["context"] },
+      );
       if (!res) {
-        return {};
+        return { context };
       }
       if ((res as Response).ok === false) {
-        return { endResponse: res as Response };
+        return { context, endResponse: res as Response };
       }
       if (res.headers) {
         return {
+          context,
           upgradeHeaders: res.headers,
         };
       }
     } catch (error) {
       if (error instanceof Response) {
-        return { endResponse: error };
+        return { context, endResponse: error };
       }
       throw error;
     }
-    return {};
+    return { context };
   }
 }
 
@@ -96,7 +104,7 @@ export interface Hooks {
    * @throws {Response}
    */
   upgrade: (
-    request: UpgradeRequest,
+    request: UpgradeRequest & { context: Peer["context"] },
   ) => MaybePromise<Response | ResponseInit | undefined>;
 
   /** A message is received */

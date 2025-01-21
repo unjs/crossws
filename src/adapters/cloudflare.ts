@@ -32,8 +32,8 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
     const peers = new Set<CloudflarePeer>();
     return {
       ...adapterUtils(peers),
-      handleUpgrade: async (request, env, context) => {
-        const { upgradeHeaders, endResponse } = await hooks.upgrade(
+      handleUpgrade: async (request, env, cfCtx) => {
+        const { upgradeHeaders, endResponse, context } = await hooks.upgrade(
           request as unknown as Request,
         );
         if (endResponse) {
@@ -49,7 +49,8 @@ export default defineWebSocketAdapter<CloudflareAdapter, CloudflareOptions>(
           wsServer: server,
           request: request as unknown as Request,
           cfEnv: env,
-          cfCtx: context,
+          cfCtx: cfCtx,
+          context,
         });
         peers.add(peer);
         server.accept();
@@ -89,6 +90,7 @@ class CloudflarePeer extends Peer<{
   wsServer: _cf.WebSocket;
   cfEnv: unknown;
   cfCtx: _cf.ExecutionContext;
+  context: Peer["context"];
 }> {
   send(data: unknown) {
     this._internal.wsServer.send(toBufferLike(data));

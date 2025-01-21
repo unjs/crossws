@@ -7,7 +7,7 @@ import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
 
-import type { ClientRequest, IncomingMessage } from "node:http";
+import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer as _WebSocketServer } from "ws";
 import type {
@@ -21,6 +21,7 @@ import type {
 type AugmentedReq = IncomingMessage & {
   _request: NodeReqProxy;
   _upgradeHeaders?: HeadersInit;
+  _context: Peer["context"];
 };
 
 export interface NodeAdapter extends AdapterInstance {
@@ -87,13 +88,15 @@ export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
       handleUpgrade: async (nodeReq, socket, head) => {
         const request = new NodeReqProxy(nodeReq);
 
-        const { upgradeHeaders, endResponse } = await hooks.upgrade(request);
+        const { upgradeHeaders, endResponse, context } =
+          await hooks.upgrade(request);
         if (endResponse) {
           return sendResponse(socket, endResponse);
         }
 
         (nodeReq as AugmentedReq)._request = request;
         (nodeReq as AugmentedReq)._upgradeHeaders = upgradeHeaders;
+        (nodeReq as AugmentedReq)._context = context;
         wss.handleUpgrade(nodeReq, socket, head, (ws) => {
           wss.emit("connection", ws, nodeReq);
         });
@@ -117,6 +120,10 @@ class NodePeer extends Peer<{
 }> {
   get remoteAddress() {
     return this._internal.nodeReq.socket?.remoteAddress;
+  }
+
+  get context() {
+    return (this._internal.nodeReq as AugmentedReq)._context;
   }
 
   send(data: unknown, options?: { compress?: boolean }) {

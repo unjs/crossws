@@ -27,7 +27,8 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
   return {
     ...adapterUtils(peers),
     fetch: async (request: Request) => {
-      const { upgradeHeaders, endResponse } = await hooks.upgrade(request);
+      const { upgradeHeaders, endResponse, context } =
+        await hooks.upgrade(request);
       if (endResponse) {
         return endResponse;
       }
@@ -60,6 +61,7 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
           request,
           hooks,
           ws,
+          context,
         });
         peers.add(peer);
         if (opts.bidir) {
@@ -98,6 +100,7 @@ class SSEPeer extends Peer<{
   request: Request;
   ws: SSEWebSocketStub;
   hooks: AdapterHookable;
+  context: Peer["context"];
 }> {
   _sseStream: ReadableStream; // server -> client
   _sseStreamController?: ReadableStreamDefaultController;
