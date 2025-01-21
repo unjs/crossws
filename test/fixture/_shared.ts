@@ -63,12 +63,12 @@ export function createDemo<T extends Adapter<any, any>>(
           headers: { "x-error": "unauthorized" },
         });
       }
-      return new Response(undefined, {
+      return {
         headers: {
           "x-powered-by": "cross-ws",
           "set-cookie": "cross-ws=1; SameSite=None; Secure",
         },
-      });
+      };
     },
   });
 
