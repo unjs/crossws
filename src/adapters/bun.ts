@@ -19,6 +19,7 @@ type ContextData = {
   peer?: BunPeer;
   request: Request;
   server?: Server;
+  context: Peer["context"];
 };
 
 // --- adapter ---
@@ -31,7 +32,8 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
     return {
       ...adapterUtils(peers),
       async handleUpgrade(request, server) {
-        const { upgradeHeaders, endResponse } = await hooks.upgrade(request);
+        const { upgradeHeaders, endResponse, context } =
+          await hooks.upgrade(request);
         if (endResponse) {
           return endResponse;
         }
@@ -39,6 +41,7 @@ export default defineWebSocketAdapter<BunAdapter, BunOptions>(
           data: {
             server,
             request,
+            context,
           } satisfies ContextData,
           headers: upgradeHeaders,
         });
@@ -91,6 +94,10 @@ class BunPeer extends Peer<{
 }> {
   get remoteAddress() {
     return this._internal.ws.remoteAddress;
+  }
+
+  get context() {
+    return this._internal.ws.data.context;
   }
 
   send(data: unknown, options?: { compress?: boolean }) {

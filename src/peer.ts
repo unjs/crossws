@@ -5,6 +5,7 @@ export interface AdapterInternal {
   ws: unknown;
   request?: Request | Partial<Request>;
   peers?: Set<Peer>;
+  context?: Peer["context"];
 }
 
 export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
@@ -14,12 +15,13 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
 
   #ws?: Partial<web.WebSocket>;
 
-  readonly context: Record<string, unknown>;
-
   constructor(internal: Internal) {
     this._topics = new Set();
-    this.context = {};
     this._internal = internal;
+  }
+
+  get context(): Record<string, unknown> {
+    return (this._internal.context ??= {});
   }
 
   /**

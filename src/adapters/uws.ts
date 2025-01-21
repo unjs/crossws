@@ -15,6 +15,7 @@ type UserData = {
   res: uws.HttpResponse;
   protocol: string;
   extensions: string;
+  context: Peer["context"];
 };
 
 type WebSocketHandler = uws.WebSocketBehavior<UserData>;
@@ -70,13 +71,13 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
           peers.add(peer);
           hooks.callHook("open", peer);
         },
-        async upgrade(res, req, context) {
+        async upgrade(res, req, uwsContext) {
           let aborted = false;
           res.onAborted(() => {
             aborted = true;
           });
 
-          const { upgradeHeaders, endResponse } = await hooks.upgrade(
+          const { upgradeHeaders, endResponse, context } = await hooks.upgrade(
             new UWSReqProxy(req),
           );
           if (endResponse) {
@@ -119,11 +120,12 @@ export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
                 res,
                 protocol,
                 extensions,
+                context,
               },
               key,
               protocol,
               extensions,
-              context,
+              uwsContext,
             );
           });
         },
@@ -166,6 +168,10 @@ class UWSPeer extends Peer<{
     } catch {
       // Error: Invalid access of closed uWS.WebSocket/SSLWebSocket.
     }
+  }
+
+  get context() {
+    return this._internal.uwsData.context;
   }
 
   send(data: unknown, options?: { compress?: boolean }) {
