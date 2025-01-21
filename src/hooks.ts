@@ -81,11 +81,6 @@ export type ResolveHooks = (
 
 export type MaybePromise<T> = T | Promise<T>;
 
-type HookFn<ArgsT extends any[] = any, RT = void> = (
-  info: Peer,
-  ...args: ArgsT
-) => MaybePromise<RT>;
-
 export type UpgradeRequest =
   | Request
   | {
