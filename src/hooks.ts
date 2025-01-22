@@ -105,7 +105,7 @@ export interface Hooks {
    */
   upgrade: (
     request: UpgradeRequest & { context: Peer["context"] },
-  ) => MaybePromise<Response | ResponseInit | undefined>;
+  ) => MaybePromise<Response | ResponseInit | void>;
 
   /** A message is received */
   message: (peer: Peer, message: Message) => MaybePromise<void>;
