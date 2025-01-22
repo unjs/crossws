@@ -1,9 +1,10 @@
 import type * as web from "../types/web.ts";
 import { randomUUID } from "uncrypto";
+import type { UpgradeRequest } from "./hooks.ts";
 
 export interface AdapterInternal {
   ws: unknown;
-  request?: Request | Partial<Request>;
+  request?: UpgradeRequest;
   peers?: Set<Peer>;
   context?: Peer["context"];
 }
@@ -40,7 +41,7 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   }
 
   /** upgrade request */
-  get request(): Request | Partial<Request> | undefined {
+  get request(): UpgradeRequest | undefined {
     return this._internal.request;
   }
 

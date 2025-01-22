@@ -74,7 +74,7 @@ export default defineWebSocketAdapter<
 
 class CloudflareDurablePeer extends Peer<{
   ws: AugmentedWebSocket;
-  request?: Partial<Request>;
+  request?: Request;
   peers?: never;
   durable: DurableObjectPub;
 }> {
