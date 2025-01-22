@@ -4,7 +4,7 @@ import type { UpgradeRequest } from "./hooks.ts";
 
 export interface AdapterInternal {
   ws: unknown;
-  request?: UpgradeRequest;
+  request: UpgradeRequest;
   peers?: Set<Peer>;
   context?: Peer["context"];
 }
@@ -41,7 +41,7 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   }
 
   /** upgrade request */
-  get request(): UpgradeRequest | undefined {
+  get request(): UpgradeRequest {
     return this._internal.request;
   }
 
