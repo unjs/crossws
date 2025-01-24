@@ -58,11 +58,15 @@ export function createDemo<T extends Adapter<any, any>>(
     },
     upgrade(req) {
       if (req.url.endsWith("?unauthorized")) {
-        return new Response("unauthorized", {
-          status: 401,
-          statusText: "Unauthorized",
-          headers: { "x-error": "unauthorized" },
-        });
+        throw {
+          get response() {
+            return new Response("unauthorized", {
+              status: 401,
+              statusText: "Unauthorized",
+              headers: { "x-error": "unauthorized" },
+            });
+          },
+        };
       }
       req.context.test = "1";
       return {
