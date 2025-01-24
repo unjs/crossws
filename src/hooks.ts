@@ -66,13 +66,11 @@ export class AdapterHookable {
         };
       }
     } catch (error) {
-      if (
-        error instanceof Response ||
-        (error && typeof error.response === "function")
-      ) {
+      const errResponse = (error as { response: Response }).response || error;
+      if (errResponse instanceof Response) {
         return {
           context,
-          endResponse: error instanceof Response ? error : error.response(),
+          endResponse: errResponse,
         };
       }
       throw error;
@@ -101,6 +99,8 @@ export type UpgradeRequest =
       url: string;
       headers: Headers;
     };
+
+export type UpgradeError = Response | { readonly response: () => Response };
 
 export interface Hooks {
   /** Upgrading */
