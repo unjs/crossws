@@ -100,7 +100,7 @@ export type UpgradeRequest =
       headers: Headers;
     };
 
-export type UpgradeError = Response | { readonly response: () => Response };
+export type UpgradeError = Response | { readonly response: Response };
 
 export interface Hooks {
   /** Upgrading */
