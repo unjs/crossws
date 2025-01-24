@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.3
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.3.2...v0.3.3)
+
+### 🚀 Enhancements
+
+- Allow throwing error with `.response` prop in `upgrade` ([#113](https://github.com/unjs/crossws/pull/113))
+
+### ❤️ Contributors
+
+- Luke Hagar ([@LukeHagar](http://github.com/LukeHagar))
+
 ## v0.3.2
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.3.1...v0.3.2)
