@@ -66,8 +66,8 @@ export class AdapterHookable {
         };
       }
     } catch (error) {
-      if (error instanceof Response) {
-        return { context, endResponse: error };
+      if (error instanceof Response || (error && typeof error.response === 'function')) {
+        return { context, endResponse: error instanceof Response ? error : error.response() };
       }
       throw error;
     }
