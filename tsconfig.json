@@ -16,5 +16,6 @@
       "@cloudflare/workers-types",
       "deno"
     ]
-  }
+  },
+  "exclude": ["examples"]
 }
