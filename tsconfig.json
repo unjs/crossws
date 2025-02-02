@@ -1,14 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": true,
     "skipLibCheck": true,
+    "target": "esnext",
+		"module": "esnext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
     "strict": true,
     "allowImportingTsExtensions": true,
+    "allowSyntheticDefaultImports": true,
     "noEmit": true,
-    "types": ["node", "@cloudflare/workers-types", "deno"]
-  },
-  "include": ["src", "test"]
+    "types": [
+      "node",
+      "@cloudflare/workers-types",
+      "deno"
+    ]
+  }
 }

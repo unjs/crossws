@@ -66,11 +66,14 @@ export class AdapterHookable {
         };
       }
     } catch (error) {
-      const errResponse = (error as { response: Response }).response || error;
-      if (errResponse instanceof Response) {
+      if (
+        error instanceof Response ||
+        (error && typeof error === "object" && "response" in error && typeof error.response === "function")
+      ) {
+        const response = error instanceof Response ? error : (error as { response: () => Response }).response();
         return {
           context,
-          endResponse: errResponse,
+          endResponse: response,
         };
       }
       throw error;
