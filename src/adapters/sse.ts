@@ -1,7 +1,7 @@
-import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type * as web from "../../types/web.ts";
 import { toString } from "../utils.ts";
-import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
@@ -19,7 +19,7 @@ export interface SSEOptions extends AdapterOptions {
 // --- adapter ---
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
-export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
+const sseAdapter: Adapter<SSEAdapter, SSEOptions> = (opts = {}) => {
   const hooks = new AdapterHookable(opts);
   const peers = new Set<SSEPeer>();
   const peersMap = opts.bidir ? new Map<string, SSEPeer>() : undefined;
@@ -90,7 +90,9 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
       return new Response(peer._sseStream, { headers });
     },
   };
-});
+};
+
+export default sseAdapter;
 
 // --- peer ---
 

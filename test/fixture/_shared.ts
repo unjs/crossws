@@ -1,6 +1,10 @@
-import { Adapter, AdapterInstance, defineHooks } from "../../src/index.ts";
+import {
+  type Adapter,
+  type AdapterInstance,
+  defineHooks,
+} from "../../src/index.ts";
 
-export const getIndexHTML = (opts?: { sse?: boolean }) =>
+export const getIndexHTML = (opts?: { sse?: boolean }): Promise<string> =>
   import("./_index.html.ts").then((r) => r.default(opts));
 
 export function createDemo<T extends Adapter<any, any>>(

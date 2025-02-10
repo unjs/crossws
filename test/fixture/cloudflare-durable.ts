@@ -32,20 +32,23 @@ export class $DurableObject extends DurableObject {
     ws.handleDurableInit(this, state, env);
   }
 
-  fetch(request: Request) {
+  override fetch(request: Request): Promise<Response> {
     return ws.handleDurableUpgrade(this, request);
   }
 
-  async webSocketMessage(client: WebSocket, message: ArrayBuffer | string) {
+  override async webSocketMessage(
+    client: WebSocket,
+    message: ArrayBuffer | string,
+  ): Promise<void> {
     return ws.handleDurableMessage(this, client, message);
   }
 
-  async webSocketClose(
+  override async webSocketClose(
     client: WebSocket,
     code: number,
     reason: string,
     wasClean: boolean,
-  ) {
+  ): Promise<void> {
     return ws.handleDurableClose(this, client, code, reason, wasClean);
   }
 }

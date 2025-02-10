@@ -1,7 +1,7 @@
 import type { Hooks, ResolveHooks } from "./hooks.ts";
 import type { Peer } from "./peer.ts";
 
-export function adapterUtils(peers: Set<Peer>) {
+export function adapterUtils(peers: Set<Peer>): AdapterInstance {
   return {
     peers,
     publish(topic: string, message: any, options) {
@@ -34,6 +34,6 @@ export type Adapter<
 export function defineWebSocketAdapter<
   AdapterT extends AdapterInstance = AdapterInstance,
   Options extends AdapterOptions = AdapterOptions,
->(factory: Adapter<AdapterT, Options>) {
+>(factory: Adapter<AdapterT, Options>): Adapter<AdapterT, Options> {
   return factory;
 }

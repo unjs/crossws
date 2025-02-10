@@ -1,14 +1,30 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "module": "preserve",
+    "moduleDetection": "force",
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
     "strict": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true,
     "allowImportingTsExtensions": true,
+    "noImplicitOverride": true,
     "noEmit": true,
-    "types": ["node", "@cloudflare/workers-types", "deno"]
+    "composite": false,
+    "isolatedDeclarations": false,
+    "types": [
+      "node",
+      "@cloudflare/workers-types",
+      "deno"
+    ]
   },
-  "include": ["src", "test"]
+  "include": [
+    "src",
+    "test",
+    "types"
+  ]
 }

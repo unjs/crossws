@@ -1,6 +1,6 @@
 import { Agent, WebSocket as WebSocketUndici } from "undici";
 import { afterAll, beforeAll, afterEach } from "vitest";
-import { execa, ResultPromise as ExecaRes } from "execa";
+import { execa, type ResultPromise as ExecaRes } from "execa";
 import { fileURLToPath } from "node:url";
 import { getRandomPort, waitForPort } from "get-port-please";
 import { wsTests } from "./tests";
@@ -40,7 +40,7 @@ export function wsConnect(
 
   const waitCallbacks: Record<string, (message: any) => void> = {};
   let nextIndex = opts?.skip || 0;
-  const next = () => {
+  const next = (): Promise<any> => {
     const index = nextIndex++;
     if (index < messages.length) {
       return Promise.resolve(messages[index]);
@@ -49,7 +49,7 @@ export function wsConnect(
       waitCallbacks[index] = resolve;
     });
   };
-  const skip = (count: number = 1) => {
+  const skip = (count: number = 1): void => {
     nextIndex += count;
   };
 
@@ -95,7 +95,15 @@ export function wsConnect(
     });
   });
 
-  return Object.assign(connectPromise, res) as Promise<typeof res>;
+  return Object.assign(connectPromise, res) as Promise<{
+    ws: WebSocket;
+    send: (data: any) => Promise<void>;
+    next: () => Promise<any>;
+    skip: (count?: number) => void;
+    messages: unknown[];
+    inspector: WebSocketInspector;
+    error?: Error;
+  }>;
 }
 
 class WebSocketInspector extends Agent {
@@ -104,18 +112,20 @@ class WebSocketInspector extends Agent {
   headers?: Record<string, string>;
   error?: Error;
 
-  _normalizeHeaders(rawHeaders: string[] | Buffer[] | null) {
+  _normalizeHeaders(
+    rawHeaders: string[] | Buffer[] | null,
+  ): Record<string, string> {
     const headerEntries: [string, string][] = [];
     for (let i = 0; i < rawHeaders!.length; i += 2) {
       headerEntries.push([
-        decodeURIComponent(rawHeaders![i].toString()).toLowerCase(),
-        decodeURIComponent(rawHeaders![i + 1].toString()),
+        decodeURIComponent(rawHeaders![i]!.toString()).toLowerCase(),
+        decodeURIComponent(rawHeaders![i + 1]!.toString()),
       ]);
     }
     return Object.fromEntries(headerEntries);
   }
 
-  dispatch(opts: any, handler: any) {
+  override dispatch(opts: any, handler: any): boolean {
     return super.dispatch(opts, {
       ...handler,
       onHeaders: (statusCode, headers, resume, statusText) => {
@@ -140,7 +150,7 @@ export function wsTestsExec(
   cmd: string,
   opts: Parameters<typeof wsTests>[1] & { silent?: boolean },
   tests = wsTests,
-) {
+): void {
   let childProc: ExecaRes;
   let url: string;
   beforeAll(async () => {
@@ -150,7 +160,7 @@ export function wsTestsExec(
       .replace("$PORT", String(port))
       .replace("./", fixtureDir + "/")
       .split(" ");
-    childProc = execa(bin, args, { env: { PORT: port.toString() } });
+    childProc = execa(bin!, args, { env: { PORT: port.toString() } });
     childProc.catch((error) => {
       if (error.signal !== "SIGTERM") {
         console.error(error);

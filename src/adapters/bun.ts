@@ -1,7 +1,7 @@
 import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
-import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
-import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
@@ -25,50 +25,50 @@ type ContextData = {
 // --- adapter ---
 
 // https://bun.sh/docs/api/websockets
-export default defineWebSocketAdapter<BunAdapter, BunOptions>(
-  (options = {}) => {
-    const hooks = new AdapterHookable(options);
-    const peers = new Set<BunPeer>();
-    return {
-      ...adapterUtils(peers),
-      async handleUpgrade(request, server) {
-        const { upgradeHeaders, endResponse, context } =
-          await hooks.upgrade(request);
-        if (endResponse) {
-          return endResponse;
-        }
-        const upgradeOK = server.upgrade(request, {
-          data: {
-            server,
-            request,
-            context,
-          } satisfies ContextData,
-          headers: upgradeHeaders,
-        });
+const bunAdapter: Adapter<BunAdapter, BunOptions> = (options = {}) => {
+  const hooks = new AdapterHookable(options);
+  const peers = new Set<BunPeer>();
+  return {
+    ...adapterUtils(peers),
+    async handleUpgrade(request, server) {
+      const { upgradeHeaders, endResponse, context } =
+        await hooks.upgrade(request);
+      if (endResponse) {
+        return endResponse;
+      }
+      const upgradeOK = server.upgrade(request, {
+        data: {
+          server,
+          request,
+          context,
+        } satisfies ContextData,
+        headers: upgradeHeaders,
+      });
 
-        if (!upgradeOK) {
-          return new Response("Upgrade failed", { status: 500 });
-        }
+      if (!upgradeOK) {
+        return new Response("Upgrade failed", { status: 500 });
+      }
+    },
+    websocket: {
+      message: (ws, message) => {
+        const peer = getPeer(ws, peers);
+        hooks.callHook("message", peer, new Message(message, peer));
       },
-      websocket: {
-        message: (ws, message) => {
-          const peer = getPeer(ws, peers);
-          hooks.callHook("message", peer, new Message(message, peer));
-        },
-        open: (ws) => {
-          const peer = getPeer(ws, peers);
-          peers.add(peer);
-          hooks.callHook("open", peer);
-        },
-        close: (ws) => {
-          const peer = getPeer(ws, peers);
-          peers.delete(peer);
-          hooks.callHook("close", peer, {});
-        },
+      open: (ws) => {
+        const peer = getPeer(ws, peers);
+        peers.add(peer);
+        hooks.callHook("open", peer);
       },
-    };
-  },
-);
+      close: (ws) => {
+        const peer = getPeer(ws, peers);
+        peers.delete(peer);
+        hooks.callHook("close", peer, {});
+      },
+    },
+  };
+};
+
+export default bunAdapter;
 
 // --- peer ---
 
@@ -92,19 +92,23 @@ class BunPeer extends Peer<{
   request: Request;
   peers: Set<BunPeer>;
 }> {
-  get remoteAddress() {
+  override get remoteAddress(): string {
     return this._internal.ws.remoteAddress;
   }
 
-  get context() {
+  override get context(): Peer["context"] {
     return this._internal.ws.data.context;
   }
 
-  send(data: unknown, options?: { compress?: boolean }) {
+  send(data: unknown, options?: { compress?: boolean }): number {
     return this._internal.ws.send(toBufferLike(data), options?.compress);
   }
 
-  publish(topic: string, data: unknown, options?: { compress?: boolean }) {
+  publish(
+    topic: string,
+    data: unknown,
+    options?: { compress?: boolean },
+  ): number {
     return this._internal.ws.publish(
       topic,
       toBufferLike(data),
@@ -112,19 +116,19 @@ class BunPeer extends Peer<{
     );
   }
 
-  subscribe(topic: string): void {
+  override subscribe(topic: string): void {
     this._internal.ws.subscribe(topic);
   }
 
-  unsubscribe(topic: string): void {
+  override unsubscribe(topic: string): void {
     this._internal.ws.unsubscribe(topic);
   }
 
-  close(code?: number, reason?: string) {
+  close(code?: number, reason?: string): void {
     this._internal.ws.close(code, reason);
   }
 
-  terminate() {
+  override terminate(): void {
     this._internal.ws.terminate();
   }
 }
