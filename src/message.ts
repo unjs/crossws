@@ -41,7 +41,7 @@ export class Message implements Partial<MessageEvent> {
    *
    * If raw data is in any other format or string, it will be automatically converted and encoded.
    */
-  uint8Array() {
+  uint8Array(): Uint8Array {
     // Cached
     const _uint8Array = this.#uint8Array;
     if (_uint8Array) {
