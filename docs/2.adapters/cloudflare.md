@@ -104,3 +104,13 @@ new_classes = ["$DurableObject"]
 ::read-more
 See [`test/fixture/cloudflare-durable.ts`](https://github.com/unjs/crossws/blob/main/test/fixture/cloudflare-durable.ts) for demo and [`src/adapters/cloudflare-durable.ts`](https://github.com/unjs/crossws/blob/main/src/adapters/cloudflare-durable.ts) for implementation.
 ::
+
+### Adapter options
+
+> [!NOTE]
+> By default, crossws uses the durable object class `$DurableObject` from `env` with an instance named `crossws`.
+> You can customize this behavior by providing `resolveDurableStub` option.
+
+- `bindingName`: Durable Object binding name from environment (default: `$DurableObject`).
+- `instanceName`: Durable Object instance name (default: `crossws`).
+- `resolveDurableStub`: Custom function that resolves Durable Object binding to handle the WebSocket upgrade. This option will override `bindingName` and `instanceName`.

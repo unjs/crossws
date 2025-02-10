@@ -1,3 +1,5 @@
+import type * as CF from "@cloudflare/workers-types";
+import type { DurableObject } from "cloudflare:workers";
 import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type * as web from "../../types/web.ts";
 import { toBufferLike } from "../utils.ts";
@@ -6,25 +8,66 @@ import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
 
-import type * as CF from "@cloudflare/workers-types";
-import type { DurableObject } from "cloudflare:workers";
+type ResolveDurableStub = (
+  req: CF.Request,
+  env: unknown,
+  context: CF.ExecutionContext,
+) => CF.DurableObjectStub | Promise<CF.DurableObjectStub>;
+
+export interface CloudflareOptions extends AdapterOptions {
+  /**
+   * Durable Object binding name from environment.
+   *
+   * **Note:** This option will be ignored if `resolveDurableStub` is provided.
+   *
+   * @default "$DurableObject"
+   */
+  bindingName?: string;
+
+  /**
+   * Durable Object instance name.
+   *
+   * **Note:** This option will be ignored if `resolveDurableStub` is provided.
+   *
+   * @default "crossws"
+   */
+  instanceName?: string;
+
+  /**
+   * Custom function that resolves Durable Object binding to handle the WebSocket upgrade.
+   *
+   * **Note:** This option will override `bindingName` and `instanceName`.
+   */
+  resolveDurableStub?: ResolveDurableStub;
+}
 
 // https://developers.cloudflare.com/durable-objects/examples/websocket-hibernation-server/
 
 const cloudflareDurableAdapter: Adapter<
   CloudflareDurableAdapter,
   CloudflareOptions
-> = (opts) => {
+> = (opts = {}) => {
   const hooks = new AdapterHookable(opts);
   const peers = new Set<CloudflareDurablePeer>();
+
+  const resolveDurableStub: ResolveDurableStub =
+    opts.resolveDurableStub ||
+    ((_req, env: any, _context): CF.DurableObjectStub => {
+      const bindingName = opts.bindingName || "$DurableObject";
+      const binding = env[bindingName] as CF.DurableObjectNamespace;
+      if (!binding) {
+        throw new Error(
+          `Durable Object binding "${bindingName}" not available`,
+        );
+      }
+      const instanceId = binding.idFromName(opts.instanceName || "crossws");
+      return binding.get(instanceId);
+    });
+
   return {
     ...adapterUtils(peers),
-    handleUpgrade: async (req, env, _context) => {
-      const bindingName = opts?.bindingName ?? "$DurableObject";
-      const instanceName = opts?.instanceName ?? "crossws";
-      const binding = (env as any)[bindingName] as CF.DurableObjectNamespace;
-      const id = binding.idFromName(instanceName);
-      const stub = binding.get(id);
+    handleUpgrade: async (req, env, context) => {
+      const stub = await resolveDurableStub(req as CF.Request, env, context);
       return stub.fetch(req as CF.Request) as unknown as Response;
     },
     handleDurableInit: async (obj, state, env) => {
@@ -224,9 +267,4 @@ export interface CloudflareDurableAdapter extends AdapterInstance {
     reason: string,
     wasClean: boolean,
   ): Promise<void>;
-}
-
-export interface CloudflareOptions extends AdapterOptions {
-  bindingName?: string;
-  instanceName?: string;
 }
