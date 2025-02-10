@@ -18,6 +18,8 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
+      - name: Update Corepack
+        run: npm i --global corepack@latest
       - run: pnpm install
       - name: Fix lint issues
         run: pnpm run lint:fix
