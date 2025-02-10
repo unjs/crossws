@@ -13,20 +13,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: corepack enable
+      - run: npm i -fg corepack && corepack enable
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: "pnpm"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - uses: denoland/setup-deno@v1
+      - uses: denoland/setup-deno@v2
         with:
-          deno-version: v1.x
+          deno-version: v2.x
       - run: pnpm install
       - run: pnpm lint
       - run: pnpm test:types
       - run: pnpm build
       - run: pnpm vitest run --coverage
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5

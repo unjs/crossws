@@ -1,4 +1,4 @@
-export default function indexTemplate(opts: { sse?: boolean } = {}) {
+export default function indexTemplate(opts: { sse?: boolean } = {}): string {
   return /* html */ `
   <!doctype html>
   <html lang="en" data-theme="dark">

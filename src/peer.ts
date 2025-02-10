@@ -1,10 +1,13 @@
 import type * as web from "../types/web.ts";
 import { randomUUID } from "uncrypto";
+import type { UpgradeRequest } from "./hooks.ts";
+import { kNodeInspect } from "./utils.ts";
 
 export interface AdapterInternal {
   ws: unknown;
-  request?: Request | Partial<Request>;
+  request: UpgradeRequest;
   peers?: Set<Peer>;
+  context?: Peer["context"];
 }
 
 export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
@@ -17,6 +20,10 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   constructor(internal: Internal) {
     this._topics = new Set();
     this._internal = internal;
+  }
+
+  get context(): Record<string, unknown> {
+    return (this._internal.context ??= {});
   }
 
   /**
@@ -35,7 +42,7 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   }
 
   /** upgrade request */
-  get request(): Request | Partial<Request> | undefined {
+  get request(): UpgradeRequest {
     return this._internal.request;
   }
 
@@ -69,17 +76,17 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   abstract close(code?: number, reason?: string): void;
 
   /** Abruptly close the connection */
-  terminate() {
+  terminate(): void {
     this.close();
   }
 
   /** Subscribe to a topic */
-  subscribe(topic: string) {
+  subscribe(topic: string): void {
     this._topics.add(topic);
   }
 
   /** Unsubscribe from a topic */
-  unsubscribe(topic: string) {
+  unsubscribe(topic: string): void {
     this._topics.delete(topic);
   }
 
@@ -98,19 +105,19 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
 
   // --- inspect ---
 
-  toString() {
+  toString(): string {
     return this.id;
   }
 
-  [Symbol.toPrimitive]() {
+  [Symbol.toPrimitive](): string {
     return this.id;
   }
 
-  [Symbol.toStringTag]() {
+  [Symbol.toStringTag](): "WebSocket" {
     return "WebSocket";
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")]() {
+  [kNodeInspect](): Record<string, unknown> {
     return Object.fromEntries(
       [
         ["id", this.id],

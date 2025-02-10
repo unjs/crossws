@@ -1,7 +1,7 @@
-import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type * as web from "../../types/web.ts";
 import { toString } from "../utils.ts";
-import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
@@ -19,7 +19,7 @@ export interface SSEOptions extends AdapterOptions {
 // --- adapter ---
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
-export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
+const sseAdapter: Adapter<SSEAdapter, SSEOptions> = (opts = {}) => {
   const hooks = new AdapterHookable(opts);
   const peers = new Set<SSEPeer>();
   const peersMap = opts.bidir ? new Map<string, SSEPeer>() : undefined;
@@ -27,9 +27,10 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
   return {
     ...adapterUtils(peers),
     fetch: async (request: Request) => {
-      const _res = await hooks.callHook("upgrade", request);
-      if (_res instanceof Response) {
-        return _res;
+      const { upgradeHeaders, endResponse, context } =
+        await hooks.upgrade(request);
+      if (endResponse) {
+        return endResponse;
       }
 
       let peer: SSEPeer;
@@ -60,6 +61,7 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
           request,
           hooks,
           ws,
+          context,
         });
         peers.add(peer);
         if (opts.bidir) {
@@ -73,20 +75,24 @@ export default defineWebSocketAdapter<SSEAdapter, SSEOptions>((opts = {}) => {
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       };
+
       if (opts.bidir) {
         headers["x-crossws-id"] = peer.id;
       }
-      if (_res?.headers) {
+
+      if (upgradeHeaders) {
         headers = new Headers(headers);
-        for (const [key, value] of new Headers(_res.headers)) {
+        for (const [key, value] of new Headers(upgradeHeaders)) {
           headers.set(key, value);
         }
       }
 
-      return new Response(peer._sseStream, { ..._res, headers });
+      return new Response(peer._sseStream, { headers });
     },
   };
-});
+};
+
+export default sseAdapter;
 
 // --- peer ---
 
@@ -96,6 +102,7 @@ class SSEPeer extends Peer<{
   request: Request;
   ws: SSEWebSocketStub;
   hooks: AdapterHookable;
+  context: Peer["context"];
 }> {
   _sseStream: ReadableStream; // server -> client
   _sseStreamController?: ReadableStreamDefaultController;

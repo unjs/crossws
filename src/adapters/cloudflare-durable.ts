@@ -1,7 +1,7 @@
-import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type * as web from "../../types/web.ts";
 import { toBufferLike } from "../utils.ts";
-import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
@@ -11,10 +11,10 @@ import type { DurableObject } from "cloudflare:workers";
 
 // https://developers.cloudflare.com/durable-objects/examples/websocket-hibernation-server/
 
-export default defineWebSocketAdapter<
+const cloudflareDurableAdapter: Adapter<
   CloudflareDurableAdapter,
   CloudflareOptions
->((opts) => {
+> = (opts) => {
   const hooks = new AdapterHookable(opts);
   const peers = new Set<CloudflareDurablePeer>();
   return {
@@ -31,10 +31,13 @@ export default defineWebSocketAdapter<
       // placeholder
     },
     handleDurableUpgrade: async (obj, request) => {
-      const res = await hooks.callHook("upgrade", request as Request);
-      if (res instanceof Response) {
-        return res;
+      const { upgradeHeaders, endResponse } = await hooks.upgrade(
+        request as Request,
+      );
+      if (endResponse) {
+        return endResponse;
       }
+
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
@@ -46,11 +49,12 @@ export default defineWebSocketAdapter<
       peers.add(peer);
       (obj as DurableObjectPub).ctx.acceptWebSocket(server);
       await hooks.callHook("open", peer);
+
       // eslint-disable-next-line unicorn/no-null
       return new Response(null, {
         status: 101,
         webSocket: client,
-        headers: res?.headers,
+        headers: upgradeHeaders,
       });
     },
     handleDurableMessage: async (obj, ws, message) => {
@@ -64,17 +68,19 @@ export default defineWebSocketAdapter<
       await hooks.callHook("close", peer, details);
     },
   };
-});
+};
+
+export default cloudflareDurableAdapter;
 
 // --- peer ---
 
 class CloudflareDurablePeer extends Peer<{
   ws: AugmentedWebSocket;
-  request?: Partial<Request>;
+  request: Request;
   peers?: never;
   durable: DurableObjectPub;
 }> {
-  get peers() {
+  override get peers() {
     return new Set(
       this.#getwebsockets().map((ws) =>
         CloudflareDurablePeer._restore(this._internal.durable, ws),
@@ -90,7 +96,7 @@ class CloudflareDurablePeer extends Peer<{
     return this._internal.ws.send(toBufferLike(data));
   }
 
-  subscribe(topic: string): void {
+  override subscribe(topic: string): void {
     super.subscribe(topic);
     const state = getAttachedState(this._internal.ws);
     if (!state.t) {

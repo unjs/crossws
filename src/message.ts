@@ -1,5 +1,6 @@
 import type { Peer } from "./peer.ts";
 import { randomUUID } from "uncrypto";
+import { kNodeInspect } from "./utils.ts";
 
 export class Message implements Partial<MessageEvent> {
   /** Access to the original [message event](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event) if available. */
@@ -41,7 +42,7 @@ export class Message implements Partial<MessageEvent> {
    *
    * If raw data is in any other format or string, it will be automatically converted and encoded.
    */
-  uint8Array() {
+  uint8Array(): Uint8Array {
     // Cached
     const _uint8Array = this.#uint8Array;
     if (_uint8Array) {
@@ -161,7 +162,7 @@ export class Message implements Partial<MessageEvent> {
   /**
    * Message data (value varies based on `peer.websocket.binaryType`).
    */
-  get data() {
+  get data(): unknown {
     switch (this.peer?.websocket?.binaryType as string) {
       case "arraybuffer": {
         return this.arrayBuffer();
@@ -188,15 +189,15 @@ export class Message implements Partial<MessageEvent> {
 
   // --- inspect ---
 
-  toString() {
+  toString(): string {
     return this.text();
   }
 
-  [Symbol.toPrimitive]() {
+  [Symbol.toPrimitive](): string {
     return this.text();
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")]() {
+  [kNodeInspect](): { data: unknown } {
     return { data: this.rawData };
   }
 }

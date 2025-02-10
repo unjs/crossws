@@ -7,7 +7,7 @@ export interface WSTestOpts {
   resHeaders?: boolean;
 }
 
-export function wsTests(getURL: () => string, opts: WSTestOpts) {
+export function wsTests(getURL: () => string, opts: WSTestOpts): void {
   test("http works", async () => {
     const response = await fetch(getURL().replace("ws", "http"));
     expect(response.status).toBe(200);
@@ -69,7 +69,7 @@ export function wsTests(getURL: () => string, opts: WSTestOpts) {
       headers: { "x-test": "1" },
     });
     await ws.send("debug");
-    const { request, remoteAddress } = await ws.next();
+    const { request, remoteAddress, context } = await ws.next();
 
     // Headers
     if (opts.adapter === "sse") {
@@ -87,6 +87,11 @@ export function wsTests(getURL: () => string, opts: WSTestOpts) {
     // Remote address
     if (!/sse|cloudflare/.test(opts.adapter)) {
       expect(remoteAddress).toMatch(/:{2}1|(?:0{4}:){7}0{3}1|127\.0\.\0\.1/);
+    }
+
+    // Context
+    if (opts.adapter !== "cloudflare-durable") {
+      expect(context.test).toBe("1");
     }
   });
 

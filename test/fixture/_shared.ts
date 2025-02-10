@@ -1,6 +1,10 @@
-import { Adapter, AdapterInstance, defineHooks } from "../../src/index.ts";
+import {
+  type Adapter,
+  type AdapterInstance,
+  defineHooks,
+} from "../../src/index.ts";
 
-export const getIndexHTML = (opts?: { sse?: boolean }) =>
+export const getIndexHTML = (opts?: { sse?: boolean }): Promise<string> =>
   import("./_index.html.ts").then((r) => r.default(opts));
 
 export function createDemo<T extends Adapter<any, any>>(
@@ -28,6 +32,7 @@ export function createDemo<T extends Adapter<any, any>>(
           peer.send({
             id: peer.id,
             remoteAddress: peer.remoteAddress,
+            context: peer.context,
             request: {
               url: peer.request?.url,
               headers: Object.fromEntries(peer.request?.headers || []),
@@ -57,12 +62,17 @@ export function createDemo<T extends Adapter<any, any>>(
     },
     upgrade(req) {
       if (req.url.endsWith("?unauthorized")) {
-        return new Response("unauthorized", {
-          status: 401,
-          statusText: "Unauthorized",
-          headers: { "x-error": "unauthorized" },
-        });
+        throw {
+          get response() {
+            return new Response("unauthorized", {
+              status: 401,
+              statusText: "Unauthorized",
+              headers: { "x-error": "unauthorized" },
+            });
+          },
+        };
       }
+      req.context.test = "1";
       return {
         headers: {
           "x-powered-by": "cross-ws",

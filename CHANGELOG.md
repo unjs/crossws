@@ -1,5 +1,59 @@
 # Changelog
 
+## v0.3.3
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.3.2...v0.3.3)
+
+### 🚀 Enhancements
+
+- Allow throwing error with `.response` prop in `upgrade` ([#113](https://github.com/unjs/crossws/pull/113))
+
+### ❤️ Contributors
+
+- Luke Hagar ([@LukeHagar](http://github.com/LukeHagar))
+
+## v0.3.2
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.3.1...v0.3.2)
+
+### 🚀 Enhancements
+
+- Support throwing responses in `upgrade` hook ([#91](https://github.com/unjs/crossws/pull/91))
+- **peer:** Support `context` ([#110](https://github.com/unjs/crossws/pull/110))
+- Shared context between `upgrade` hook and `peer` ([#111](https://github.com/unjs/crossws/pull/111))
+
+### 🩹 Fixes
+
+- **types:** `peer.request` always has `.headers` if defined ([e915f8d](https://github.com/unjs/crossws/commit/e915f8d))
+- **types:** Mark `peer.request` as always defined ([8fbb59b](https://github.com/unjs/crossws/commit/8fbb59b))
+
+### 📖 Documentation
+
+- Fix typo ([#85](https://github.com/unjs/crossws/pull/85))
+- Fix typo ([#84](https://github.com/unjs/crossws/pull/84))
+- Add `destr` tip for JSON parsing ([#109](https://github.com/unjs/crossws/pull/109))
+
+### 🏡 Chore
+
+- **release:** V0.3.1 ([c6d888f](https://github.com/unjs/crossws/commit/c6d888f))
+- **example:** Handle binary/blob messages ([38c6baa](https://github.com/unjs/crossws/commit/38c6baa))
+- Update eslint config ([d3ab5f8](https://github.com/unjs/crossws/commit/d3ab5f8))
+- Update deps ([590a4a7](https://github.com/unjs/crossws/commit/590a4a7))
+- Update deno typos ([095c538](https://github.com/unjs/crossws/commit/095c538))
+- Update deps ([bef0f4f](https://github.com/unjs/crossws/commit/bef0f4f))
+- **examples:** Fix typo ([#107](https://github.com/unjs/crossws/pull/107))
+- Remote unused type ([e3c2cf5](https://github.com/unjs/crossws/commit/e3c2cf5))
+- Update build config ([3f5a5dc](https://github.com/unjs/crossws/commit/3f5a5dc))
+- Fix upgrade hook type ([ee7b282](https://github.com/unjs/crossws/commit/ee7b282))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+- Luke Hagar ([@LukeHagar](http://github.com/LukeHagar))
+- 39sho ([@39sho](http://github.com/39sho))
+- Sandro Circi ([@sandros94](http://github.com/sandros94))
+- Jamaluddin Rumi <jamal.rumi@icloud.com>
+
 ## v0.3.1
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.3.0...v0.3.1)

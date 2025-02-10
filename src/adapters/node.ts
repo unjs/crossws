@@ -1,13 +1,13 @@
-import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type { WebSocket } from "../../types/web.ts";
 import { toBufferLike } from "../utils.ts";
-import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
 import { Peer } from "../peer.ts";
 
-import type { ClientRequest, IncomingMessage } from "node:http";
+import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer as _WebSocketServer } from "ws";
 import type {
@@ -21,6 +21,7 @@ import type {
 type AugmentedReq = IncomingMessage & {
   _request: NodeReqProxy;
   _upgradeHeaders?: HeadersInit;
+  _context: Peer["context"];
 };
 
 export interface NodeAdapter extends AdapterInstance {
@@ -37,73 +38,77 @@ export interface NodeOptions extends AdapterOptions {
 
 // https://github.com/websockets/ws
 // https://github.com/websockets/ws/blob/master/doc/ws.md
-export default defineWebSocketAdapter<NodeAdapter, NodeOptions>(
-  (options = {}) => {
-    const hooks = new AdapterHookable(options);
-    const peers = new Set<NodePeer>();
+const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
+  const hooks = new AdapterHookable(options);
+  const peers = new Set<NodePeer>();
 
-    const wss: WebSocketServer =
-      options.wss ||
-      (new _WebSocketServer({
-        noServer: true,
-        ...(options.serverOptions as any),
-      }) as WebSocketServer);
+  const wss: WebSocketServer =
+    options.wss ||
+    (new _WebSocketServer({
+      noServer: true,
+      ...(options.serverOptions as any),
+    }) as WebSocketServer);
 
-    wss.on("connection", (ws, nodeReq) => {
-      const request = new NodeReqProxy(nodeReq);
-      const peer = new NodePeer({ ws, request, peers, nodeReq });
-      peers.add(peer);
-      hooks.callHook("open", peer); // ws is already open
-      ws.on("message", (data: unknown) => {
-        if (Array.isArray(data)) {
-          data = Buffer.concat(data);
-        }
-        hooks.callHook("message", peer, new Message(data, peer));
-      });
-      ws.on("error", (error: Error) => {
-        peers.delete(peer);
-        hooks.callHook("error", peer, new WSError(error));
-      });
-      ws.on("close", (code: number, reason: Buffer) => {
-        peers.delete(peer);
-        hooks.callHook("close", peer, {
-          code,
-          reason: reason?.toString(),
-        });
-      });
-    });
-
-    wss.on("headers", (outgoingHeaders, req) => {
-      const upgradeHeaders = (req as AugmentedReq)._upgradeHeaders;
-      if (upgradeHeaders) {
-        for (const [key, value] of new Headers(upgradeHeaders)) {
-          outgoingHeaders.push(`${key}: ${value}`);
-        }
+  wss.on("connection", (ws, nodeReq) => {
+    const request = new NodeReqProxy(nodeReq);
+    const peer = new NodePeer({ ws, request, peers, nodeReq });
+    peers.add(peer);
+    hooks.callHook("open", peer); // ws is already open
+    ws.on("message", (data: unknown) => {
+      if (Array.isArray(data)) {
+        data = Buffer.concat(data);
       }
+      hooks.callHook("message", peer, new Message(data, peer));
     });
+    ws.on("error", (error: Error) => {
+      peers.delete(peer);
+      hooks.callHook("error", peer, new WSError(error));
+    });
+    ws.on("close", (code: number, reason: Buffer) => {
+      peers.delete(peer);
+      hooks.callHook("close", peer, {
+        code,
+        reason: reason?.toString(),
+      });
+    });
+  });
 
-    return {
-      ...adapterUtils(peers),
-      handleUpgrade: async (nodeReq, socket, head) => {
-        const request = new NodeReqProxy(nodeReq);
-        const res = await hooks.callHook("upgrade", request);
-        if (res instanceof Response) {
-          return sendResponse(socket, res);
-        }
-        (nodeReq as AugmentedReq)._request = request;
-        (nodeReq as AugmentedReq)._upgradeHeaders = res?.headers;
-        wss.handleUpgrade(nodeReq, socket, head, (ws) => {
-          wss.emit("connection", ws, nodeReq);
-        });
-      },
-      closeAll: (code, data) => {
-        for (const client of wss.clients) {
-          client.close(code, data);
-        }
-      },
-    };
-  },
-);
+  wss.on("headers", (outgoingHeaders, req) => {
+    const upgradeHeaders = (req as AugmentedReq)._upgradeHeaders;
+    if (upgradeHeaders) {
+      for (const [key, value] of new Headers(upgradeHeaders)) {
+        outgoingHeaders.push(`${key}: ${value}`);
+      }
+    }
+  });
+
+  return {
+    ...adapterUtils(peers),
+    handleUpgrade: async (nodeReq, socket, head) => {
+      const request = new NodeReqProxy(nodeReq);
+
+      const { upgradeHeaders, endResponse, context } =
+        await hooks.upgrade(request);
+      if (endResponse) {
+        return sendResponse(socket, endResponse);
+      }
+
+      (nodeReq as AugmentedReq)._request = request;
+      (nodeReq as AugmentedReq)._upgradeHeaders = upgradeHeaders;
+      (nodeReq as AugmentedReq)._context = context;
+      wss.handleUpgrade(nodeReq, socket, head, (ws) => {
+        wss.emit("connection", ws, nodeReq);
+      });
+    },
+    closeAll: (code, data) => {
+      for (const client of wss.clients) {
+        client.close(code, data);
+      }
+    },
+  };
+};
+
+export default nodeAdapter;
 
 // --- peer ---
 
@@ -113,13 +118,17 @@ class NodePeer extends Peer<{
   nodeReq: IncomingMessage;
   ws: WebSocketT & { _peer?: NodePeer };
 }> {
-  get remoteAddress() {
+  override get remoteAddress() {
     return this._internal.nodeReq.socket?.remoteAddress;
+  }
+
+  override get context() {
+    return (this._internal.nodeReq as AugmentedReq)._context;
   }
 
   send(data: unknown, options?: { compress?: boolean }) {
     const dataBuff = toBufferLike(data);
-    const isBinary = typeof data !== "string";
+    const isBinary = typeof dataBuff !== "string";
     this._internal.ws.send(dataBuff, {
       compress: options?.compress,
       binary: isBinary,
@@ -151,7 +160,7 @@ class NodePeer extends Peer<{
     this._internal.ws.close(code, data);
   }
 
-  terminate() {
+  override terminate() {
     this._internal.ws.terminate();
   }
 }
