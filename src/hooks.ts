@@ -47,7 +47,15 @@ export class AdapterHookable {
     endResponse?: Response;
     context: Peer["context"];
   }> {
-    const context = (request.context ??= {});
+    let context = request.context;
+    if (!context) {
+      context = {};
+      Object.defineProperty(request, "context", {
+        enumerable: true,
+        value: context,
+      });
+    }
+
     try {
       const res = await this.callHook(
         "upgrade",
