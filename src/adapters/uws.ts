@@ -181,7 +181,13 @@ class UWSPeer extends Peer<{
   }
 
   override subscribe(topic: string): void {
+    this._topics.add(topic);
     this._internal.uws.subscribe(topic);
+  }
+
+  override unsubscribe(topic: string): void {
+    this._topics.delete(topic);
+    this._internal.uws.unsubscribe(topic);
   }
 
   publish(topic: string, message: string, options?: { compress?: boolean }) {
