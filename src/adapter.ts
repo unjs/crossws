@@ -5,10 +5,16 @@ export function adapterUtils(peers: Set<Peer>): AdapterInstance {
   return {
     peers,
     publish(topic: string, message: any, options) {
-      const firstPeer = peers.values().next().value as Peer;
-      if (firstPeer) {
-        firstPeer.send(message, options);
-        firstPeer.publish(topic, message, options);
+      let firstPeerWithTopic: Peer | undefined;
+      for (const peer of peers) {
+        if (peer.topics.has(topic)) {
+          firstPeerWithTopic = peer;
+          break;
+        }
+      }
+      if (firstPeerWithTopic) {
+        firstPeerWithTopic.send(message, options);
+        firstPeerWithTopic.publish(topic, message, options);
       }
     },
   } satisfies AdapterInstance;
