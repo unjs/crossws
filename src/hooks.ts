@@ -41,7 +41,7 @@ export class AdapterHookable {
   }
 
   async upgrade(
-    request: UpgradeRequest & { context?: Peer["context"] },
+    request: UpgradeRequest & { readonly context?: Peer["context"] },
   ): Promise<{
     upgradeHeaders?: HeadersInit;
     endResponse?: Response;
