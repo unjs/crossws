@@ -128,7 +128,7 @@ class NodePeer extends Peer<{
 
   send(data: unknown, options?: { compress?: boolean }) {
     const dataBuff = toBufferLike(data);
-    const isBinary = typeof data !== "string";
+    const isBinary = typeof dataBuff !== "string";
     this._internal.ws.send(dataBuff, {
       compress: options?.compress,
       binary: isBinary,

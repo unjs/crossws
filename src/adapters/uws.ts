@@ -176,7 +176,7 @@ class UWSPeer extends Peer<{
 
   send(data: unknown, options?: { compress?: boolean }): number {
     const dataBuff = toBufferLike(data);
-    const isBinary = typeof data !== "string";
+    const isBinary = typeof dataBuff !== "string";
     return this._internal.uws.send(dataBuff, isBinary, options?.compress);
   }
 
