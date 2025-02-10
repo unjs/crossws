@@ -17,6 +17,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Update Corepack
+        run: npm i --global corepack@latest
       - run: pnpm install
       - name: Fix lint issues
         run: pnpm run lint:fix
