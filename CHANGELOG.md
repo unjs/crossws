@@ -1,5 +1,44 @@
 # Changelog
 
+## v0.3.4
+
+[compare changes](https://github.com/unjs/crossws/compare/v0.3.3...v0.3.4)
+
+### 🚀 Enhancements
+
+- **cloudflare:** Support `resolveDurableStub` ([#130](https://github.com/unjs/crossws/pull/130))
+
+### 🩹 Fixes
+
+- Specify an explicit return type for `uint8Array()` ([#128](https://github.com/unjs/crossws/pull/128))
+- **node, uws:** Send data as blob only if it is not string ([#124](https://github.com/unjs/crossws/pull/124))
+- Global publish via first subscribed peer ([#103](https://github.com/unjs/crossws/pull/103))
+- **bun:** Pass `code` and `reason` to `close` hook ([#132](https://github.com/unjs/crossws/pull/132))
+- Define `request.context` as read only ([#133](https://github.com/unjs/crossws/pull/133))
+
+### 💅 Refactors
+
+- Stricter type declarations ([#129](https://github.com/unjs/crossws/pull/129))
+
+### 📖 Documentation
+
+- **node:** Check `upgrade === "websocket"` in example ([#131](https://github.com/unjs/crossws/pull/131))
+- Add dynamic example for changeable resolve ([e5daf22](https://github.com/unjs/crossws/commit/e5daf22))
+
+### 🏡 Chore
+
+- **release:** V0.3.3 ([d917f3a](https://github.com/unjs/crossws/commit/d917f3a))
+- Update deps ([d904557](https://github.com/unjs/crossws/commit/d904557))
+- Update deps ([43ec0c0](https://github.com/unjs/crossws/commit/43ec0c0))
+- Update ci ([9ef29ad](https://github.com/unjs/crossws/commit/9ef29ad))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](http://github.com/pi0))
+- Sandro Circi ([@sandros94](http://github.com/sandros94))
+- Flo <TecToast@gmail.com>
+- Tee Ming <chewteeming01@gmail.com>
+
 ## v0.3.3
 
 [compare changes](https://github.com/unjs/crossws/compare/v0.3.2...v0.3.3)
