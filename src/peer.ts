@@ -68,7 +68,7 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
     return this._internal.peers || new Set();
   }
 
-  /** All subscribed topics for this peer */
+  /** All topics, this peer has been subscribed to. */
   get topics(): Set<string> {
     return this._topics;
   }
