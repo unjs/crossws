@@ -59,10 +59,10 @@ const bunAdapter: Adapter<BunAdapter, BunOptions> = (options = {}) => {
         peers.add(peer);
         hooks.callHook("open", peer);
       },
-      close: (ws) => {
+      close: (ws, code, reason) => {
         const peer = getPeer(ws, peers);
         peers.delete(peer);
-        hooks.callHook("close", peer, {});
+        hooks.callHook("close", peer, { code, reason });
       },
     },
   };
