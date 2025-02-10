@@ -24,7 +24,11 @@ const server = createServer((req, res) => {
   );
 }).listen(3000);
 
-server.on("upgrade", ws.handleUpgrade);
+server.on("upgrade", (req, socket, head) => {
+  if (req.headers.upgrade === "websocket") {
+    ws.handleUpgrade(req, socket, head);
+  }
+});
 ```
 
 ::read-more
