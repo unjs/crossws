@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe } from "vitest";
 import { getRandomPort, waitForPort } from "get-port-please";
-import { App, TemplatedApp } from "uWebSockets.js";
+import { App, type TemplatedApp } from "uWebSockets.js";
 import uwsAdapter from "../../src/adapters/uws";
 import { createDemo } from "../fixture/_shared";
 import { wsTests } from "../tests";

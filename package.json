@@ -92,21 +92,21 @@
     "@types/deno": "^2.0.0",
     "@types/eventsource": "^1.1.15",
     "@types/node": "^22.13.1",
-    "@types/web": "^0.0.201",
+    "@types/web": "^0.0.202",
     "@types/ws": "^8.5.14",
     "@vitest/coverage-v8": "^3.0.5",
     "automd": "^0.3.12",
     "changelogen": "^0.5.7",
     "consola": "^3.4.0",
-    "eslint": "^9.19.0",
+    "eslint": "^9.20.0",
     "eslint-config-unjs": "^0.4.2",
     "eventsource": "^3.0.5",
     "execa": "^9.5.2",
     "get-port-please": "^3.1.2",
-    "h3": "^1.14.0",
+    "h3": "^1.15.0",
     "jiti": "^2.4.2",
     "listhen": "^1.9.0",
-    "prettier": "^3.4.2",
+    "prettier": "^3.5.0",
     "typescript": "^5.7.3",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.44.0",
     "unbuild": "^3.3.1",
@@ -115,5 +115,5 @@
     "wrangler": "^3.107.3",
     "ws": "^8.18.0"
   },
-  "packageManager": "pnpm@10.2.0"
+  "packageManager": "pnpm@10.2.1"
 }

@@ -7,7 +7,7 @@ export interface WSTestOpts {
   resHeaders?: boolean;
 }
 
-export function wsTests(getURL: () => string, opts: WSTestOpts) {
+export function wsTests(getURL: () => string, opts: WSTestOpts): void {
   test("http works", async () => {
     const response = await fetch(getURL().replace("ws", "http"));
     expect(response.status).toBe(200);
