@@ -1,1 +1,3 @@
-export default globalThis.WebSocket;
+const WebSocket: typeof globalThis.WebSocket = globalThis.WebSocket;
+
+export default WebSocket;

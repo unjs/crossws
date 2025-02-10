@@ -1,19 +1,19 @@
 /// <reference types="node" />
 
-import { EventEmitter } from "events";
-import {
+import type { EventEmitter } from "events";
+import type { Server as HTTPSServer } from "node:https";
+import type { Duplex, DuplexOptions } from "node:stream";
+import type { SecureContextOptions } from "node:tls";
+import type { URL } from "node:url";
+import type { ZlibOptions } from "node:zlib";
+import type {
   Agent,
   ClientRequest,
   ClientRequestArgs,
   IncomingMessage,
   OutgoingHttpHeaders,
   Server as HTTPServer,
-} from "http";
-import { Server as HTTPSServer } from "https";
-import { Duplex, DuplexOptions } from "stream";
-import { SecureContextOptions } from "tls";
-import { URL } from "url";
-import { ZlibOptions } from "zlib";
+} from "node:http";
 
 // can not get all overload of BufferConstructor['from'], need to copy all it's first arguments here
 // https://github.com/microsoft/TypeScript/issues/32164

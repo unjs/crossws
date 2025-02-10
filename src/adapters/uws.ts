@@ -1,8 +1,8 @@
-import type { AdapterOptions, AdapterInstance } from "../adapter.ts";
+import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type { WebSocket } from "../../types/web.ts";
 import type uws from "uWebSockets.js";
 import { toBufferLike } from "../utils.ts";
-import { defineWebSocketAdapter, adapterUtils } from "../adapter.ts";
+import { adapterUtils } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer } from "../peer.ts";
@@ -42,97 +42,97 @@ export interface UWSOptions extends AdapterOptions {
 
 // https://github.com/websockets/ws
 // https://github.com/websockets/ws/blob/master/doc/ws.md
-export default defineWebSocketAdapter<UWSAdapter, UWSOptions>(
-  (options = {}) => {
-    const hooks = new AdapterHookable(options);
-    const peers = new Set<UWSPeer>();
-    return {
-      ...adapterUtils(peers),
-      websocket: {
-        ...options.uws,
-        close(ws, code, message) {
-          const peer = getPeer(ws, peers);
-          ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
-            2 /* CLOSING */;
-          peers.delete(peer);
-          hooks.callHook("close", peer, {
-            code,
-            reason: message?.toString(),
-          });
-          ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
-            3 /* CLOSED */;
-        },
-        message(ws, message, isBinary) {
-          const peer = getPeer(ws, peers);
-          hooks.callHook("message", peer, new Message(message, peer));
-        },
-        open(ws) {
-          const peer = getPeer(ws, peers);
-          peers.add(peer);
-          hooks.callHook("open", peer);
-        },
-        async upgrade(res, req, uwsContext) {
-          let aborted = false;
-          res.onAborted(() => {
-            aborted = true;
-          });
+const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
+  const hooks = new AdapterHookable(options);
+  const peers = new Set<UWSPeer>();
+  return {
+    ...adapterUtils(peers),
+    websocket: {
+      ...options.uws,
+      close(ws, code, message) {
+        const peer = getPeer(ws, peers);
+        ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
+          2 /* CLOSING */;
+        peers.delete(peer);
+        hooks.callHook("close", peer, {
+          code,
+          reason: message?.toString(),
+        });
+        ((peer as any)._internal.ws as UwsWebSocketProxy).readyState =
+          3 /* CLOSED */;
+      },
+      message(ws, message, isBinary) {
+        const peer = getPeer(ws, peers);
+        hooks.callHook("message", peer, new Message(message, peer));
+      },
+      open(ws) {
+        const peer = getPeer(ws, peers);
+        peers.add(peer);
+        hooks.callHook("open", peer);
+      },
+      async upgrade(res, req, uwsContext) {
+        let aborted = false;
+        res.onAborted(() => {
+          aborted = true;
+        });
 
-          const { upgradeHeaders, endResponse, context } = await hooks.upgrade(
-            new UWSReqProxy(req),
-          );
-          if (endResponse) {
-            res.writeStatus(`${endResponse.status} ${endResponse.statusText}`);
-            for (const [key, value] of endResponse.headers) {
-              res.writeHeader(key, value);
-            }
-            if (endResponse.body) {
-              for await (const chunk of endResponse.body) {
-                if (aborted) break;
-                res.write(chunk);
-              }
-            }
-            if (!aborted) {
-              res.end();
-            }
-            return;
+        const { upgradeHeaders, endResponse, context } = await hooks.upgrade(
+          new UWSReqProxy(req),
+        );
+        if (endResponse) {
+          res.writeStatus(`${endResponse.status} ${endResponse.statusText}`);
+          for (const [key, value] of endResponse.headers) {
+            res.writeHeader(key, value);
           }
-
-          if (aborted) {
-            return;
-          }
-
-          res.writeStatus("101 Switching Protocols");
-          if (upgradeHeaders) {
-            // prettier-ignore
-            const headers = upgradeHeaders instanceof Headers ? upgradeHeaders : new Headers(upgradeHeaders);
-            for (const [key, value] of headers) {
-              res.writeHeader(key, value);
+          if (endResponse.body) {
+            for await (const chunk of endResponse.body) {
+              if (aborted) break;
+              res.write(chunk);
             }
           }
+          if (!aborted) {
+            res.end();
+          }
+          return;
+        }
 
-          res.cork(() => {
-            const key = req.getHeader("sec-websocket-key");
-            const protocol = req.getHeader("sec-websocket-protocol");
-            const extensions = req.getHeader("sec-websocket-extensions");
-            res.upgrade(
-              {
-                req,
-                res,
-                protocol,
-                extensions,
-                context,
-              },
-              key,
+        if (aborted) {
+          return;
+        }
+
+        res.writeStatus("101 Switching Protocols");
+        if (upgradeHeaders) {
+          // prettier-ignore
+          const headers = upgradeHeaders instanceof Headers ? upgradeHeaders : new Headers(upgradeHeaders);
+          for (const [key, value] of headers) {
+            res.writeHeader(key, value);
+          }
+        }
+
+        res.cork(() => {
+          const key = req.getHeader("sec-websocket-key");
+          const protocol = req.getHeader("sec-websocket-protocol");
+          const extensions = req.getHeader("sec-websocket-extensions");
+          res.upgrade(
+            {
+              req,
+              res,
               protocol,
               extensions,
-              uwsContext,
-            );
-          });
-        },
+              context,
+            },
+            key,
+            protocol,
+            extensions,
+            uwsContext,
+          );
+        });
       },
-    };
-  },
-);
+    },
+  };
+};
+
+export default uwsAdapter;
 
 // --- peer ---
 
@@ -159,7 +159,7 @@ class UWSPeer extends Peer<{
   ws: UwsWebSocketProxy;
   uwsData: UserData;
 }> {
-  get remoteAddress() {
+  override get remoteAddress(): string | undefined {
     try {
       const addr = new TextDecoder().decode(
         this._internal.uws.getRemoteAddressAsText(),
@@ -170,17 +170,17 @@ class UWSPeer extends Peer<{
     }
   }
 
-  get context() {
+  override get context(): Record<string, unknown> {
     return this._internal.uwsData.context;
   }
 
-  send(data: unknown, options?: { compress?: boolean }) {
+  send(data: unknown, options?: { compress?: boolean }): number {
     const dataBuff = toBufferLike(data);
     const isBinary = typeof data !== "string";
     return this._internal.uws.send(dataBuff, isBinary, options?.compress);
   }
 
-  subscribe(topic: string): void {
+  override subscribe(topic: string): void {
     this._internal.uws.subscribe(topic);
   }
 
@@ -191,11 +191,11 @@ class UWSPeer extends Peer<{
     return 0;
   }
 
-  close(code?: number, reason?: uws.RecognizedString) {
+  close(code?: number, reason?: uws.RecognizedString): void {
     this._internal.uws.end(code, reason);
   }
 
-  terminate(): void {
+  override terminate(): void {
     this._internal.uws.close();
   }
 }
@@ -240,15 +240,15 @@ class UwsWebSocketProxy implements Partial<WebSocket> {
 
   constructor(private _uws: uws.WebSocket<UserData>) {}
 
-  get bufferedAmount() {
+  get bufferedAmount(): number {
     return this._uws?.getBufferedAmount();
   }
 
-  get protocol() {
+  get protocol(): string {
     return this._uws?.getUserData().protocol;
   }
 
-  get extensions() {
+  get extensions(): string {
     return this._uws?.getUserData().extensions;
   }
 }
