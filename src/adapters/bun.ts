@@ -117,10 +117,12 @@ class BunPeer extends Peer<{
   }
 
   override subscribe(topic: string): void {
+    this._topics.add(topic);
     this._internal.ws.subscribe(topic);
   }
 
   override unsubscribe(topic: string): void {
+    this._topics.delete(topic);
     this._internal.ws.unsubscribe(topic);
   }
 
