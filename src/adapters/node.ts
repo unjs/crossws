@@ -25,7 +25,11 @@ type AugmentedReq = IncomingMessage & {
 };
 
 export interface NodeAdapter extends AdapterInstance {
-  handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): void;
+  handleUpgrade(
+    req: IncomingMessage,
+    socket: Duplex,
+    head: Buffer,
+  ): Promise<void>;
   closeAll: (code?: number, data?: string | Buffer) => void;
 }
 
