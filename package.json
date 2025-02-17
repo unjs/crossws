@@ -98,7 +98,7 @@
     "automd": "^0.3.12",
     "changelogen": "^0.5.7",
     "consola": "^3.4.0",
-    "eslint": "^9.20.0",
+    "eslint": "^9.20.1",
     "eslint-config-unjs": "^0.4.2",
     "eventsource": "^3.0.5",
     "execa": "^9.5.2",
@@ -112,8 +112,8 @@
     "unbuild": "^3.3.1",
     "undici": "^7.3.0",
     "vitest": "^3.0.5",
-    "wrangler": "^3.107.3",
+    "wrangler": "^3.108.1",
     "ws": "^8.18.0"
   },
-  "packageManager": "pnpm@10.2.1"
+  "packageManager": "pnpm@10.3.0"
 }
