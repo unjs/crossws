@@ -214,7 +214,11 @@ async function sendResponse(socket: Duplex, res: Response) {
       socket.write(chunk);
     }
   }
+  socket.end();
   return new Promise<void>((resolve) => {
-    socket.end(resolve);
+    socket.once("finish", () => {
+      socket.destroy();
+      resolve();
+    });
   });
 }
