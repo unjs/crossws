@@ -115,5 +115,13 @@
     "wrangler": "^3.108.1",
     "ws": "^8.18.0"
   },
-  "packageManager": "pnpm@10.3.0"
+  "packageManager": "pnpm@10.3.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  }
 }
