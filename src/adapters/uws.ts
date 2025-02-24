@@ -122,7 +122,7 @@ const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
               context,
             },
             key,
-            protocol,
+            '',
             extensions,
             uwsContext,
           );
