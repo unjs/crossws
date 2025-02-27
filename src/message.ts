@@ -1,5 +1,5 @@
 import type { Peer } from "./peer.ts";
-import { randomUUID } from "uncrypto";
+import { randomUUID } from "node:crypto";
 import { kNodeInspect } from "./utils.ts";
 
 export class Message implements Partial<MessageEvent> {

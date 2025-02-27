@@ -1,5 +1,5 @@
 import type * as web from "../types/web.ts";
-import { randomUUID } from "uncrypto";
+import { randomUUID } from "node:crypto";
 import type { UpgradeRequest } from "./hooks.ts";
 import { kNodeInspect } from "./utils.ts";
 
