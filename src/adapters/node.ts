@@ -214,6 +214,9 @@ async function sendResponse(socket: Duplex, res: Response) {
     }
   }
   return new Promise<void>((resolve) => {
-    socket.end(resolve);
+    socket.end(() => {
+      socket.destroy();
+      resolve();
+    });
   });
 }
