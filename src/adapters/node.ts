@@ -213,18 +213,10 @@ async function sendResponse(socket: Duplex, res: Response) {
       socket.write(chunk);
     }
   }
-  if (socket.writable) {
-    socket.end();
-  }
   return new Promise<void>((resolve) => {
-    const cleanup = () => {
+    socket.end(() => {
       socket.destroy();
       resolve();
-    };
-    if (socket.writableFinished) {
-      cleanup();
-    } else {
-      socket.once("finish", cleanup);
-    }
+    });
   });
 }
