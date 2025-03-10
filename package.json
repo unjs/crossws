@@ -90,7 +90,7 @@
     "@cloudflare/workers-types": "^4.20250204.0",
     "@types/bun": "^1.2.2",
     "@types/deno": "^2.0.0",
-    "@types/eventsource": "^1.1.15",
+    "@types/eventsource": "^3.0.0",
     "@types/node": "^22.13.1",
     "@types/web": "^0.0.202",
     "@types/ws": "^8.5.14",
@@ -115,5 +115,13 @@
     "wrangler": "^3.108.1",
     "ws": "^8.18.0"
   },
-  "packageManager": "pnpm@10.3.0"
+  "packageManager": "pnpm@10.3.0",
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  }
 }
