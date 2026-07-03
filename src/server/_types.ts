@@ -1,6 +1,6 @@
 import type { Server, ServerPlugin, ServerOptions, ServerRequest } from "srvx";
 
-import type { Hooks } from "../hooks";
+import type { Hooks, MaybePromise } from "../hooks";
 
 import type { BunOptions } from "../adapters/bun";
 import type { BunnyOptions } from "../adapters/bunny";
@@ -10,6 +10,15 @@ import type { SSEOptions } from "../adapters/sse";
 import type { CloudflareOptions } from "../adapters/cloudflare";
 
 export type WSOptions = Partial<Hooks> & {
+  /**
+   * Resolve the WebSocket hooks for an incoming request.
+   *
+   * When omitted, hooks are resolved by calling the server's `fetch` handler
+   * and reading the `crossws` property off the returned `Response`. Provide
+   * `resolve` only to customize routing (e.g. resolve hooks without invoking
+   * the app). The default is skipped when inline hooks are passed directly
+   * (e.g. `ws({ message })`), which run with zero per-event overhead instead.
+   */
   resolve?: (req: ServerRequest) => Partial<Hooks> | Promise<Partial<Hooks>>;
   options?: {
     bun?: BunOptions;
@@ -21,7 +30,25 @@ export type WSOptions = Partial<Hooks> & {
   };
 };
 
-export type ServerWithWSOptions = ServerOptions & { websocket?: WSOptions };
+/**
+ * Value the app `fetch` handler may return for a WebSocket upgrade request when
+ * the default resolver is used. Either:
+ * - a `Response` carrying hooks on its `crossws` property (the srvx convention),
+ *   or
+ * - a plain `{ crossws, headers }` object with the hooks and optional headers to
+ *   send on the WebSocket handshake response.
+ *
+ * Returning a normal `Response` (no `crossws`) is always valid — the connection
+ * simply upgrades without hooks.
+ */
+export type WSUpgradeResult =
+  | (Response & { crossws?: Partial<Hooks> })
+  | { crossws?: Partial<Hooks>; headers?: HeadersInit };
+
+export type ServerWithWSOptions = Omit<ServerOptions, "fetch"> & {
+  fetch: (request: ServerRequest) => MaybePromise<WSUpgradeResult>;
+  websocket?: WSOptions;
+};
 
 export declare function plugin(options: WSOptions): ServerPlugin;
 

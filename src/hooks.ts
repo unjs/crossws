@@ -6,6 +6,17 @@ import type { Message } from "./message.ts";
 export class AdapterHookable {
   options: AdapterOptions;
 
+  // Memoized `resolve` result per connection. `resolve` may be expensive — the
+  // default `crossws/server` resolver invokes the app's `fetch` handler — so it
+  // must run **exactly once per connection**, not on every `callHook` (i.e. not
+  // on every message). The cache is keyed by the connection's `context` object,
+  // which `upgrade()` creates and every adapter re-exposes verbatim as
+  // `peer.context`. That single shared identity spans both the `upgrade` event
+  // and every later peer event, so one `resolve` call serves the whole
+  // connection. Keyed weakly so entries are released when the connection is
+  // garbage collected.
+  #resolveCache = new WeakMap<object, MaybePromise<Partial<Hooks> | undefined>>();
+
   constructor(options?: AdapterOptions) {
     this.options = options || {};
   }
@@ -14,14 +25,53 @@ export class AdapterHookable {
     name: N,
     arg1: Parameters<Hooks[N]>[0],
     arg2?: Parameters<Hooks[N]>[1],
+    // The connection's `context` object, used as the per-connection cache key.
+    // Passed explicitly by `upgrade()` (no peer exists yet); for peer events it
+    // is derived from `peer.context`, which is the same object.
+    connection?: object,
   ): MaybePromise<ReturnType<Hooks[N]>> {
     // Call global hook first
     const globalHook = this.options.hooks?.[name];
     const globalPromise = globalHook?.(arg1 as any, arg2 as any);
 
-    // Resolve hooks for request
+    const resolve = this.options.resolve;
+    if (!resolve) {
+      return globalPromise as any; // Fast path: no resolver configured
+    }
+
+    // Resolve hooks for the connection, memoized by the shared `context`
+    // identity so `resolve` runs once per connection instead of per event.
     const request = (arg1 as Peer).request || arg1;
-    const resolveHooksPromise = this.options.resolve?.(request);
+    const cacheKey = connection || (arg1 as Peer).context || request;
+    let resolveHooksPromise: MaybePromise<Partial<Hooks> | undefined>;
+    if (this.#resolveCache.has(cacheKey)) {
+      resolveHooksPromise = this.#resolveCache.get(cacheKey);
+    } else {
+      // `resolve` may throw *synchronously* (e.g. the default resolver's
+      // `fetch(req)` throwing before it returns a promise). Normalize that to a
+      // rejected promise so it flows through the same eviction/`.catch` path as
+      // an async rejection, instead of escaping as a synchronous throw — which,
+      // on the fire-and-forget event call sites (message/close/…), would surface
+      // as an uncaught exception rather than a handled rejection.
+      try {
+        resolveHooksPromise = resolve(request);
+      } catch (error) {
+        resolveHooksPromise = Promise.reject(error);
+      }
+      this.#resolveCache.set(cacheKey, resolveHooksPromise);
+      // Don't let a rejected `resolve` poison the whole connection: evict the
+      // failed entry so a later event can retry and recover from a transient
+      // error (e.g. the default resolver's `fetch` failing once). Guarded so a
+      // concurrent re-resolve isn't clobbered. This `catch` is a separate branch
+      // and does not swallow the rejection seen by the hook resolution below.
+      if (resolveHooksPromise instanceof Promise) {
+        resolveHooksPromise.catch(() => {
+          if (this.#resolveCache.get(cacheKey) === resolveHooksPromise) {
+            this.#resolveCache.delete(cacheKey);
+          }
+        });
+      }
+    }
     if (!resolveHooksPromise) {
       return globalPromise as any; // Fast path: no hooks to resolve
     }
@@ -51,7 +101,14 @@ export class AdapterHookable {
     const context = request.context || {};
 
     try {
-      const res = await this.callHook("upgrade", request as Request & { context?: PeerContext });
+      // Seed the per-connection resolve cache against `context` so every later
+      // peer event on this connection reuses this single `resolve` call.
+      const res = await this.callHook(
+        "upgrade",
+        request as Request & { context?: PeerContext },
+        undefined,
+        context,
+      );
       if (!res) {
         return { context, namespace };
       }
