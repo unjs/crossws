@@ -93,7 +93,6 @@ export class AdapterHookable {
     context: PeerContext;
     namespace: string;
     upgradeHeaders?: HeadersInit;
-    protocol?: string;
     endResponse?: Response;
     handled?: boolean;
   }> {
@@ -158,7 +157,7 @@ export class AdapterHookable {
       upgradeHeaders = merged;
     }
 
-    return { context, namespace, upgradeHeaders, protocol };
+    return { context, namespace, upgradeHeaders };
   }
 
   // Pick the subprotocol to accept, in precedence order:
