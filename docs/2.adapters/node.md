@@ -38,6 +38,26 @@ server.on("upgrade", (req, socket, head) => {
 See [`test/fixture/node.ts`](https://github.com/h3js/crossws/blob/main/test/fixture/node.ts) for demo and [`src/adapters/node.ts`](https://github.com/h3js/crossws/blob/main/src/adapters/node.ts) for implementation.
 ::
 
+## Detecting dead connections (heartbeat)
+
+A normal disconnect — closed tab, killed process, `socket.destroy()` — sends a TCP `FIN`/`RST`, so `ws` emits `close` within milliseconds and your `close` hook fires. But a **half-open** connection (laptop sleep, NAT/mobile idle timeout, power loss, a yanked cable) vanishes without ever delivering a `FIN`/`RST`. The OS socket stays `ESTABLISHED` indefinitely, `ws` never emits `close`, and the peer — plus anything it owns, such as a proxied upstream connection — leaks.
+
+Unlike native runtimes (Bun, Deno, uWebSockets), Node's `ws` does not ping idle connections for you. Pass `heartbeatInterval` (milliseconds) to have the adapter ping every peer and terminate any that miss the pong:
+
+```ts
+import crossws from "crossws/adapters/node";
+
+const ws = crossws({
+  // Ping every peer every 30s; a peer that misses the next ping is terminated.
+  heartbeatInterval: 30_000,
+  hooks: {
+    message: console.log,
+  },
+});
+```
+
+Terminated peers surface through the usual `close` hook (code `1006`), so any teardown wired to `close`/`error` (including [`createWebSocketProxy`](/guide/proxy) closing its upstream) runs unchanged. The option is **disabled by default** (`0`); a value around `30_000` is a sensible starting point.
+
 ## Delegating to an existing Node.js upgrade handler
 
 If you already have a Node.js WebSocket library that exposes a raw `(req, socket, head)` upgrade handler (e.g. [`ws`](https://github.com/websockets/ws), `socket.io`, `express-ws`), you can route to it through crossws using `fromNodeUpgradeHandler`. This lets you keep crossws's upgrade-time request handling while delegating the WebSocket lifecycle to your existing library.

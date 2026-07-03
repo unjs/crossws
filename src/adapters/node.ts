@@ -22,6 +22,9 @@ type AugmentedReq = IncomingMessage & {
   _namespace: string;
 };
 
+// `ws` instance tagged with the heartbeat liveness flag (see `heartbeatInterval`).
+type HeartbeatWS = WebSocketT & { _isAlive?: boolean };
+
 export interface NodeAdapter extends AdapterInstance {
   handleUpgrade(
     req: IncomingMessage,
@@ -35,6 +38,28 @@ export interface NodeAdapter extends AdapterInstance {
 export interface NodeOptions extends AdapterOptions {
   wss?: WebSocketServer;
   serverOptions?: ServerOptions;
+  /**
+   * Server-side heartbeat interval in **milliseconds**. When greater than `0`,
+   * the adapter periodically pings every connected peer and terminates any peer
+   * that did not answer the previous ping with a pong.
+   *
+   * This is the only reliable way to detect **half-open** connections — laptop
+   * sleep, NAT/mobile idle timeout, power loss, a yanked cable — where the peer
+   * vanishes without the TCP stack ever delivering a `FIN`/`RST`. In that case
+   * the OS socket stays `ESTABLISHED` indefinitely, `ws` never emits `'close'`,
+   * and the peer (and anything it owns, e.g. a proxied upstream socket) leaks.
+   *
+   * A normal abrupt disconnect (browser tab closed, process killed, client
+   * `socket.destroy()`) *does* send a `FIN`/`RST`, so `ws` emits `'close'`
+   * within milliseconds and the `close` hook fires regardless of this option —
+   * the heartbeat only covers the silent, no-packet case.
+   *
+   * Terminated peers surface through the usual `close` hook (code `1006`).
+   * A sensible value is `30000` (30s). Set to `0` to disable.
+   *
+   * @default 0 (disabled)
+   */
+  heartbeatInterval?: number;
 }
 
 // --- adapter ---
@@ -58,6 +83,8 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       ...(options.serverOptions as any),
     }) as WebSocketServer);
 
+  const heartbeatInterval = options.heartbeatInterval ?? 0;
+
   wss.on("connection", (ws, nodeReq: AugmentedReq) => {
     const request = new NodeReqProxy(nodeReq);
     const peers = getPeers(globalPeers, nodeReq._namespace);
@@ -70,6 +97,16 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       sync: baseUtils.sync,
     });
     peers.add(peer);
+    if (heartbeatInterval > 0) {
+      // `isAlive` implements the standard `ws` liveness pattern: it is reset to
+      // `true` on every pong (and on connect), and the heartbeat sweep flips it
+      // to `false` right before pinging. A peer still `false` at the next sweep
+      // never answered the previous ping, so its connection is presumed dead.
+      (ws as HeartbeatWS)._isAlive = true;
+      ws.on("pong", () => {
+        (ws as HeartbeatWS)._isAlive = true;
+      });
+    }
     hooks.callHook("open", peer); // ws is already open
     ws.on("message", (data: unknown, isBinary: boolean) => {
       if (Array.isArray(data)) {
@@ -102,6 +139,39 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
     });
   });
 
+  // Single shared sweep for all peers rather than a timer per connection.
+  // Terminating a dead peer destroys its socket, which makes `ws` emit
+  // `'close'` (code 1006) → our `close` handler → the `close` hook fires, so
+  // downstream teardown (e.g. `createWebSocketProxy` closing its upstream) runs
+  // through the exact same path as any other disconnect.
+  let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+  if (heartbeatInterval > 0) {
+    heartbeatTimer = setInterval(() => {
+      for (const client of wss.clients) {
+        const ws = client as HeartbeatWS;
+        if (ws._isAlive === false) {
+          client.terminate();
+          continue;
+        }
+        ws._isAlive = false;
+        try {
+          client.ping();
+        } catch {
+          // socket may have raced into CLOSING between the sweep and the ping
+        }
+      }
+    }, heartbeatInterval);
+    // Don't let the heartbeat keep an otherwise-idle process alive.
+    heartbeatTimer.unref?.();
+    // Stop sweeping once the server is gone.
+    wss.on("close", () => {
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = undefined;
+      }
+    });
+  }
+
   wss.on("headers", (outgoingHeaders, req) => {
     const upgradeHeaders = (req as AugmentedReq)._upgradeHeaders;
     if (upgradeHeaders) {
@@ -113,6 +183,13 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
 
   return {
     ...baseUtils,
+    close: async (code, reason) => {
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = undefined;
+      }
+      await baseUtils.close(code, reason);
+    },
     handleUpgrade: async (nodeReq, socket, head, webRequest) => {
       const request = webRequest || new NodeReqProxy(nodeReq);
 
