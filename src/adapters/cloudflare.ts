@@ -4,6 +4,7 @@ import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type * as web from "../../types/web.ts";
 import { env as cfGlobalEnv } from "cloudflare:workers";
 import { toBufferLike } from "../utils.ts";
+import { getPeers } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer, type PeerContext } from "../peer.ts";
@@ -63,7 +64,12 @@ export interface CloudflareOptions extends AdapterOptions {
 
 const cloudflareAdapter: Adapter<CloudflareDurableAdapter, CloudflareOptions> = (opts = {}) => {
   const hooks = new AdapterHookable(opts);
-  const globalPeers = new Map<string, Set<CloudflareDurablePeer | CloudflareFallbackPeer>>();
+
+  // Tracks peers for the in-Worker fallback path only (single isolate, no
+  // Durable Object). Durable Object peers are intentionally NOT tracked here:
+  // holding peer references across requests/DOs on Cloudflare triggers I/O
+  // errors. Use `getDurablePeers()` from within the Durable Object instead.
+  const globalPeers = new Map<string, Set<CloudflareFallbackPeer>>();
 
   const defaultDurableStubResolver: ResolveDurableStub = async (
     req,
@@ -100,9 +106,9 @@ const cloudflareAdapter: Adapter<CloudflareDurableAdapter, CloudflareOptions> = 
     opts.resolveDurableStub || defaultDurableStubResolver;
 
   return {
-    // Returns an empty Map(). Accessing this object across different requests or Durable Objects on Cloudflare triggers I/O errors,
-    // rendering it non-functional in those contexts. Maintained solely for backward compatibility.
-    peers: new Map(),
+    // Only the in-Worker fallback peers are exposed here. Durable Object peers
+    // are not (see `globalPeers` above); use `getDurablePeers()` for those.
+    peers: globalPeers,
     getDurablePeers,
     handleUpgrade: async (request, cfEnv, cfCtx) => {
       // Upgrade request with Durable Object binding
@@ -120,11 +126,13 @@ const cloudflareAdapter: Adapter<CloudflareDurableAdapter, CloudflareOptions> = 
         return endResponse as unknown as Response;
       }
 
+      const peers = getPeers(globalPeers, namespace);
       const pair = new WebSocketPair() as unknown as [CF.WebSocket, CF.WebSocket];
       const client = pair[0];
       const server = pair[1];
       const peer = new CloudflareFallbackPeer({
         ws: client,
+        peers,
         wsServer: server,
         request: request as unknown as Request,
         cfEnv,
@@ -132,6 +140,7 @@ const cloudflareAdapter: Adapter<CloudflareDurableAdapter, CloudflareOptions> = 
         context,
         namespace,
       });
+      peers.add(peer);
       server.accept();
       hooks.callHook("open", peer);
       server.addEventListener("message", (event) => {
@@ -142,9 +151,11 @@ const cloudflareAdapter: Adapter<CloudflareDurableAdapter, CloudflareOptions> = 
         );
       });
       server.addEventListener("error", (event) => {
+        peers.delete(peer);
         hooks.callHook("error", peer, new WSError(event.error));
       });
       server.addEventListener("close", (event) => {
+        peers.delete(peer);
         hooks.callHook("close", peer, event);
         server.close();
       });
@@ -197,8 +208,10 @@ const cloudflareAdapter: Adapter<CloudflareDurableAdapter, CloudflareOptions> = 
     handleDurablePublish: async (_obj, topic, data, opts) => {
       const peers = getDurablePeers(_obj as DurableObjectPub, topic);
       for (const peer of peers) {
-        // single Durable Object with multiple namespaces
-        if (opts && peer.namespace !== opts.namespace) {
+        // When a namespace is given, scope the publish to a single namespace
+        // (single Durable Object hosting multiple namespaces). Without it,
+        // publish to every namespace subscribed to the topic.
+        if (opts?.namespace && peer.namespace !== opts.namespace) {
           continue;
         }
         peer.send(data);
@@ -328,6 +341,7 @@ class CloudflareDurablePeer extends Peer<{
 class CloudflareFallbackPeer extends Peer<{
   ws: CF.WebSocket;
   request: Request;
+  peers: Set<CloudflareFallbackPeer>;
   wsServer: CF.WebSocket;
   cfEnv: unknown;
   cfCtx: CF.ExecutionContext;
@@ -390,6 +404,17 @@ type AttachedState = {
 };
 
 export interface CloudflareDurableAdapter extends AdapterInstance {
+  /**
+   * List the peers connected to a Durable Object instance, optionally filtered
+   * by `topic`.
+   *
+   * **Note:** Must be called from within the `$DurableObject` class (e.g.
+   * `ws.getDurablePeers(this)`) since it relies on the Durable Object context.
+   * The adapter-level `peers` map only tracks the in-Worker fallback path and
+   * never contains Durable Object peers.
+   */
+  getDurablePeers(obj: DurableObject, topic?: string): Peer[];
+
   handleUpgrade(
     req: Request | CF.Request,
     env: unknown,

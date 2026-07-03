@@ -11,6 +11,13 @@ export default {
     env: Record<string, any>,
     context: ExecutionContext,
   ): Promise<Response> {
+    // The adapter-level `peers` map is always empty on Cloudflare; peers live
+    // inside the Durable Object and must be enumerated from within it.
+    if (new URL(request.url).pathname === "/peers") {
+      const stub = env.$DurableObject.get(env.$DurableObject.idFromName("crossws"));
+      return Response.json({ peers: await stub.webSocketPeers() });
+    }
+
     const response = handleDemoRoutes(ws, request);
     if (response) {
       return response;
@@ -38,6 +45,10 @@ export class $DurableObject extends DurableObject {
 
   webSocketPublish(topic: string, message: unknown, opts: any) {
     return ws.handleDurablePublish(this, topic, message, opts);
+  }
+
+  webSocketPeers() {
+    return ws.getDurablePeers(this).map((peer) => `${peer.namespace}:${peer.id}`);
   }
 
   override async webSocketMessage(client: WebSocket, message: ArrayBuffer | string): Promise<void> {

@@ -99,7 +99,16 @@ There are two scenarios for this:
 >```
 
 > [!WARNING] 
-> When using the Cloudflare adapter, the `peers` property of the adapter is always set to an empty `Map()`. If you need access to the list of connected peers within a DO use the `getDurablePeers()` function instead. `getDurablePeers()` can only be used inside the `$DurableObject` class since it requires the DO instance.
+> When using Durable Objects, the adapter's `peers` property never contains the Durable Object peers (it only tracks the in-Worker fallback path). If you need access to the list of connected peers within a DO use the `getDurablePeers()` function instead. `getDurablePeers()` can only be used inside the `$DurableObject` class since it requires the DO instance.
+>```ts
+>export class $DurableObject extends DurableObject {
+>  // Pass `this` since it requires the Durable Object instance.
+>  // Optionally pass a topic to only list peers subscribed to it.
+>  listPeers() {
+>    return ws.getDurablePeers(this).map((peer) => peer.id);
+>  }
+>}
+>```
 
 ## Adapter options
 
