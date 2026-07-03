@@ -2,7 +2,7 @@ import { serve as srvxServe } from "srvx/deno";
 import adapter from "../adapters/deno";
 import { defaultResolve } from "./_resolve";
 
-import type { Server, ServerPlugin } from "srvx";
+import type { Server, ServerPlugin, ServerOptions } from "srvx";
 import type { WSOptions, ServerWithWSOptions } from "./_types";
 
 export function plugin(wsOpts: WSOptions): ServerPlugin {
@@ -27,5 +27,5 @@ export function serve(options: ServerWithWSOptions): Server {
     options.plugins ||= [];
     options.plugins.push(plugin(options.websocket));
   }
-  return srvxServe(options);
+  return srvxServe(options as ServerOptions);
 }

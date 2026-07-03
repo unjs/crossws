@@ -44,12 +44,56 @@ export function defaultResolve(server: Server, wsOpts: WSOptions): WSOptions["re
     throw new Error("[crossws] server has no fetch handler to resolve WebSocket hooks from");
   }
 
-  return (req) =>
-    Promise.resolve(fetch(req)).then((res) => {
-      const hooks = (res as { crossws?: Partial<Hooks> }).crossws;
-      // Only `.crossws` is consumed; release the rest of the response so a
-      // streaming/proxied body on the upgrade path isn't leaked per connection.
-      res.body?.cancel().catch(() => {});
-      return hooks as Partial<Hooks>;
-    });
+  return (req) => Promise.resolve(fetch(req)).then((res) => hooksFromFetchResult(res));
+}
+
+/**
+ * Extract WebSocket hooks from a `fetch` result for the default resolver.
+ *
+ * The result may be either:
+ * - a `Response` carrying hooks on its `crossws` property — only `.crossws` is
+ *   read, the body is released, and the response's HTTP headers are ignored
+ *   (they are not handshake headers); or
+ * - a plain `{ crossws, headers }` object, where `headers` are applied to the
+ *   WebSocket handshake response.
+ */
+function hooksFromFetchResult(res: unknown): Partial<Hooks> {
+  const crossws = (res as { crossws?: Partial<Hooks> } | undefined)?.crossws;
+
+  if (res instanceof Response) {
+    // Only `.crossws` is consumed; release the rest of the response so a
+    // streaming/proxied body on the upgrade path isn't leaked per connection.
+    res.body?.cancel().catch(() => {});
+    return crossws as Partial<Hooks>;
+  }
+
+  const headers = (res as { headers?: HeadersInit } | undefined)?.headers;
+  if (!headers) {
+    return crossws as Partial<Hooks>;
+  }
+
+  // Apply the shortcut `headers` to the handshake by composing an `upgrade`
+  // hook, merged with (and overridden by) any `upgrade` hook from `.crossws`.
+  const userUpgrade = crossws?.upgrade;
+  return {
+    ...crossws,
+    async upgrade(request) {
+      const result = await userUpgrade?.(request);
+      if (result instanceof Response) {
+        return result;
+      }
+      return { ...result, headers: mergeHeaders(headers, result?.headers) };
+    },
+  };
+}
+
+function mergeHeaders(base: HeadersInit, extra?: HeadersInit): HeadersInit {
+  if (!extra) {
+    return base;
+  }
+  const merged = new Headers(base);
+  for (const [key, value] of new Headers(extra)) {
+    merged.set(key, value);
+  }
+  return merged;
 }

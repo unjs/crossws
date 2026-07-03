@@ -154,6 +154,58 @@ test("inline global hooks still work without a resolve or fetch .crossws", async
   await once(client, "close");
 });
 
+test("app fetch may return a plain { crossws } object (no Response instance)", async () => {
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: () => ({
+      crossws: {
+        message(peer, message) {
+          peer.send(`echo:${message.text()}`);
+        },
+      },
+    }),
+    websocket: {}, // default resolver reads `.crossws` off the returned object
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  await once(client, "open");
+  client.send("hi");
+  const [reply] = await once(client, "message");
+  expect(reply.toString()).toBe("echo:hi");
+  client.close();
+  await once(client, "close");
+});
+
+test("app fetch may return { crossws, headers } to set handshake headers", async () => {
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: () => ({
+      crossws: {
+        message(peer, message) {
+          peer.send(message.text());
+        },
+      },
+      headers: { "x-hello": "world" },
+    }),
+    websocket: {},
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  // `ws` emits `upgrade` with the raw handshake response (an IncomingMessage).
+  const [res] = (await once(client, "upgrade")) as [{ headers: Record<string, string> }];
+  expect(res.headers["x-hello"]).toBe("world");
+  client.close();
+  await once(client, "close");
+});
+
 test("defaultResolve returns the explicit resolve unchanged", () => {
   const resolve: WSOptions["resolve"] = () => ({});
   const server = { options: { fetch: () => new Response("ok") } } as unknown as Server;

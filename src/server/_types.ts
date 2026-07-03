@@ -1,6 +1,6 @@
 import type { Server, ServerPlugin, ServerOptions, ServerRequest } from "srvx";
 
-import type { Hooks } from "../hooks";
+import type { Hooks, MaybePromise } from "../hooks";
 
 import type { BunOptions } from "../adapters/bun";
 import type { BunnyOptions } from "../adapters/bunny";
@@ -30,7 +30,25 @@ export type WSOptions = Partial<Hooks> & {
   };
 };
 
-export type ServerWithWSOptions = ServerOptions & { websocket?: WSOptions };
+/**
+ * Value the app `fetch` handler may return for a WebSocket upgrade request when
+ * the default resolver is used. Either:
+ * - a `Response` carrying hooks on its `crossws` property (the srvx convention),
+ *   or
+ * - a plain `{ crossws, headers }` object with the hooks and optional headers to
+ *   send on the WebSocket handshake response.
+ *
+ * Returning a normal `Response` (no `crossws`) is always valid — the connection
+ * simply upgrades without hooks.
+ */
+export type WSUpgradeResult =
+  | (Response & { crossws?: Partial<Hooks> })
+  | { crossws?: Partial<Hooks>; headers?: HeadersInit };
+
+export type ServerWithWSOptions = Omit<ServerOptions, "fetch"> & {
+  fetch: (request: ServerRequest) => MaybePromise<WSUpgradeResult>;
+  websocket?: WSOptions;
+};
 
 export declare function plugin(options: WSOptions): ServerPlugin;
 
