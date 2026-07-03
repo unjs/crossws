@@ -25,6 +25,12 @@ type AugmentedReq = IncomingMessage & {
 // `ws` instance tagged with the heartbeat liveness flag (see the idle sweep below).
 type HeartbeatWS = WebSocketT & { _isAlive?: boolean };
 
+// Payload carried by our own liveness probe (see the idle sweep). The client
+// echoes it back in the pong, letting the `pong` handler tell an internal
+// keepalive reply apart from an app-level `peer.ping()` and skip the `pong`
+// hook for it. Kept well under the 125-byte control-frame limit.
+const HEARTBEAT_PING = Buffer.from("crossws-ping");
+
 export interface NodeAdapter extends AdapterInstance {
   handleUpgrade(
     req: IncomingMessage,
@@ -89,6 +95,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       nodeReq,
       namespace: nodeReq._namespace,
       sync: baseUtils.sync,
+      hooks,
     });
     peers.add(peer);
     liveSockets.add(ws as HeartbeatWS);
@@ -115,6 +122,20 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
         data = data.toString("utf8");
       }
       hooks.callHook("message", peer, new Message(data, peer));
+    });
+    // `ws` auto-replies to an inbound ping with a pong per the spec; these
+    // hooks only observe the control frames, they don't need to answer them.
+    ws.on("ping", (data: Buffer) => {
+      hooks.callHook("ping", peer, data);
+    });
+    ws.on("pong", (data: Buffer) => {
+      // Skip our own liveness probe's echoed pong (see the idle sweep); it is
+      // not an app-level pong and would otherwise fire the `pong` hook every
+      // idle interval with a bogus payload.
+      if (data.equals(HEARTBEAT_PING)) {
+        return;
+      }
+      hooks.callHook("pong", peer, data);
     });
     ws.on("error", (error: Error) => {
       peers.delete(peer);
@@ -160,7 +181,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
         }
         ws._isAlive = false;
         try {
-          ws.ping();
+          ws.ping(HEARTBEAT_PING);
         } catch {
           // socket may have raced into CLOSING between the sweep and the ping
         }
@@ -245,6 +266,7 @@ class NodePeer extends Peer<{
   nodeReq: IncomingMessage;
   ws: WebSocketT & { _peer?: NodePeer };
   sync?: SyncDriver;
+  hooks: AdapterHookable;
 }> {
   override get remoteAddress() {
     return this._internal.nodeReq.socket?.remoteAddress;
@@ -289,6 +311,18 @@ class NodePeer extends Peer<{
 
   override terminate() {
     this._internal.ws.terminate();
+  }
+
+  override ping(data?: unknown): void {
+    // `ws` validates the control frame synchronously (rejecting non-buffer
+    // payloads and anything over the 125-byte limit) and throws. Surface that
+    // through the `error` hook instead of letting it crash the process — e.g.
+    // when `ping()` is called from inside a hook handler.
+    try {
+      this._internal.ws.ping(data);
+    } catch (error) {
+      this._internal.hooks.callHook("error", this, new WSError(error));
+    }
   }
 }
 

@@ -42,6 +42,7 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   protected _id?: string;
 
   #ws?: Partial<web.WebSocket>;
+  #pingUnsupportedWarned = false;
 
   constructor(internal: Internal) {
     this._topics = new Set();
@@ -171,6 +172,30 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
   /** Abruptly close the connection */
   terminate(): void {
     this.close();
+  }
+
+  /**
+   * Send an application-level WebSocket ping control frame to the client.
+   *
+   * Pair with the {@link Hooks.pong} hook (e.g. embedding a timestamp in
+   * `data`) to measure round-trip latency, or rely on the {@link Hooks.ping}
+   * hook to observe pings the client sends unprompted.
+   *
+   * `data` is optional and, per RFC 6455, must not exceed 125 bytes (a ping is
+   * a control frame); an over-long or otherwise invalid payload is reported via
+   * the {@link Hooks.error} hook instead of being sent.
+   *
+   * **Note:** Not all adapters can send a ping frame; unsupported adapters
+   * warn once and no-op. Refer to the
+   * [compatibility table](https://crossws.h3.dev/guide/peer#compatibility).
+   */
+  ping(_data?: unknown): number | void | undefined {
+    // Warn once per peer instead of on every call, so a heartbeat loop against
+    // an unsupported adapter can't spam the console.
+    if (!this.#pingUnsupportedWarned) {
+      this.#pingUnsupportedWarned = true;
+      console.warn("[crossws] `peer.ping()` is not supported by this adapter.");
+    }
   }
 
   /** Subscribe to a topic */

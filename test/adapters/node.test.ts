@@ -5,7 +5,7 @@ import { getRandomPort, waitForPort } from "get-port-please";
 import nodeAdapter from "../../src/adapters/node";
 import { defineHooks } from "../../src/index";
 import { createDemo } from "../fixture/_shared";
-import { wsTests } from "../tests";
+import { wsTests, pingPongTests } from "../tests";
 import { wsConnect } from "../_utils";
 
 describe("node", () => {
@@ -50,6 +50,8 @@ describe("node", () => {
   wsTests(() => url, {
     adapter: "node",
   });
+
+  pingPongTests(() => url);
 
   test("forcefully terminates when force=true", async () => {
     ws.closeAll(undefined, undefined, true);

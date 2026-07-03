@@ -214,4 +214,24 @@ export interface Hooks {
 
   /** An error occurs */
   error: (peer: Peer, error: WSError) => MaybePromise<void>;
+
+  /**
+   * An application-level WebSocket ping control frame was received from the
+   * peer (e.g. sent by the client, or by another server via
+   * {@link Peer.ping}).
+   *
+   * **Note:** Only emitted by adapters that surface inbound ping frames.
+   * Refer to the [compatibility table](https://crossws.h3.dev/guide/peer#compatibility).
+   */
+  ping: (peer: Peer, data: Uint8Array) => MaybePromise<void>;
+
+  /**
+   * An application-level WebSocket pong control frame was received from the
+   * peer, typically in reply to {@link Peer.ping}. Use together with a
+   * timestamp embedded in the ping payload to measure round-trip latency.
+   *
+   * **Note:** Only emitted by adapters that surface inbound pong frames.
+   * Refer to the [compatibility table](https://crossws.h3.dev/guide/peer#compatibility).
+   */
+  pong: (peer: Peer, data: Uint8Array) => MaybePromise<void>;
 }

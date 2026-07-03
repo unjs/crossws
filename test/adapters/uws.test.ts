@@ -9,7 +9,7 @@ import {
 import uwsAdapter from "../../src/adapters/uws";
 import { defineHooks } from "../../src/index";
 import { createDemo } from "../fixture/_shared";
-import { wsTests } from "../tests";
+import { wsTests, pingPongTests } from "../tests";
 import { wsConnect } from "../_utils";
 
 describe("uws", () => {
@@ -67,6 +67,8 @@ describe("uws", () => {
   wsTests(() => url, {
     adapter: "uws",
   });
+
+  pingPongTests(() => url);
 });
 
 // Regression: a global `adapter.publish(topic, data)` (no namespace) on a
