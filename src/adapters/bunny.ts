@@ -1,6 +1,6 @@
 import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
-import { adapterUtils, getPeers } from "../adapter.ts";
+import { adapterUtils, getPeers, DEFAULT_IDLE_TIMEOUT } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
@@ -69,9 +69,8 @@ const bunnyAdapter: Adapter<BunnyAdapter, BunnyOptions> = (options = {}) => {
         upgradeOptions.protocol = negotiatedProtocol;
       }
 
-      if (options.idleTimeout !== undefined) {
-        upgradeOptions.idleTimeout = options.idleTimeout;
-      }
+      // Default to the shared 30s (Bunny's platform default is also 30).
+      upgradeOptions.idleTimeout = options.idleTimeout ?? DEFAULT_IDLE_TIMEOUT;
 
       const { response, socket } = request.upgradeWebSocket(
         Object.keys(upgradeOptions).length > 0 ? upgradeOptions : undefined,

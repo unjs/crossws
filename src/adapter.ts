@@ -219,13 +219,23 @@ export interface AdapterOptions {
    * code `1006`), so any `close`/`error` teardown — including
    * `createWebSocketProxy` closing its upstream — runs unchanged.
    *
-   * Set to `0` to disable. When left `undefined`, every runtime applies a
-   * sensible default: Node and Bun ~120s, Deno ~30s.
+   * Set to `0` to disable. Defaults to {@link DEFAULT_IDLE_TIMEOUT} (30s) on
+   * every runtime — low enough to keep idle connections alive through the
+   * typical ~60s reverse-proxy / load-balancer idle timeout, while reclaiming
+   * dead sockets promptly. Pings are a few bytes and standards clients auto-pong,
+   * so a live connection is never disconnected.
    *
-   * @default 120 on Node; runtime-native otherwise (Bun ~120s, Deno ~30s)
+   * @default 30 (seconds)
    */
   idleTimeout?: number;
 }
+
+/**
+ * Default {@link AdapterOptions.idleTimeout} (seconds), applied consistently by
+ * every adapter. 30s stays under the common ~60s intermediary idle timeout and
+ * matches Deno's native default and Socket.IO's keepalive range.
+ */
+export const DEFAULT_IDLE_TIMEOUT = 30;
 
 export type Adapter<
   AdapterT extends AdapterInstance = AdapterInstance,

@@ -1,6 +1,6 @@
 import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
-import { adapterUtils, getPeers } from "../adapter.ts";
+import { adapterUtils, getPeers, DEFAULT_IDLE_TIMEOUT } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
@@ -63,9 +63,12 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
 
   // `idleTimeout` is configured in seconds (consistent with the Bun/Deno/uWS
   // adapters); `ws` has no native liveness, so we emulate it with a ping sweep.
-  // Defaults to 120s (matching Bun) so half-open connections can't leak out of
-  // the box; pass `0` to opt out.
-  const idleTimeoutMs = (options.idleTimeout ?? 120) * 1000;
+  // Defaults to 30s so half-open connections can't leak out of the box; `0`
+  // opts out. The sweep runs at half the timeout: a peer is pinged at one tick
+  // and, if it hasn't answered (or sent anything) by the next, terminated — so
+  // a dead socket is caught within ~`idleTimeout`, matching the native adapters.
+  const idleTimeoutMs = (options.idleTimeout ?? DEFAULT_IDLE_TIMEOUT) * 1000;
+  const sweepMs = Math.max(1, Math.floor(idleTimeoutMs / 2));
 
   wss.on("connection", (ws, nodeReq: AugmentedReq) => {
     const request = new NodeReqProxy(nodeReq);
@@ -129,8 +132,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
   // Terminating a dead peer destroys its socket, which makes `ws` emit
   // `'close'` (code 1006) → our `close` handler → the `close` hook fires, so
   // downstream teardown (e.g. `createWebSocketProxy` closing its upstream) runs
-  // through the exact same path as any other disconnect. A dead peer is
-  // detected within one-to-two `idleTimeout` intervals.
+  // through the exact same path as any other disconnect.
   let idleTimer: ReturnType<typeof setInterval> | undefined;
   if (idleTimeoutMs > 0) {
     idleTimer = setInterval(() => {
@@ -147,7 +149,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
           // socket may have raced into CLOSING between the sweep and the ping
         }
       }
-    }, idleTimeoutMs);
+    }, sweepMs);
     // Don't let the sweep keep an otherwise-idle process alive.
     idleTimer.unref?.();
     // Stop sweeping once the server is gone.

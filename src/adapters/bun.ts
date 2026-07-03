@@ -1,7 +1,7 @@
 import type { WebSocketHandler, ServerWebSocket, Server } from "bun";
 import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
-import { adapterUtils, getPeers } from "../adapter.ts";
+import { adapterUtils, getPeers, DEFAULT_IDLE_TIMEOUT } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer, type PeerContext } from "../peer.ts";
@@ -58,11 +58,11 @@ const bunAdapter: Adapter<BunAdapter, BunOptions> = (options = {}) => {
       }
     },
     websocket: {
-      // Map the shared `idleTimeout` (seconds) onto Bun's native option. Bun
-      // auto-sends keepalive pings (`sendPings` defaults to `true`) and closes
-      // a connection idle beyond this, so half-open sockets can't leak. Left
-      // to Bun's default (~120s) when unset.
-      ...(options.idleTimeout === undefined ? {} : { idleTimeout: options.idleTimeout }),
+      // Map the shared `idleTimeout` (seconds, default 30) onto Bun's native
+      // option. Bun auto-sends keepalive pings (`sendPings` defaults to `true`)
+      // and closes a connection idle beyond this, so half-open sockets can't
+      // leak. `0` disables it.
+      idleTimeout: options.idleTimeout ?? DEFAULT_IDLE_TIMEOUT,
       message: (ws, message) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
         const peer = getPeer(ws, peers, baseUtils.sync);
