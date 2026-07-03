@@ -72,11 +72,13 @@ function hooksFromFetchResult(res: unknown): Partial<Hooks> | undefined {
     // client and fail the handshake) instead of silently upgrading a
     // handler-less socket — e.g. an app returning
     // `new Response("Unauthorized", { status: 401 })` on the upgrade path.
-    if (!res.ok) {
+    // `101` (Switching Protocols, as produced by e.g. Cloudflare's
+    // `WebSocketPair`) signals an upgrade, so it is not treated as an error.
+    if (!res.ok && res.status !== 101) {
       return { upgrade: () => res };
     }
-    // A plain 2xx response without hooks: the app didn't opt into WebSockets for
-    // this request; upgrade with no hooks and release the body.
+    // A `2xx`/`101` response without hooks: proceed with the upgrade but attach
+    // no hooks; the response body is unused, so release it.
     res.body?.cancel().catch(() => {});
     return undefined;
   }
