@@ -3,7 +3,16 @@ import type { Server } from "srvx";
 import type { Hooks } from "../hooks";
 import type { WSOptions } from "./_types";
 
-const HOOK_NAMES: (keyof Hooks)[] = ["upgrade", "message", "open", "close", "drain", "error"];
+const HOOK_NAMES = ["upgrade", "message", "open", "close", "drain", "error"] as const;
+
+// Compile-time guard: if a hook is added to `Hooks` but not listed above, the
+// leftover key is no longer `never`, so this type resolves to a tuple and the
+// `satisfies true` below errors — preventing the inline-hook detection in
+// `defaultResolve` from silently missing the new hook.
+type _AllHookNamesListed = [Exclude<keyof Hooks, (typeof HOOK_NAMES)[number]>] extends [never]
+  ? true
+  : ["HOOK_NAMES is missing hook(s):", Exclude<keyof Hooks, (typeof HOOK_NAMES)[number]>];
+true satisfies _AllHookNamesListed;
 
 /**
  * Resolve the hooks resolver for a server plugin.
@@ -36,7 +45,11 @@ export function defaultResolve(server: Server, wsOpts: WSOptions): WSOptions["re
   }
 
   return (req) =>
-    Promise.resolve(fetch(req)).then(
-      (res) => (res as { crossws?: Partial<Hooks> }).crossws as Partial<Hooks>,
-    );
+    Promise.resolve(fetch(req)).then((res) => {
+      const hooks = (res as { crossws?: Partial<Hooks> }).crossws;
+      // Only `.crossws` is consumed; release the rest of the response so a
+      // streaming/proxied body on the upgrade path isn't leaked per connection.
+      res.body?.cancel().catch(() => {});
+      return hooks as Partial<Hooks>;
+    });
 }

@@ -47,7 +47,17 @@ export class AdapterHookable {
     if (this.#resolveCache.has(cacheKey)) {
       resolveHooksPromise = this.#resolveCache.get(cacheKey);
     } else {
-      resolveHooksPromise = resolve(request);
+      // `resolve` may throw *synchronously* (e.g. the default resolver's
+      // `fetch(req)` throwing before it returns a promise). Normalize that to a
+      // rejected promise so it flows through the same eviction/`.catch` path as
+      // an async rejection, instead of escaping as a synchronous throw — which,
+      // on the fire-and-forget event call sites (message/close/…), would surface
+      // as an uncaught exception rather than a handled rejection.
+      try {
+        resolveHooksPromise = resolve(request);
+      } catch (error) {
+        resolveHooksPromise = Promise.reject(error);
+      }
       this.#resolveCache.set(cacheKey, resolveHooksPromise);
       // Don't let a rejected `resolve` poison the whole connection: evict the
       // failed entry so a later event can retry and recover from a transient

@@ -116,8 +116,17 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
     handleUpgrade: async (nodeReq, socket, head, webRequest) => {
       const request = webRequest || new NodeReqProxy(nodeReq);
 
-      const { upgradeHeaders, endResponse, handled, context, namespace } =
-        await hooks.upgrade(request);
+      let upgraded: Awaited<ReturnType<typeof hooks.upgrade>>;
+      try {
+        upgraded = await hooks.upgrade(request);
+      } catch {
+        // `handleUpgrade` is invoked fire-and-forget from the server's
+        // `upgrade` listener, so a rejected `upgrade()` (e.g. the default
+        // resolver's app `fetch` throwing) would otherwise hang the socket and
+        // raise an unhandled rejection. Fail the handshake with a 500 instead.
+        return sendResponse(socket, new Response("Internal Server Error", { status: 500 }));
+      }
+      const { upgradeHeaders, endResponse, handled, context, namespace } = upgraded;
       if (endResponse) {
         return sendResponse(socket, endResponse);
       }

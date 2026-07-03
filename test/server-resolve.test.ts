@@ -311,6 +311,44 @@ test("cross-provider: default fetch resolver is not invoked per message", async 
   await once(client, "close");
 });
 
+test("a synchronously throwing app fetch fails the handshake cleanly", async () => {
+  // The default resolver calls the app `fetch` on upgrade. A fetch that throws
+  // *synchronously* must not escape as an uncaught exception nor hang the
+  // socket — the handshake should fail and the server stay up. (afterEach
+  // asserts no unhandledRejection/uncaughtException leaked.)
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: () => {
+      throw new Error("boom");
+    },
+    websocket: {}, // default resolver → calls app fetch on upgrade
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  const [error] = await once(client, "error");
+  expect(error).toBeInstanceOf(Error);
+});
+
+test("a rejecting app fetch fails the handshake cleanly", async () => {
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: () => Promise.reject(new Error("boom")),
+    websocket: {}, // default resolver → calls app fetch on upgrade
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  const [error] = await once(client, "error");
+  expect(error).toBeInstanceOf(Error);
+});
+
 test("defaultResolve throws a clear error when fetch is missing", () => {
   const server = { options: {} } as unknown as Server;
   expect(() => defaultResolve(server, {})).toThrow(
