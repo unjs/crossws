@@ -216,22 +216,25 @@ export function pingPongTests(getURL: () => string): void {
   // skip past it and assert on the next message deterministically.
   const connect = () => {
     const client = new NodeWebSocket(getURL());
-    const messages: string[] = [];
-    const waitCallbacks: Record<number, (message: string) => void> = {};
-    let nextIndex = 0;
+    const queue: string[] = [];
+    let pending: ((message: string) => void) | undefined;
     client.on("message", (data) => {
       const text = data.toString();
-      const index = messages.push(text) - 1;
-      waitCallbacks[index]?.(text);
-      delete waitCallbacks[index];
+      if (pending) {
+        pending(text);
+        pending = undefined;
+      } else {
+        queue.push(text);
+      }
     });
+    // The tests only ever await `next()` sequentially, so a plain FIFO queue
+    // with a single pending resolver is enough.
     const next = (): Promise<string> => {
-      const index = nextIndex++;
-      if (index < messages.length) {
-        return Promise.resolve(messages[index]!);
+      if (queue.length > 0) {
+        return Promise.resolve(queue.shift()!);
       }
       return new Promise((resolve) => {
-        waitCallbacks[index] = resolve;
+        pending = resolve;
       });
     };
     return new Promise<{ client: NodeWebSocket; next: () => Promise<string> }>(

@@ -4,6 +4,7 @@ import { toBufferLike } from "../utils.ts";
 import { adapterUtils, getPeers, DEFAULT_IDLE_TIMEOUT } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
+import { WSError } from "../error.ts";
 import { Peer, type PeerContext } from "../peer.ts";
 import type { SyncDriver } from "../sync.ts";
 
@@ -65,36 +66,36 @@ const bunAdapter: Adapter<BunAdapter, BunOptions> = (options = {}) => {
       idleTimeout: options.idleTimeout ?? DEFAULT_IDLE_TIMEOUT,
       message: (ws, message) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("message", peer, new Message(message, peer));
       },
       open: (ws) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         peers.add(peer);
         hooks.callHook("open", peer);
       },
       close: (ws, code, reason) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         peers.delete(peer);
         hooks.callHook("close", peer, { code, reason });
       },
       drain: (ws) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
-        const peer = getPeer(ws, peers);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("drain", peer);
       },
       // Bun auto-replies to an inbound ping with a pong per the spec; these
       // hooks only observe the control frames, they don't need to answer them.
       ping: (ws, data) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("ping", peer, data);
       },
       pong: (ws, data) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("pong", peer, data);
       },
     },
@@ -108,7 +109,8 @@ export default bunAdapter;
 function getPeer(
   ws: ServerWebSocket<ContextData>,
   peers: Set<BunPeer>,
-  sync?: SyncDriver,
+  sync: SyncDriver | undefined,
+  hooks: AdapterHookable,
 ): BunPeer {
   if (ws.data.peer) {
     return ws.data.peer;
@@ -119,6 +121,7 @@ function getPeer(
     peers,
     namespace: ws.data.namespace,
     sync,
+    hooks,
   });
   ws.data.peer = peer;
   return peer;
@@ -130,6 +133,7 @@ class BunPeer extends Peer<{
   request: Request;
   peers: Set<BunPeer>;
   sync?: SyncDriver;
+  hooks: AdapterHookable;
 }> {
   override get remoteAddress(): string {
     return this._internal.ws.remoteAddress;
@@ -170,6 +174,14 @@ class BunPeer extends Peer<{
   }
 
   override ping(data?: unknown): number {
-    return this._internal.ws.ping(data as any);
+    // Guard against the native ping rejecting the payload (e.g. the 125-byte
+    // control-frame limit): surface it through the `error` hook rather than
+    // letting it crash a caller inside a hook handler.
+    try {
+      return this._internal.ws.ping(data as any);
+    } catch (error) {
+      this._internal.hooks.callHook("error", this, new WSError(error));
+      return 0;
+    }
   }
 }

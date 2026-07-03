@@ -5,6 +5,7 @@ import { toBufferLike } from "../utils.ts";
 import { adapterUtils, getPeers, DEFAULT_IDLE_TIMEOUT } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
+import { WSError } from "../error.ts";
 import { Peer, type PeerContext } from "../peer.ts";
 import type { SyncDriver } from "../sync.ts";
 import { StubRequest } from "../_request.ts";
@@ -54,7 +55,7 @@ const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
       ...options.uws,
       close(ws, code, message) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         ((peer as any)._internal.ws as UwsWebSocketProxy).readyState = 2 /* CLOSING */;
         peers.delete(peer);
         hooks.callHook("close", peer, {
@@ -65,29 +66,36 @@ const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
       },
       message(ws, message, _isBinary) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("message", peer, new Message(message, peer));
       },
       drain(ws) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
-        const peer = getPeer(ws, peers);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("drain", peer);
       },
       // uWS auto-replies to an inbound ping with a pong per the spec; these
       // hooks only observe the control frames, they don't need to answer them.
+      // Skip the `Uint8Array` copy entirely when nothing consumes it.
       ping(ws, message) {
+        if (!hooks.options.hooks?.ping && !hooks.options.resolve) {
+          return;
+        }
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("ping", peer, new Uint8Array(message));
       },
       pong(ws, message) {
+        if (!hooks.options.hooks?.pong && !hooks.options.resolve) {
+          return;
+        }
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         hooks.callHook("pong", peer, new Uint8Array(message));
       },
       open(ws) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
-        const peer = getPeer(ws, peers, baseUtils.sync);
+        const peer = getPeer(ws, peers, baseUtils.sync, hooks);
         peers.add(peer);
         hooks.callHook("open", peer);
       },
@@ -159,7 +167,12 @@ export default uwsAdapter;
 
 // --- peer ---
 
-function getPeer(uws: uws.WebSocket<UserData>, peers: Set<UWSPeer>, sync?: SyncDriver): UWSPeer {
+function getPeer(
+  uws: uws.WebSocket<UserData>,
+  peers: Set<UWSPeer>,
+  sync: SyncDriver | undefined,
+  hooks: AdapterHookable,
+): UWSPeer {
   const uwsData = uws.getUserData();
   if (uwsData.peer) {
     return uwsData.peer;
@@ -172,6 +185,7 @@ function getPeer(uws: uws.WebSocket<UserData>, peers: Set<UWSPeer>, sync?: SyncD
     namespace: uwsData.namespace,
     uwsData,
     sync,
+    hooks,
   });
   uwsData.peer = peer;
   return peer;
@@ -185,6 +199,7 @@ class UWSPeer extends Peer<{
   ws: UwsWebSocketProxy;
   uwsData: UserData;
   sync?: SyncDriver;
+  hooks: AdapterHookable;
 }> {
   override get remoteAddress(): string | undefined {
     try {
@@ -231,7 +246,15 @@ class UWSPeer extends Peer<{
   }
 
   override ping(data?: uws.RecognizedString): number {
-    return this._internal.uws.ping(data);
+    // Guard against uWS rejecting the payload (e.g. the 125-byte control-frame
+    // limit): surface it through the `error` hook rather than letting it crash
+    // a caller inside a hook handler.
+    try {
+      return this._internal.uws.ping(data);
+    } catch (error) {
+      this._internal.hooks.callHook("error", this, new WSError(error));
+      return 0;
+    }
   }
 }
 
