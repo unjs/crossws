@@ -2,7 +2,7 @@ import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import type { WebSocket } from "../../types/web.ts";
 import type uws from "uWebSockets.js";
 import { toBufferLike } from "../utils.ts";
-import { adapterUtils, getPeers } from "../adapter.ts";
+import { adapterUtils, getPeers, DEFAULT_IDLE_TIMEOUT } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { Peer, type PeerContext } from "../peer.ts";
@@ -46,6 +46,11 @@ const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
   return {
     ...baseUtils,
     websocket: {
+      // Map the shared `idleTimeout` (seconds, default 30) onto uWebSockets'
+      // native option. uWS auto-sends keepalive pings (`sendPingsAutomatically`
+      // defaults on) and closes a connection idle beyond this. An explicit
+      // `idleTimeout` in `options.uws` wins (spread last); `0` disables.
+      idleTimeout: options.idleTimeout ?? DEFAULT_IDLE_TIMEOUT,
       ...options.uws,
       close(ws, code, message) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);

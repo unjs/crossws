@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { createServer, Server } from "node:http";
+import { WebSocket } from "ws";
 import { getRandomPort, waitForPort } from "get-port-please";
 import nodeAdapter from "../../src/adapters/node";
 import { defineHooks } from "../../src/index";
@@ -57,6 +58,112 @@ describe("node", () => {
         expect(peer.websocket.readyState).toBe(2 /* CLOSING */);
       }
     }
+  });
+});
+
+// Half-open connections (laptop sleep, NAT/mobile idle timeout, power loss)
+// vanish without ever delivering a TCP FIN/RST, so `ws` never emits `'close'`
+// and the peer leaks forever. The `idleTimeout` option pings peers and
+// terminates any that miss the pong. Simulated here with an `autoPong: false`
+// client that receives pings but never answers them.
+describe("node (idleTimeout terminates unresponsive peers)", () => {
+  let server: Server;
+  let url: string;
+  let ws: ReturnType<typeof nodeAdapter>;
+  const closes: Array<{ code: number | undefined }> = [];
+
+  beforeAll(async () => {
+    ws = nodeAdapter({
+      idleTimeout: 0.04, // seconds (40ms) — fast sweep for the test
+      hooks: defineHooks({
+        close(_peer, details) {
+          closes.push({ code: details.code });
+        },
+      }),
+    });
+    server = createServer((_req, res) => res.end("ok"));
+    server.on("upgrade", ws.handleUpgrade);
+    const port = await getRandomPort("localhost");
+    url = `ws://localhost:${port}/`;
+    await new Promise<void>((resolve) => server.listen(port, resolve));
+    await waitForPort(port);
+  });
+
+  afterAll(async () => {
+    await ws.close();
+    server.close();
+  });
+
+  test("terminates a peer that never answers pings", async () => {
+    // A well-behaved client auto-pongs and must survive the heartbeat.
+    const alive = new WebSocket(url);
+    await new Promise((resolve) => alive.on("open", resolve));
+
+    // A silent client never pongs -> the sweep must terminate it.
+    const dead = new WebSocket(url, { autoPong: false });
+    const deadClosed = new Promise<number>((resolve) => dead.on("close", (code) => resolve(code)));
+    await new Promise((resolve) => dead.on("open", resolve));
+
+    // First sweep marks not-alive + pings; second sweep (no pong seen)
+    // terminates. Allow a few intervals of slack.
+    const closeCode = await Promise.race([
+      deadClosed,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("dead peer was not terminated")), 1000),
+      ),
+    ]);
+    expect(closeCode).toBe(1006);
+    expect(alive.readyState).toBe(WebSocket.OPEN);
+    // The server-side `close` hook fires a tick after `terminate()` destroys the
+    // socket — wait for it so downstream teardown (proxy upstream close) is
+    // exercised through the normal path.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(closes.some((c) => c.code === 1006)).toBe(true);
+
+    alive.close();
+  });
+});
+
+// Regression: with `clientTracking: false` (or a user-supplied `wss` created
+// that way), `ws` leaves `wss.clients` `undefined`. The idle sweep — default-on
+// since `idleTimeout` defaults to 30 — used to iterate `wss.clients` and threw
+// `TypeError: undefined is not iterable` every tick. crossws now tracks its own
+// sockets, so the sweep still detects and terminates dead peers without crashing.
+describe("node (idleTimeout with clientTracking disabled)", () => {
+  let server: Server;
+  let url: string;
+  let ws: ReturnType<typeof nodeAdapter>;
+
+  beforeAll(async () => {
+    ws = nodeAdapter({
+      idleTimeout: 0.04, // seconds (40ms) — fast sweep for the test
+      serverOptions: { clientTracking: false },
+    });
+    server = createServer((_req, res) => res.end("ok"));
+    server.on("upgrade", ws.handleUpgrade);
+    const port = await getRandomPort("localhost");
+    url = `ws://localhost:${port}/`;
+    await new Promise<void>((resolve) => server.listen(port, resolve));
+    await waitForPort(port);
+  });
+
+  afterAll(async () => {
+    await ws.close();
+    server.close();
+  });
+
+  test("sweep terminates a silent peer without touching wss.clients", async () => {
+    const dead = new WebSocket(url, { autoPong: false });
+    const deadClosed = new Promise<number>((resolve) => dead.on("close", (code) => resolve(code)));
+    await new Promise((resolve) => dead.on("open", resolve));
+
+    const closeCode = await Promise.race([
+      deadClosed,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("dead peer was not terminated")), 1000),
+      ),
+    ]);
+    expect(closeCode).toBe(1006);
   });
 });
 

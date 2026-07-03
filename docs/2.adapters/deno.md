@@ -34,3 +34,11 @@ Deno.serve({ port: 3000 }, (request, info) => {
 ::read-more
 See [`test/fixture/deno.ts`](./test/fixture/deno.ts) for demo and [`src/adapters/deno.ts`](./src/adapters/deno.ts) for implementation.
 ::
+
+## Idle timeout
+
+The shared [`idleTimeout`](/adapters#idletimeout) option (in **seconds**) closes connections that die silently (half-open sockets). It maps to Deno's native `Deno.upgradeWebSocket` idle timeout, which auto-sends keepalive pings. Defaults to `30`; pass `0` to disable.
+
+```ts
+const ws = crossws({ idleTimeout: 60, hooks: { message: console.log } });
+```

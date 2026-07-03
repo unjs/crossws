@@ -201,7 +201,45 @@ export interface AdapterOptions {
    * Defaults to `console.error`. Has no effect without `sync`.
    */
   onError?: (error: unknown, context: SyncErrorContext) => void;
+
+  /**
+   * Close a connection that has stayed idle — no incoming messages and no
+   * pong replies — for roughly this many **seconds**. This reclaims peers
+   * whose transport died silently ("half-open" sockets: laptop sleep,
+   * NAT/mobile idle timeout, power loss, a cut cable) without the TCP stack
+   * ever delivering a `FIN`/`RST`, which would otherwise leak forever.
+   *
+   * Implemented per runtime, but with a single consistent knob:
+   * - **Node** — the `ws` library has no built-in liveness, so crossws pings
+   *   each peer on this interval and terminates any that miss the pong. Honors
+   *   sub-second (fractional) values.
+   * - **Bun / Deno / uWebSockets / Bunny** — mapped to the runtime's native
+   *   WebSocket idle timeout, which also auto-sends keepalive pings. These
+   *   runtimes take **whole seconds**, so a fractional value is rounded down —
+   *   a value below `1` may become `0` and disable liveness there; use `>= 1`.
+   *
+   * Terminated peers surface through the normal `close` hook (Node reports
+   * code `1006`), so any `close`/`error` teardown — including
+   * `createWebSocketProxy` closing its upstream — runs unchanged.
+   *
+   * Set to `0` to disable. Defaults to {@link DEFAULT_IDLE_TIMEOUT} (30s) on
+   * every runtime — low enough to keep idle connections alive through the
+   * typical ~60s reverse-proxy / load-balancer idle timeout, while reclaiming
+   * dead sockets promptly. Pings are a few bytes and standards clients auto-pong,
+   * so a live connection is never disconnected.
+   *
+   * @default 30 (seconds)
+   */
+  idleTimeout?: number;
 }
+
+/**
+ * Default {@link AdapterOptions.idleTimeout} (seconds), applied consistently by
+ * every adapter. 30s stays under the common ~60s intermediary (reverse-proxy /
+ * load-balancer) idle timeout while still reclaiming dead sockets promptly, and
+ * sits within Socket.IO's keepalive range.
+ */
+export const DEFAULT_IDLE_TIMEOUT = 30;
 
 export type Adapter<
   AdapterT extends AdapterInstance = AdapterInstance,

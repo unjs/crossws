@@ -1,6 +1,6 @@
 import type { AdapterOptions, AdapterInstance, Adapter } from "../adapter.ts";
 import { toBufferLike } from "../utils.ts";
-import { adapterUtils, getPeers } from "../adapter.ts";
+import { adapterUtils, getPeers, DEFAULT_IDLE_TIMEOUT } from "../adapter.ts";
 import { AdapterHookable } from "../hooks.ts";
 import { Message } from "../message.ts";
 import { WSError } from "../error.ts";
@@ -52,6 +52,11 @@ const denoAdapter: Adapter<DenoAdapter, DenoOptions> = (options = {}) => {
         // https://github.com/denoland/deno/issues/19277
         headers,
         protocol: headers.get("sec-websocket-protocol") ?? "",
+        // Map the shared `idleTimeout` (seconds, default 30) onto Deno's native
+        // option: Deno auto-sends keepalive pings and closes a connection whose
+        // pong doesn't arrive in time, so half-open sockets can't leak. `0`
+        // disables it.
+        idleTimeout: options.idleTimeout ?? DEFAULT_IDLE_TIMEOUT,
       });
       const peers = getPeers(globalPeers, namespace);
       const peer = new DenoPeer({

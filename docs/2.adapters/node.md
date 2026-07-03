@@ -38,6 +38,27 @@ server.on("upgrade", (req, socket, head) => {
 See [`test/fixture/node.ts`](https://github.com/h3js/crossws/blob/main/test/fixture/node.ts) for demo and [`src/adapters/node.ts`](https://github.com/h3js/crossws/blob/main/src/adapters/node.ts) for implementation.
 ::
 
+## Detecting dead connections (`idleTimeout`)
+
+A normal disconnect — closed tab, killed process, `socket.destroy()` — sends a TCP `FIN`/`RST`, so `ws` emits `close` within milliseconds and your `close` hook fires. But a **half-open** connection (laptop sleep, NAT/mobile idle timeout, power loss, a yanked cable) vanishes without ever delivering a `FIN`/`RST`. The OS socket stays `ESTABLISHED` indefinitely, `ws` never emits `close`, and the peer — plus anything it owns, such as a proxied upstream connection — leaks.
+
+Unlike the native runtimes (Bun, Deno, uWebSockets), Node's `ws` does not ping idle connections for you — so crossws emulates it. The adapter pings every peer and terminates any that miss the pong, driven by the shared [`idleTimeout`](/adapters#idletimeout) option (in **seconds**). It **defaults to `30`** on every runtime, so half-open connections are cleaned up out of the box:
+
+```ts
+import crossws from "crossws/adapters/node";
+
+const ws = crossws({
+  // Optional — defaults to 30. Lower it to detect dead peers faster, or
+  // set 0 to disable.
+  idleTimeout: 30,
+  hooks: {
+    message: console.log,
+  },
+});
+```
+
+Terminated peers surface through the usual `close` hook (code `1006`), so any teardown wired to `close`/`error` (including [`createWebSocketProxy`](/guide/proxy) closing its upstream) runs unchanged. Pass `idleTimeout: 0` to opt out. The same option and default apply on the Bun, Deno, and uWebSockets adapters, where it maps to the runtime's native idle timeout.
+
 ## Delegating to an existing Node.js upgrade handler
 
 If you already have a Node.js WebSocket library that exposes a raw `(req, socket, head)` upgrade handler (e.g. [`ws`](https://github.com/websockets/ws), `socket.io`, `express-ws`), you can route to it through crossws using `fromNodeUpgradeHandler`. This lets you keep crossws's upgrade-time request handling while delegating the WebSocket lifecycle to your existing library.
