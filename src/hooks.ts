@@ -93,12 +93,16 @@ export class AdapterHookable {
     context: PeerContext;
     namespace: string;
     upgradeHeaders?: HeadersInit;
+    protocol?: string;
     endResponse?: Response;
     handled?: boolean;
   }> {
     let namespace = this.options.getNamespace?.(request) ?? new URL(request.url).pathname;
 
     const context = request.context || {};
+
+    let upgradeHeaders: HeadersInit | undefined;
+    let protocolFromHook: string | undefined;
 
     try {
       // Seed the per-connection resolve cache against `context` so every later
@@ -109,30 +113,24 @@ export class AdapterHookable {
         undefined,
         context,
       );
-      if (!res) {
-        return { context, namespace };
-      }
-      if ((res as { namespace?: string }).namespace) {
-        namespace = (res as { namespace: string }).namespace;
-      }
-      if ((res as { context?: Record<string, unknown> }).context) {
-        Object.assign(context, (res as { context?: Record<string, unknown> }).context);
-      }
-      if (res instanceof Response) {
-        return { context, namespace, endResponse: res };
-      }
-      if ((res as { handled?: boolean }).handled) {
-        // Hook took ownership of the socket — any `headers` returned
-        // alongside `handled` are ignored since the adapter skips its
-        // own upgrade and no response will be written from here.
-        return { context, namespace, handled: true };
-      }
-      if (res.headers) {
-        return {
-          context,
-          namespace,
-          upgradeHeaders: res.headers,
-        };
+      if (res) {
+        if ((res as { namespace?: string }).namespace) {
+          namespace = (res as { namespace: string }).namespace;
+        }
+        if ((res as { context?: Record<string, unknown> }).context) {
+          Object.assign(context, (res as { context?: Record<string, unknown> }).context);
+        }
+        if (res instanceof Response) {
+          return { context, namespace, endResponse: res };
+        }
+        if ((res as { handled?: boolean }).handled) {
+          // Hook took ownership of the socket — any `headers`/`protocol`
+          // returned alongside `handled` are ignored since the adapter skips
+          // its own upgrade and no response will be written from here.
+          return { context, namespace, handled: true };
+        }
+        upgradeHeaders = res.headers;
+        protocolFromHook = (res as { protocol?: string }).protocol;
       }
     } catch (error) {
       const errResponse = (error as { response: Response }).response || error;
@@ -145,8 +143,76 @@ export class AdapterHookable {
       }
       throw error;
     }
-    return { context, namespace };
+
+    // Resolve the negotiated subprotocol (opt-in; strict/no-echo by default).
+    // Adapters don't need to know about any of this: every runtime turns a
+    // `sec-websocket-protocol` entry in `upgradeHeaders` into the accepted
+    // subprotocol (Node re-emits it via ws's `headers` event, Deno reads it
+    // into its native `protocol` option, Bun forwards it to `server.upgrade`),
+    // so folding the choice back into the headers here keeps negotiation
+    // consistent across all of them from a single place.
+    const protocol = await this._resolveProtocol(request, upgradeHeaders, protocolFromHook);
+    if (protocol) {
+      const merged = new Headers(upgradeHeaders);
+      merged.set("sec-websocket-protocol", protocol);
+      upgradeHeaders = merged;
+    }
+
+    return { context, namespace, upgradeHeaders, protocol };
   }
+
+  // Pick the subprotocol to accept, in precedence order:
+  //   1. `protocol` returned explicitly from the `upgrade` hook (per-connection).
+  //   2. a `sec-websocket-protocol` header set directly by the hook (the
+  //      pre-existing way to negotiate, kept working verbatim).
+  //   3. the `handleProtocols(protocols, request)` adapter option (global
+  //      default), mirroring ws's own selector signature.
+  // Returns `undefined` to accept no subprotocol — the strict default, so a
+  // server never claims to speak a protocol the app didn't opt into.
+  async _resolveProtocol(
+    request: Request,
+    upgradeHeaders: HeadersInit | undefined,
+    protocolFromHook: string | undefined,
+  ): Promise<string | undefined> {
+    if (protocolFromHook) {
+      return protocolFromHook;
+    }
+    if (upgradeHeaders) {
+      const headers =
+        upgradeHeaders instanceof Headers ? upgradeHeaders : new Headers(upgradeHeaders);
+      const fromHeader = headers.get("sec-websocket-protocol");
+      if (fromHeader) {
+        return fromHeader;
+      }
+    }
+    const handleProtocols = this.options.handleProtocols;
+    if (handleProtocols) {
+      const offered = _parseProtocols(request.headers.get("sec-websocket-protocol"));
+      if (offered.size > 0) {
+        const chosen = await handleProtocols(offered, request);
+        if (chosen) {
+          return chosen;
+        }
+      }
+    }
+    return undefined;
+  }
+}
+
+// Parse a `sec-websocket-protocol` request header ("a, b , c") into the set of
+// distinct, trimmed subprotocol tokens the client offered.
+function _parseProtocols(header: string | null | undefined): Set<string> {
+  const protocols = new Set<string>();
+  if (!header) {
+    return protocols;
+  }
+  for (const part of header.split(",")) {
+    const token = part.trim();
+    if (token) {
+      protocols.add(token);
+    }
+  }
+  return protocols;
 }
 
 // --- types ---
@@ -169,6 +235,12 @@ export interface Hooks {
    *
    * - You can throw a Response to abort the upgrade.
    * - You can return { headers } to modify the response.
+   * - You can return { protocol } to accept a WebSocket subprotocol for this
+   *   connection (echoed back as `Sec-WebSocket-Protocol`). This is the
+   *   per-connection counterpart to the global
+   *   {@link AdapterOptions.handleProtocols} option and takes precedence over
+   *   it. It should be one of the subprotocols the client offered (the values
+   *   in the request's `Sec-WebSocket-Protocol` header).
    * - You can return { namespace } to change the pub/sub namespace.
    * - You can return { context } to provide a custom peer context.
    * - You can return { handled: true } to signal that the upgrade has
@@ -186,6 +258,7 @@ export interface Hooks {
   ) => MaybePromise<
     | {
         headers?: HeadersInit;
+        protocol?: string;
         namespace?: string;
         context?: PeerContext;
         handled?: boolean;

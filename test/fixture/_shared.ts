@@ -90,19 +90,32 @@ export function createDemo<T extends Adapter<any, any>>(
         "x-powered-by": "cross-ws",
         "set-cookie": "cross-ws=1; SameSite=None; Secure",
       };
-      if (req.headers.get("sec-websocket-protocol") === "supported") {
+      const reqProtocol = req.headers.get("sec-websocket-protocol");
+      // Negotiate via a header set directly by the hook (the original way).
+      if (reqProtocol === "supported") {
         headers["sec-websocket-protocol"] = "supported";
       }
-      return {
+      const result: {
+        context: Record<string, string>;
+        headers: Record<string, string>;
+        protocol?: string;
+      } = {
         context: { test: "1" },
         headers,
       };
+      // Negotiate via the first-class per-connection `protocol` return field.
+      if (reqProtocol === "graphql-transport-ws") {
+        result.protocol = "graphql-transport-ws";
+      }
+      return result;
     },
   });
 
   return adapter({
     ...options,
     hooks,
+    // Global default selector: negotiate via the `handleProtocols` option.
+    handleProtocols: (protocols: Set<string>) => (protocols.has("chat") ? "chat" : false),
   });
 }
 
