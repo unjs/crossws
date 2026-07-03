@@ -63,7 +63,9 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
 
   // `idleTimeout` is configured in seconds (consistent with the Bun/Deno/uWS
   // adapters); `ws` has no native liveness, so we emulate it with a ping sweep.
-  const idleTimeoutMs = (options.idleTimeout ?? 0) * 1000;
+  // Defaults to 120s (matching Bun) so half-open connections can't leak out of
+  // the box; pass `0` to opt out.
+  const idleTimeoutMs = (options.idleTimeout ?? 120) * 1000;
 
   wss.on("connection", (ws, nodeReq: AugmentedReq) => {
     const request = new NodeReqProxy(nodeReq);

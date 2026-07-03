@@ -42,14 +42,14 @@ See [`test/fixture/node.ts`](https://github.com/h3js/crossws/blob/main/test/fixt
 
 A normal disconnect — closed tab, killed process, `socket.destroy()` — sends a TCP `FIN`/`RST`, so `ws` emits `close` within milliseconds and your `close` hook fires. But a **half-open** connection (laptop sleep, NAT/mobile idle timeout, power loss, a yanked cable) vanishes without ever delivering a `FIN`/`RST`. The OS socket stays `ESTABLISHED` indefinitely, `ws` never emits `close`, and the peer — plus anything it owns, such as a proxied upstream connection — leaks.
 
-Unlike the native runtimes (Bun, Deno, uWebSockets), Node's `ws` does not ping idle connections for you. Pass the shared [`idleTimeout`](/adapters#idletimeout) option (in **seconds**) to have the adapter ping every peer and terminate any that miss the pong:
+Unlike the native runtimes (Bun, Deno, uWebSockets), Node's `ws` does not ping idle connections for you — so crossws emulates it. The adapter pings every peer on the shared [`idleTimeout`](/adapters#idletimeout) interval (in **seconds**) and terminates any that miss the pong. It **defaults to `120` on Node** (matching Bun), so half-open connections are cleaned up out of the box:
 
 ```ts
 import crossws from "crossws/adapters/node";
 
 const ws = crossws({
-  // Ping idle peers; a peer that saw no traffic and missed the probe ping
-  // within ~this many seconds is terminated.
+  // Optional — defaults to 120. Lower it to detect dead peers faster, or
+  // set 0 to disable.
   idleTimeout: 30,
   hooks: {
     message: console.log,
@@ -57,7 +57,7 @@ const ws = crossws({
 });
 ```
 
-Terminated peers surface through the usual `close` hook (code `1006`), so any teardown wired to `close`/`error` (including [`createWebSocketProxy`](/guide/proxy) closing its upstream) runs unchanged. On Node the option is **disabled by default**; a value around `30` is a sensible starting point. The same `idleTimeout` option works on the Bun, Deno, and uWebSockets adapters, where it maps to the runtime's native idle timeout (those default to ~120s / ~30s when unset).
+Terminated peers surface through the usual `close` hook (code `1006`), so any teardown wired to `close`/`error` (including [`createWebSocketProxy`](/guide/proxy) closing its upstream) runs unchanged. Pass `idleTimeout: 0` to opt out. The same option works on the Bun, Deno, and uWebSockets adapters, where it maps to the runtime's native idle timeout (~120s / ~30s by default).
 
 ## Delegating to an existing Node.js upgrade handler
 

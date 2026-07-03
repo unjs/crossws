@@ -219,10 +219,10 @@ export interface AdapterOptions {
    * code `1006`), so any `close`/`error` teardown — including
    * `createWebSocketProxy` closing its upstream — runs unchanged.
    *
-   * Set to `0` to disable. When left `undefined`, runtimes with a native
-   * default keep it (Bun ~120s, Deno ~30s); **Node has no timeout unless set**.
+   * Set to `0` to disable. When left `undefined`, every runtime applies a
+   * sensible default: Node and Bun ~120s, Deno ~30s.
    *
-   * @default undefined (runtime-native; Node: disabled)
+   * @default 120 on Node; runtime-native otherwise (Bun ~120s, Deno ~30s)
    */
   idleTimeout?: number;
 }
