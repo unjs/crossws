@@ -249,6 +249,32 @@ test("cross-provider: upgrade + peer events share a single resolve via context",
   expect(resolveCalls).toBe(1);
 });
 
+test("cross-provider: a rejected resolve is evicted so later events recover", async () => {
+  // A transient `resolve` failure (e.g. the default resolver's `fetch` throwing
+  // once) must not poison the whole connection — the cached rejection is evicted
+  // so the next event retries.
+  let calls = 0;
+  const hooks = new AdapterHookable({
+    resolve: () => {
+      calls++;
+      return calls === 1
+        ? Promise.reject(new Error("transient"))
+        : Promise.resolve({ message() {} });
+    },
+  });
+  const peer = {
+    request: new Request("http://localhost/"),
+    context: {} as PeerContext,
+  } as unknown as Peer;
+  const msg = (text: string) => ({ text: () => text }) as unknown as Message;
+
+  // First event: resolve rejects → this event rejects.
+  await expect(hooks.callHook("message", peer, msg("a"))).rejects.toThrow("transient");
+  // The failed cache entry is evicted, so the next event resolves afresh.
+  await expect(hooks.callHook("message", peer, msg("b"))).resolves.toBeUndefined();
+  expect(calls).toBe(2);
+});
+
 test("cross-provider: default fetch resolver is not invoked per message", async () => {
   let fetchCalls = 0;
   const port = await getRandomPort("localhost");

@@ -49,6 +49,18 @@ export class AdapterHookable {
     } else {
       resolveHooksPromise = resolve(request);
       this.#resolveCache.set(cacheKey, resolveHooksPromise);
+      // Don't let a rejected `resolve` poison the whole connection: evict the
+      // failed entry so a later event can retry and recover from a transient
+      // error (e.g. the default resolver's `fetch` failing once). Guarded so a
+      // concurrent re-resolve isn't clobbered. This `catch` is a separate branch
+      // and does not swallow the rejection seen by the hook resolution below.
+      if (resolveHooksPromise instanceof Promise) {
+        resolveHooksPromise.catch(() => {
+          if (this.#resolveCache.get(cacheKey) === resolveHooksPromise) {
+            this.#resolveCache.delete(cacheKey);
+          }
+        });
+      }
     }
     if (!resolveHooksPromise) {
       return globalPromise as any; // Fast path: no hooks to resolve
