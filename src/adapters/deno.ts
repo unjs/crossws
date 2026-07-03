@@ -52,6 +52,11 @@ const denoAdapter: Adapter<DenoAdapter, DenoOptions> = (options = {}) => {
         // https://github.com/denoland/deno/issues/19277
         headers,
         protocol: headers.get("sec-websocket-protocol") ?? "",
+        // Map the shared `idleTimeout` (seconds) onto Deno's native option:
+        // Deno auto-sends keepalive pings and closes a connection whose pong
+        // doesn't arrive in time, so half-open sockets can't leak. Left to
+        // Deno's default (~30s) when unset.
+        ...(options.idleTimeout === undefined ? {} : { idleTimeout: options.idleTimeout }),
       });
       const peers = getPeers(globalPeers, namespace);
       const peer = new DenoPeer({

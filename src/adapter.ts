@@ -201,6 +201,30 @@ export interface AdapterOptions {
    * Defaults to `console.error`. Has no effect without `sync`.
    */
   onError?: (error: unknown, context: SyncErrorContext) => void;
+
+  /**
+   * Close a connection that has stayed idle — no incoming messages and no
+   * pong replies — for roughly this many **seconds**. This reclaims peers
+   * whose transport died silently ("half-open" sockets: laptop sleep,
+   * NAT/mobile idle timeout, power loss, a cut cable) without the TCP stack
+   * ever delivering a `FIN`/`RST`, which would otherwise leak forever.
+   *
+   * Implemented per runtime, but with a single consistent knob:
+   * - **Node** — the `ws` library has no built-in liveness, so crossws pings
+   *   each peer on this interval and terminates any that miss the pong.
+   * - **Bun / Deno / uWebSockets / Bunny** — mapped to the runtime's native
+   *   WebSocket idle timeout, which also auto-sends keepalive pings.
+   *
+   * Terminated peers surface through the normal `close` hook (Node reports
+   * code `1006`), so any `close`/`error` teardown — including
+   * `createWebSocketProxy` closing its upstream — runs unchanged.
+   *
+   * Set to `0` to disable. When left `undefined`, runtimes with a native
+   * default keep it (Bun ~120s, Deno ~30s); **Node has no timeout unless set**.
+   *
+   * @default undefined (runtime-native; Node: disabled)
+   */
+  idleTimeout?: number;
 }
 
 export type Adapter<

@@ -63,10 +63,10 @@ describe("node", () => {
 
 // Half-open connections (laptop sleep, NAT/mobile idle timeout, power loss)
 // vanish without ever delivering a TCP FIN/RST, so `ws` never emits `'close'`
-// and the peer leaks forever. The `heartbeatInterval` option pings peers and
+// and the peer leaks forever. The `idleTimeout` option pings peers and
 // terminates any that miss the pong. Simulated here with an `autoPong: false`
 // client that receives pings but never answers them.
-describe("node (heartbeat terminates unresponsive peers)", () => {
+describe("node (idleTimeout terminates unresponsive peers)", () => {
   let server: Server;
   let url: string;
   let ws: ReturnType<typeof nodeAdapter>;
@@ -74,7 +74,7 @@ describe("node (heartbeat terminates unresponsive peers)", () => {
 
   beforeAll(async () => {
     ws = nodeAdapter({
-      heartbeatInterval: 40,
+      idleTimeout: 0.04, // seconds (40ms) — fast sweep for the test
       hooks: defineHooks({
         close(_peer, details) {
           closes.push({ code: details.code });

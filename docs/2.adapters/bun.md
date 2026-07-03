@@ -38,3 +38,11 @@ Bun.serve({
 ::read-more
 See [`test/fixture/bun.ts`](https://github.com/h3js/crossws/blob/main/test/fixture/bun.ts) for demo and [`src/adapters/bun.ts`](https://github.com/h3js/crossws/blob/main/src/adapters/bun.ts) for implementation.
 ::
+
+## Idle timeout
+
+Pass the shared [`idleTimeout`](/adapters#idletimeout) option (in **seconds**) to close connections that die silently (half-open sockets). It maps to Bun's native WebSocket idle timeout, which auto-sends keepalive pings. When unset, Bun's default (~120s) applies.
+
+```ts
+const ws = crossws({ idleTimeout: 60, hooks: { message: console.log } });
+```

@@ -38,28 +38,6 @@ export interface NodeAdapter extends AdapterInstance {
 export interface NodeOptions extends AdapterOptions {
   wss?: WebSocketServer;
   serverOptions?: ServerOptions;
-  /**
-   * Server-side heartbeat interval in **milliseconds**. When greater than `0`,
-   * the adapter periodically pings every connected peer and terminates any peer
-   * that did not answer the previous ping with a pong.
-   *
-   * This is the only reliable way to detect **half-open** connections — laptop
-   * sleep, NAT/mobile idle timeout, power loss, a yanked cable — where the peer
-   * vanishes without the TCP stack ever delivering a `FIN`/`RST`. In that case
-   * the OS socket stays `ESTABLISHED` indefinitely, `ws` never emits `'close'`,
-   * and the peer (and anything it owns, e.g. a proxied upstream socket) leaks.
-   *
-   * A normal abrupt disconnect (browser tab closed, process killed, client
-   * `socket.destroy()`) *does* send a `FIN`/`RST`, so `ws` emits `'close'`
-   * within milliseconds and the `close` hook fires regardless of this option —
-   * the heartbeat only covers the silent, no-packet case.
-   *
-   * Terminated peers surface through the usual `close` hook (code `1006`).
-   * A sensible value is `30000` (30s). Set to `0` to disable.
-   *
-   * @default 0 (disabled)
-   */
-  heartbeatInterval?: number;
 }
 
 // --- adapter ---
@@ -83,7 +61,9 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       ...(options.serverOptions as any),
     }) as WebSocketServer);
 
-  const heartbeatInterval = options.heartbeatInterval ?? 0;
+  // `idleTimeout` is configured in seconds (consistent with the Bun/Deno/uWS
+  // adapters); `ws` has no native liveness, so we emulate it with a ping sweep.
+  const idleTimeoutMs = (options.idleTimeout ?? 0) * 1000;
 
   wss.on("connection", (ws, nodeReq: AugmentedReq) => {
     const request = new NodeReqProxy(nodeReq);
@@ -97,15 +77,19 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       sync: baseUtils.sync,
     });
     peers.add(peer);
-    if (heartbeatInterval > 0) {
-      // `isAlive` implements the standard `ws` liveness pattern: it is reset to
-      // `true` on every pong (and on connect), and the heartbeat sweep flips it
-      // to `false` right before pinging. A peer still `false` at the next sweep
-      // never answered the previous ping, so its connection is presumed dead.
+    if (idleTimeoutMs > 0) {
+      // Standard `ws` liveness pattern: `_isAlive` is reset to `true` on any
+      // inbound traffic (pong, message, ping) and on connect, and the idle
+      // sweep flips it to `false` right before pinging. A peer still `false`
+      // at the next sweep saw no traffic for a whole interval and never
+      // answered the probe ping, so its connection is presumed dead.
       (ws as HeartbeatWS)._isAlive = true;
-      ws.on("pong", () => {
+      const markAlive = () => {
         (ws as HeartbeatWS)._isAlive = true;
-      });
+      };
+      ws.on("pong", markAlive);
+      ws.on("ping", markAlive);
+      ws.on("message", markAlive);
     }
     hooks.callHook("open", peer); // ws is already open
     ws.on("message", (data: unknown, isBinary: boolean) => {
@@ -139,14 +123,15 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
     });
   });
 
-  // Single shared sweep for all peers rather than a timer per connection.
+  // Single shared idle sweep for all peers rather than a timer per connection.
   // Terminating a dead peer destroys its socket, which makes `ws` emit
   // `'close'` (code 1006) → our `close` handler → the `close` hook fires, so
   // downstream teardown (e.g. `createWebSocketProxy` closing its upstream) runs
-  // through the exact same path as any other disconnect.
-  let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
-  if (heartbeatInterval > 0) {
-    heartbeatTimer = setInterval(() => {
+  // through the exact same path as any other disconnect. A dead peer is
+  // detected within one-to-two `idleTimeout` intervals.
+  let idleTimer: ReturnType<typeof setInterval> | undefined;
+  if (idleTimeoutMs > 0) {
+    idleTimer = setInterval(() => {
       for (const client of wss.clients) {
         const ws = client as HeartbeatWS;
         if (ws._isAlive === false) {
@@ -160,14 +145,14 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
           // socket may have raced into CLOSING between the sweep and the ping
         }
       }
-    }, heartbeatInterval);
-    // Don't let the heartbeat keep an otherwise-idle process alive.
-    heartbeatTimer.unref?.();
+    }, idleTimeoutMs);
+    // Don't let the sweep keep an otherwise-idle process alive.
+    idleTimer.unref?.();
     // Stop sweeping once the server is gone.
     wss.on("close", () => {
-      if (heartbeatTimer) {
-        clearInterval(heartbeatTimer);
-        heartbeatTimer = undefined;
+      if (idleTimer) {
+        clearInterval(idleTimer);
+        idleTimer = undefined;
       }
     });
   }
@@ -184,9 +169,9 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
   return {
     ...baseUtils,
     close: async (code, reason) => {
-      if (heartbeatTimer) {
-        clearInterval(heartbeatTimer);
-        heartbeatTimer = undefined;
+      if (idleTimer) {
+        clearInterval(idleTimer);
+        idleTimer = undefined;
       }
       await baseUtils.close(code, reason);
     },

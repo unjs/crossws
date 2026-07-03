@@ -46,6 +46,11 @@ const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
   return {
     ...baseUtils,
     websocket: {
+      // Map the shared `idleTimeout` (seconds) onto uWebSockets' native option.
+      // uWS auto-sends keepalive pings (`sendPingsAutomatically` defaults on)
+      // and closes a connection idle beyond this. An explicit `idleTimeout` in
+      // `options.uws` wins (spread last).
+      ...(options.idleTimeout === undefined ? {} : { idleTimeout: options.idleTimeout }),
       ...options.uws,
       close(ws, code, message) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);

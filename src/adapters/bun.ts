@@ -58,6 +58,11 @@ const bunAdapter: Adapter<BunAdapter, BunOptions> = (options = {}) => {
       }
     },
     websocket: {
+      // Map the shared `idleTimeout` (seconds) onto Bun's native option. Bun
+      // auto-sends keepalive pings (`sendPings` defaults to `true`) and closes
+      // a connection idle beyond this, so half-open sockets can't leak. Left
+      // to Bun's default (~120s) when unset.
+      ...(options.idleTimeout === undefined ? {} : { idleTimeout: options.idleTimeout }),
       message: (ws, message) => {
         const peers = getPeers(globalPeers, ws.data.namespace);
         const peer = getPeer(ws, peers, baseUtils.sync);
