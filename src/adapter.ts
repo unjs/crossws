@@ -211,9 +211,12 @@ export interface AdapterOptions {
    *
    * Implemented per runtime, but with a single consistent knob:
    * - **Node** — the `ws` library has no built-in liveness, so crossws pings
-   *   each peer on this interval and terminates any that miss the pong.
+   *   each peer on this interval and terminates any that miss the pong. Honors
+   *   sub-second (fractional) values.
    * - **Bun / Deno / uWebSockets / Bunny** — mapped to the runtime's native
-   *   WebSocket idle timeout, which also auto-sends keepalive pings.
+   *   WebSocket idle timeout, which also auto-sends keepalive pings. These
+   *   runtimes take **whole seconds**, so a fractional value is rounded down —
+   *   a value below `1` may become `0` and disable liveness there; use `>= 1`.
    *
    * Terminated peers surface through the normal `close` hook (Node reports
    * code `1006`), so any `close`/`error` teardown — including
@@ -232,8 +235,9 @@ export interface AdapterOptions {
 
 /**
  * Default {@link AdapterOptions.idleTimeout} (seconds), applied consistently by
- * every adapter. 30s stays under the common ~60s intermediary idle timeout and
- * matches Deno's native default and Socket.IO's keepalive range.
+ * every adapter. 30s stays under the common ~60s intermediary (reverse-proxy /
+ * load-balancer) idle timeout while still reclaiming dead sockets promptly, and
+ * sits within Socket.IO's keepalive range.
  */
 export const DEFAULT_IDLE_TIMEOUT = 30;
 

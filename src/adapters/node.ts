@@ -22,7 +22,7 @@ type AugmentedReq = IncomingMessage & {
   _namespace: string;
 };
 
-// `ws` instance tagged with the heartbeat liveness flag (see `heartbeatInterval`).
+// `ws` instance tagged with the heartbeat liveness flag (see the idle sweep below).
 type HeartbeatWS = WebSocketT & { _isAlive?: boolean };
 
 export interface NodeAdapter extends AdapterInstance {
@@ -61,14 +61,23 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       ...(options.serverOptions as any),
     }) as WebSocketServer);
 
+  // Sockets crossws opened through this adapter. We track them ourselves rather
+  // than read `wss.clients` so the idle sweep and `closeAll` (a) never touch
+  // foreign connections on a shared/user-supplied `wss`, and (b) don't crash
+  // when `clientTracking` is disabled — which leaves `wss.clients` `undefined`.
+  const liveSockets = new Set<HeartbeatWS>();
+
   // `idleTimeout` is configured in seconds (consistent with the Bun/Deno/uWS
   // adapters); `ws` has no native liveness, so we emulate it with a ping sweep.
   // Defaults to 30s so half-open connections can't leak out of the box; `0`
-  // opts out. The sweep runs at half the timeout: a peer is pinged at one tick
-  // and, if it hasn't answered (or sent anything) by the next, terminated — so
-  // a dead socket is caught within ~`idleTimeout`, matching the native adapters.
+  // opts out. The sweep runs once per `idleTimeout`: a peer is pinged at one
+  // tick and, if it hasn't answered (or sent anything) by the next, terminated.
+  // Giving a peer a full interval to reply means a live-but-slow connection
+  // (high-latency mobile/satellite link) is never dropped, matching the native
+  // runtimes, which likewise close only after a full idle window; a dead socket
+  // is caught within ~1–2×`idleTimeout`.
   const idleTimeoutMs = (options.idleTimeout ?? DEFAULT_IDLE_TIMEOUT) * 1000;
-  const sweepMs = Math.max(1, Math.floor(idleTimeoutMs / 2));
+  const sweepMs = Math.max(1, Math.floor(idleTimeoutMs));
 
   wss.on("connection", (ws, nodeReq: AugmentedReq) => {
     const request = new NodeReqProxy(nodeReq);
@@ -82,6 +91,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       sync: baseUtils.sync,
     });
     peers.add(peer);
+    liveSockets.add(ws as HeartbeatWS);
     if (idleTimeoutMs > 0) {
       // Standard `ws` liveness pattern: `_isAlive` is reset to `true` on any
       // inbound traffic (pong, message, ping) and on connect, and the idle
@@ -120,6 +130,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
     socket?.on("drain", onDrain);
     ws.on("close", (code: number, reason: Buffer) => {
       peers.delete(peer);
+      liveSockets.delete(ws as HeartbeatWS);
       socket?.off("drain", onDrain);
       hooks.callHook("close", peer, {
         code,
@@ -134,17 +145,22 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
   // downstream teardown (e.g. `createWebSocketProxy` closing its upstream) runs
   // through the exact same path as any other disconnect.
   let idleTimer: ReturnType<typeof setInterval> | undefined;
+  const stopSweep = () => {
+    if (idleTimer) {
+      clearInterval(idleTimer);
+      idleTimer = undefined;
+    }
+  };
   if (idleTimeoutMs > 0) {
     idleTimer = setInterval(() => {
-      for (const client of wss.clients) {
-        const ws = client as HeartbeatWS;
+      for (const ws of liveSockets) {
         if (ws._isAlive === false) {
-          client.terminate();
+          ws.terminate();
           continue;
         }
         ws._isAlive = false;
         try {
-          client.ping();
+          ws.ping();
         } catch {
           // socket may have raced into CLOSING between the sweep and the ping
         }
@@ -153,12 +169,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
     // Don't let the sweep keep an otherwise-idle process alive.
     idleTimer.unref?.();
     // Stop sweeping once the server is gone.
-    wss.on("close", () => {
-      if (idleTimer) {
-        clearInterval(idleTimer);
-        idleTimer = undefined;
-      }
-    });
+    wss.on("close", stopSweep);
   }
 
   wss.on("headers", (outgoingHeaders, req) => {
@@ -173,10 +184,7 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
   return {
     ...baseUtils,
     close: async (code, reason) => {
-      if (idleTimer) {
-        clearInterval(idleTimer);
-        idleTimer = undefined;
-      }
+      stopSweep();
       await baseUtils.close(code, reason);
     },
     handleUpgrade: async (nodeReq, socket, head, webRequest) => {
@@ -203,11 +211,11 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       });
     },
     closeAll: (code, data, force) => {
-      for (const client of wss.clients) {
+      for (const ws of liveSockets) {
         if (force) {
-          client.terminate();
+          ws.terminate();
         } else {
-          client.close(code, data);
+          ws.close(code, data);
         }
       }
     },

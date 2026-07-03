@@ -124,6 +124,49 @@ describe("node (idleTimeout terminates unresponsive peers)", () => {
   });
 });
 
+// Regression: with `clientTracking: false` (or a user-supplied `wss` created
+// that way), `ws` leaves `wss.clients` `undefined`. The idle sweep — default-on
+// since `idleTimeout` defaults to 30 — used to iterate `wss.clients` and threw
+// `TypeError: undefined is not iterable` every tick. crossws now tracks its own
+// sockets, so the sweep still detects and terminates dead peers without crashing.
+describe("node (idleTimeout with clientTracking disabled)", () => {
+  let server: Server;
+  let url: string;
+  let ws: ReturnType<typeof nodeAdapter>;
+
+  beforeAll(async () => {
+    ws = nodeAdapter({
+      idleTimeout: 0.04, // seconds (40ms) — fast sweep for the test
+      serverOptions: { clientTracking: false },
+    });
+    server = createServer((_req, res) => res.end("ok"));
+    server.on("upgrade", ws.handleUpgrade);
+    const port = await getRandomPort("localhost");
+    url = `ws://localhost:${port}/`;
+    await new Promise<void>((resolve) => server.listen(port, resolve));
+    await waitForPort(port);
+  });
+
+  afterAll(async () => {
+    await ws.close();
+    server.close();
+  });
+
+  test("sweep terminates a silent peer without touching wss.clients", async () => {
+    const dead = new WebSocket(url, { autoPong: false });
+    const deadClosed = new Promise<number>((resolve) => dead.on("close", (code) => resolve(code)));
+    await new Promise((resolve) => dead.on("open", resolve));
+
+    const closeCode = await Promise.race([
+      deadClosed,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("dead peer was not terminated")), 1000),
+      ),
+    ]);
+    expect(closeCode).toBe(1006);
+  });
+});
+
 // Regression: `NodePeer._publish` derived `isBinary` from the raw payload, so a
 // non-string value (a plain object, which `toBufferLike` serializes to a JSON
 // string) was broadcast as a *binary* frame. The `_publish` fan-out path is only
