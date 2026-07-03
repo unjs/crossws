@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.4.9
+
+[compare changes](https://github.com/h3js/crossws/compare/v0.4.8...v0.4.9)
+
+### 🚀 Enhancements
+
+- **server:** Default `resolve` to app fetch `.crossws` ([#200](https://github.com/h3js/crossws/pull/200))
+- Application-level ping/pong hooks and peer.ping() ([#202](https://github.com/h3js/crossws/pull/202))
+- Opt-in WebSocket subprotocol negotiation ([#203](https://github.com/h3js/crossws/pull/203))
+
+### 🩹 Fixes
+
+- Detect half-open connections via a consistent `idleTimeout` option ([#201](https://github.com/h3js/crossws/pull/201))
+
+### 📖 Documentation
+
+- Improvements ([13af6ed](https://github.com/h3js/crossws/commit/13af6ed))
+
+### ❤️ Contributors
+
+- Pi0x <x@pi0.io>
+- Pooya Parsa ([@pi0](https://github.com/pi0))
+
 ## v0.4.8
 
 [compare changes](https://github.com/h3js/crossws/compare/v0.4.7...v0.4.8)
