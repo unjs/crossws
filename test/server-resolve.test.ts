@@ -7,7 +7,7 @@ import { defaultResolve } from "../src/server/_resolve.ts";
 import { AdapterHookable } from "../src/hooks.ts";
 import type { Server } from "srvx";
 import type { Hooks } from "../src/hooks.ts";
-import type { Peer } from "../src/peer.ts";
+import type { Peer, PeerContext } from "../src/peer.ts";
 import type { Message } from "../src/message.ts";
 import type { WSOptions } from "../src/server/_types.ts";
 
@@ -214,6 +214,41 @@ test("cross-provider: resolve runs once per connection, not per message", async 
   expect(resolveCalls).toBe(2);
 });
 
+test("cross-provider: upgrade + peer events share a single resolve via context", async () => {
+  // Real adapters give the peer a *different* `request` object than the upgrade
+  // request (e.g. deno snapshots it, node wraps a fresh proxy), so the upgrade
+  // event and later peer events would resolve twice if keyed by request. They
+  // are keyed by the shared `context` object instead — this asserts exactly one
+  // resolve spans the whole connection.
+  let resolveCalls = 0;
+  const hooks = new AdapterHookable({
+    resolve: () => {
+      resolveCalls++;
+      return { upgrade() {}, open() {}, message() {}, close() {} };
+    },
+  });
+  const msg = (text: string) => ({ text: () => text }) as unknown as Message;
+
+  // Upgrade seeds the cache against the returned `context`.
+  const upgradeReq = new Request("http://localhost/") as Request & { context?: PeerContext };
+  const { context } = await hooks.upgrade(upgradeReq);
+  expect(resolveCalls).toBe(1);
+
+  // Peer carries the SAME context but a DIFFERENT request object.
+  const peer = {
+    request: new Request("http://localhost/snapshot"),
+    context,
+  } as unknown as Peer;
+  await hooks.callHook("open", peer);
+  for (let i = 0; i < 10; i++) {
+    await hooks.callHook("message", peer, msg(`m${i}`));
+  }
+  await hooks.callHook("close", peer, {});
+
+  // Still one — the upgrade's resolve was reused for every peer event.
+  expect(resolveCalls).toBe(1);
+});
+
 test("cross-provider: default fetch resolver is not invoked per message", async () => {
   let fetchCalls = 0;
   const port = await getRandomPort("localhost");
@@ -236,17 +271,15 @@ test("cross-provider: default fetch resolver is not invoked per message", async 
   const client = new WebSocket(`ws://127.0.0.1:${port}/`);
   await once(client, "open");
 
-  // Drive one message so the connection is fully resolved, then snapshot.
-  client.send("m0");
-  await once(client, "message");
-  const callsAfterFirst = fetchCalls;
-
-  // Many more messages must NOT trigger further fetch/resolve calls.
-  for (let i = 1; i <= 20; i++) {
+  // Drive many messages — none must trigger an additional fetch/resolve.
+  for (let i = 0; i <= 20; i++) {
     client.send(`m${i}`);
     await once(client, "message");
   }
-  expect(fetchCalls).toBe(callsAfterFirst);
+
+  // Exactly one fetch served the whole connection (the upgrade resolve, reused
+  // for open + every message via the shared `context` key).
+  expect(fetchCalls).toBe(1);
 
   client.close();
   await once(client, "close");

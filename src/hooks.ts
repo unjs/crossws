@@ -8,11 +8,13 @@ export class AdapterHookable {
 
   // Memoized `resolve` result per connection. `resolve` may be expensive — the
   // default `crossws/server` resolver invokes the app's `fetch` handler — so it
-  // must run at most **once per connection**, not on every `callHook` (i.e. not
-  // on every message). The upgrade request and each peer's `request` identity
-  // are stable for the lifetime of a connection, so the resolved hooks are
-  // cached against that object and reused for every subsequent event. Keyed
-  // weakly so entries are released when the request/peer is garbage collected.
+  // must run **exactly once per connection**, not on every `callHook` (i.e. not
+  // on every message). The cache is keyed by the connection's `context` object,
+  // which `upgrade()` creates and every adapter re-exposes verbatim as
+  // `peer.context`. That single shared identity spans both the `upgrade` event
+  // and every later peer event, so one `resolve` call serves the whole
+  // connection. Keyed weakly so entries are released when the connection is
+  // garbage collected.
   #resolveCache = new WeakMap<object, MaybePromise<Partial<Hooks> | undefined>>();
 
   constructor(options?: AdapterOptions) {
@@ -23,6 +25,10 @@ export class AdapterHookable {
     name: N,
     arg1: Parameters<Hooks[N]>[0],
     arg2?: Parameters<Hooks[N]>[1],
+    // The connection's `context` object, used as the per-connection cache key.
+    // Passed explicitly by `upgrade()` (no peer exists yet); for peer events it
+    // is derived from `peer.context`, which is the same object.
+    connection?: object,
   ): MaybePromise<ReturnType<Hooks[N]>> {
     // Call global hook first
     const globalHook = this.options.hooks?.[name];
@@ -33,15 +39,16 @@ export class AdapterHookable {
       return globalPromise as any; // Fast path: no resolver configured
     }
 
-    // Resolve hooks for the connection, memoized by the stable request/peer
+    // Resolve hooks for the connection, memoized by the shared `context`
     // identity so `resolve` runs once per connection instead of per event.
     const request = (arg1 as Peer).request || arg1;
+    const cacheKey = connection || (arg1 as Peer).context || request;
     let resolveHooksPromise: MaybePromise<Partial<Hooks> | undefined>;
-    if (this.#resolveCache.has(request)) {
-      resolveHooksPromise = this.#resolveCache.get(request);
+    if (this.#resolveCache.has(cacheKey)) {
+      resolveHooksPromise = this.#resolveCache.get(cacheKey);
     } else {
       resolveHooksPromise = resolve(request);
-      this.#resolveCache.set(request, resolveHooksPromise);
+      this.#resolveCache.set(cacheKey, resolveHooksPromise);
     }
     if (!resolveHooksPromise) {
       return globalPromise as any; // Fast path: no hooks to resolve
@@ -72,7 +79,14 @@ export class AdapterHookable {
     const context = request.context || {};
 
     try {
-      const res = await this.callHook("upgrade", request as Request & { context?: PeerContext });
+      // Seed the per-connection resolve cache against `context` so every later
+      // peer event on this connection reuses this single `resolve` call.
+      const res = await this.callHook(
+        "upgrade",
+        request as Request & { context?: PeerContext },
+        undefined,
+        context,
+      );
       if (!res) {
         return { context, namespace };
       }
