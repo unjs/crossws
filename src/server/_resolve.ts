@@ -44,7 +44,8 @@ export function defaultResolve(server: Server, wsOpts: WSOptions): WSOptions["re
     throw new Error("[crossws] server has no fetch handler to resolve WebSocket hooks from");
   }
 
-  return (req) => Promise.resolve(fetch(req)).then((res) => hooksFromFetchResult(res));
+  return (req) =>
+    Promise.resolve(fetch(req)).then((res) => hooksFromFetchResult(res) as Partial<Hooks>);
 }
 
 /**
@@ -57,19 +58,32 @@ export function defaultResolve(server: Server, wsOpts: WSOptions): WSOptions["re
  * - a plain `{ crossws, headers }` object, where `headers` are applied to the
  *   WebSocket handshake response.
  */
-function hooksFromFetchResult(res: unknown): Partial<Hooks> {
+function hooksFromFetchResult(res: unknown): Partial<Hooks> | undefined {
   const crossws = (res as { crossws?: Partial<Hooks> } | undefined)?.crossws;
 
   if (res instanceof Response) {
-    // Only `.crossws` is consumed; release the rest of the response so a
-    // streaming/proxied body on the upgrade path isn't leaked per connection.
+    if (crossws) {
+      // Hooks attached — upgrade with them; the response body is unused, so
+      // release it (avoids leaking a streaming/proxied body per connection).
+      res.body?.cancel().catch(() => {});
+      return crossws;
+    }
+    // No hooks attached. Render an error/redirect response (send it to the
+    // client and fail the handshake) instead of silently upgrading a
+    // handler-less socket — e.g. an app returning
+    // `new Response("Unauthorized", { status: 401 })` on the upgrade path.
+    if (!res.ok) {
+      return { upgrade: () => res };
+    }
+    // A plain 2xx response without hooks: the app didn't opt into WebSockets for
+    // this request; upgrade with no hooks and release the body.
     res.body?.cancel().catch(() => {});
-    return crossws as Partial<Hooks>;
+    return undefined;
   }
 
   const headers = (res as { headers?: HeadersInit } | undefined)?.headers;
   if (!headers) {
-    return crossws as Partial<Hooks>;
+    return crossws;
   }
 
   // Apply the shortcut `headers` to the handshake by composing an `upgrade`

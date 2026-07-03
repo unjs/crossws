@@ -363,6 +363,25 @@ test("cross-provider: default fetch resolver is not invoked per message", async 
   await once(client, "close");
 });
 
+test("a non-ok app fetch Response is rendered (upgrade rejected)", async () => {
+  // An app returning e.g. `new Response("Unauthorized", { status: 401 })` on the
+  // upgrade path must fail the handshake and send that response, not silently
+  // open a handler-less socket.
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: () => new Response("Unauthorized", { status: 401 }),
+    websocket: {}, // default resolver
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  const [error] = await once(client, "error");
+  expect((error as Error).message).toContain("401");
+});
+
 test("a synchronously throwing app fetch fails the handshake cleanly", async () => {
   // The default resolver calls the app `fetch` on upgrade. A fetch that throws
   // *synchronously* must not escape as an uncaught exception nor hang the
