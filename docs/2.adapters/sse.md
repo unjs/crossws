@@ -62,6 +62,39 @@ async fetch(request) {
 }
 ```
 
+### Using with Express or other Node.js frameworks
+
+The SSE adapter's `ws.fetch` is a Web-standard fetch handler: it takes a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and returns a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response). Node.js frameworks like [Express](https://expressjs.com/) instead work with the raw Node.js `(req, res)` style, so you need a small bridge to convert between the two.
+
+Rather than manually converting streams with `Readable.toWeb`/`Readable.fromWeb` and copying over status/headers by hand, use the [`toNodeHandler`](https://srvx.h3.dev/guide/node) helper from [srvx](https://srvx.h3.dev/), which turns any Web-standard fetch handler into a plain `(req, res)` Node.js handler:
+
+```js
+import express from "express";
+import { toNodeHandler } from "srvx/node";
+import sseAdapter from "crossws/adapters/sse";
+
+const ws = sseAdapter({
+  hooks: {
+    /* ... */
+  },
+});
+
+const app = express();
+
+app.use((req, res, next) => {
+  if (
+    req.headers.accept === "text/event-stream" ||
+    req.headers["x-crossws-id"]
+  ) {
+    return toNodeHandler((request) => ws.fetch(request))(req, res);
+  }
+  next();
+});
+```
+
+> [!NOTE]
+> This is not specific to Express: `toNodeHandler` only needs the raw Node.js `req`/`res` objects, so the same pattern works for any framework whose handler ultimately exposes them — Fastify's `request.raw`/`reply.raw`, NestJS running on top of its Express or Fastify adapter, or a plain `node:http` server.
+
 ### Client side
 
 In order to make communication with server, we need a special `WebsocketSSE` client.
