@@ -1,4 +1,4 @@
-import type { Hooks, ResolveHooks } from "./hooks.ts";
+import type { Hooks, MaybePromise, ResolveHooks } from "./hooks.ts";
 import type { Peer } from "./peer.ts";
 import type { SyncAdapter, SyncDriver, SyncMessage } from "./sync.ts";
 import { serializeMessage } from "./utils.ts";
@@ -186,6 +186,32 @@ export interface AdapterOptions {
   resolve?: ResolveHooks;
   getNamespace?: (request: Request) => string;
   hooks?: Partial<Hooks>;
+
+  /**
+   * Select the WebSocket subprotocol to accept during the handshake.
+   *
+   * Browsers that open `new WebSocket(url, protocols)` send their offer in the
+   * `Sec-WebSocket-Protocol` request header and **reject the connection** if
+   * the server's `101` response doesn't echo one of the offered values back.
+   * By default crossws negotiates nothing (a server never claims to speak a
+   * protocol the app didn't opt into), so supply this to accept one.
+   *
+   * Called with the set of subprotocols the client offered and the upgrade
+   * request. Return the single subprotocol to accept (must be one of the
+   * offered values), or `false`/`undefined` to accept none. Only invoked when
+   * the client actually offered at least one subprotocol.
+   *
+   * This is the global default; the {@link Hooks.upgrade} hook may return
+   * `{ protocol }` to override it per connection.
+   *
+   * @example
+   * handleProtocols: (protocols) =>
+   *   protocols.has("graphql-transport-ws") ? "graphql-transport-ws" : false
+   */
+  handleProtocols?: (
+    protocols: Set<string>,
+    request: Request,
+  ) => MaybePromise<string | false | null | undefined>;
   /**
    * Optional sync backplane to relay pub/sub between multiple crossws
    * instances (e.g. across regions/processes). Opt-in: when absent, pub/sub

@@ -87,6 +87,32 @@ export function wsTests(getURL: () => string, opts: WSTestOpts): void {
     }
   });
 
+  // Negotiate via the per-connection `protocol` field returned from `upgrade()`.
+  test.runIf(/^(node|bun|deno)$/.test(opts.adapter))(
+    "negotiate sub-protocol via upgrade() protocol field",
+    async () => {
+      const ws = await wsConnect(getURL(), {
+        headers: { "sec-websocket-protocol": "graphql-transport-ws" },
+      });
+      expect(ws.inspector.headers).toMatchObject({
+        "sec-websocket-protocol": "graphql-transport-ws",
+      });
+    },
+  );
+
+  // Negotiate via the global `handleProtocols` adapter option.
+  test.runIf(/^(node|bun|deno)$/.test(opts.adapter))(
+    "negotiate sub-protocol via handleProtocols option",
+    async () => {
+      const ws = await wsConnect(getURL(), {
+        headers: { "sec-websocket-protocol": "chat" },
+      });
+      expect(ws.inspector.headers).toMatchObject({
+        "sec-websocket-protocol": "chat",
+      });
+    },
+  );
+
   test("peer.request (headers, url, remoteAddress)", async () => {
     const ws = await wsConnect(getURL() + "?foo=bar", {
       skip: 1,
