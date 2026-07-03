@@ -73,6 +73,18 @@ const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
         const peer = getPeer(ws, peers);
         hooks.callHook("drain", peer);
       },
+      // uWS auto-replies to an inbound ping with a pong per the spec; these
+      // hooks only observe the control frames, they don't need to answer them.
+      ping(ws, message) {
+        const peers = getPeers(globalPeers, ws.getUserData().namespace);
+        const peer = getPeer(ws, peers, baseUtils.sync);
+        hooks.callHook("ping", peer, new Uint8Array(message));
+      },
+      pong(ws, message) {
+        const peers = getPeers(globalPeers, ws.getUserData().namespace);
+        const peer = getPeer(ws, peers, baseUtils.sync);
+        hooks.callHook("pong", peer, new Uint8Array(message));
+      },
       open(ws) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
         const peer = getPeer(ws, peers, baseUtils.sync);
@@ -216,6 +228,10 @@ class UWSPeer extends Peer<{
 
   override terminate(): void {
     this._internal.uws.close();
+  }
+
+  override ping(data?: uws.RecognizedString): number {
+    return this._internal.uws.ping(data);
   }
 }
 

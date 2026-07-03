@@ -173,6 +173,21 @@ export abstract class Peer<Internal extends AdapterInternal = AdapterInternal> {
     this.close();
   }
 
+  /**
+   * Send an application-level WebSocket ping control frame to the client.
+   *
+   * Pair with the {@link Hooks.pong} hook (e.g. embedding a timestamp in
+   * `data`) to measure round-trip latency, or rely on the {@link Hooks.ping}
+   * hook to observe pings the client sends unprompted.
+   *
+   * **Note:** Not all adapters can send a ping frame; unsupported adapters
+   * warn and no-op. Refer to the
+   * [compatibility table](https://crossws.h3.dev/guide/peer#compatibility).
+   */
+  ping(_data?: unknown): number | void | undefined {
+    console.warn("[crossws] `peer.ping()` is not supported by this adapter.");
+  }
+
   /** Subscribe to a topic */
   subscribe(topic: string): void {
     this._topics.add(topic);

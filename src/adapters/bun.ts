@@ -85,6 +85,18 @@ const bunAdapter: Adapter<BunAdapter, BunOptions> = (options = {}) => {
         const peer = getPeer(ws, peers);
         hooks.callHook("drain", peer);
       },
+      // Bun auto-replies to an inbound ping with a pong per the spec; these
+      // hooks only observe the control frames, they don't need to answer them.
+      ping: (ws, data) => {
+        const peers = getPeers(globalPeers, ws.data.namespace);
+        const peer = getPeer(ws, peers, baseUtils.sync);
+        hooks.callHook("ping", peer, data);
+      },
+      pong: (ws, data) => {
+        const peers = getPeers(globalPeers, ws.data.namespace);
+        const peer = getPeer(ws, peers, baseUtils.sync);
+        hooks.callHook("pong", peer, data);
+      },
     },
   };
 };
@@ -155,5 +167,9 @@ class BunPeer extends Peer<{
 
   override terminate(): void {
     this._internal.ws.terminate();
+  }
+
+  override ping(data?: unknown): number {
+    return this._internal.ws.ping(data as any);
   }
 }

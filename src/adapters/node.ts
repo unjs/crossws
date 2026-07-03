@@ -116,6 +116,14 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       }
       hooks.callHook("message", peer, new Message(data, peer));
     });
+    // `ws` auto-replies to an inbound ping with a pong per the spec; these
+    // hooks only observe the control frames, they don't need to answer them.
+    ws.on("ping", (data: Buffer) => {
+      hooks.callHook("ping", peer, data);
+    });
+    ws.on("pong", (data: Buffer) => {
+      hooks.callHook("pong", peer, data);
+    });
     ws.on("error", (error: Error) => {
       peers.delete(peer);
       hooks.callHook("error", peer, new WSError(error));
@@ -289,6 +297,10 @@ class NodePeer extends Peer<{
 
   override terminate() {
     this._internal.ws.terminate();
+  }
+
+  override ping(data?: unknown): void {
+    this._internal.ws.ping(data);
   }
 }
 

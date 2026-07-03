@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { WebSocket as NodeWebSocket } from "ws";
 import { wsConnect } from "./_utils";
 
 export interface WSTestOpts {
@@ -198,4 +199,72 @@ export function wsTests(getURL: () => string, opts: WSTestOpts): void {
       expect(await ws2.next()).toBe("ping");
     },
   );
+}
+
+/**
+ * Application-level ping/pong control frames aren't reachable through the
+ * standard `WebSocket` API (browsers/undici auto-answer them invisibly to
+ * JS), so — unlike {@link wsTests} — this suite connects with the `ws`
+ * package, which exposes `.ping()`/`.pong()` and the raw `ping`/`pong`
+ * events. Only wired up for adapters that support it (node, uws, bun); refer
+ * to the [compatibility table](https://crossws.h3.dev/guide/peer#compatibility).
+ */
+export function pingPongTests(getURL: () => string): void {
+  // Queues inbound text messages (attached before `open` resolves, so the
+  // fixture's immediate "Welcome ..." message can't be missed in the race
+  // between connecting and a test attaching its own listener) so a test can
+  // skip past it and assert on the next message deterministically.
+  const connect = () => {
+    const client = new NodeWebSocket(getURL());
+    const messages: string[] = [];
+    const waitCallbacks: Record<number, (message: string) => void> = {};
+    let nextIndex = 0;
+    client.on("message", (data) => {
+      const text = data.toString();
+      const index = messages.push(text) - 1;
+      waitCallbacks[index]?.(text);
+      delete waitCallbacks[index];
+    });
+    const next = (): Promise<string> => {
+      const index = nextIndex++;
+      if (index < messages.length) {
+        return Promise.resolve(messages[index]!);
+      }
+      return new Promise((resolve) => {
+        waitCallbacks[index] = resolve;
+      });
+    };
+    return new Promise<{ client: NodeWebSocket; next: () => Promise<string> }>(
+      (resolve, reject) => {
+        client.once("open", () => resolve({ client, next }));
+        client.once("error", reject);
+      },
+    );
+  };
+
+  test("ping hook observes an inbound ping from the client", async () => {
+    const { client, next } = await connect();
+    await next(); // "Welcome ..." from the `open` hook
+    client.ping("client-ping");
+    expect(await next()).toBe("ping-received:client-ping");
+    client.close();
+  });
+
+  test("pong hook observes an inbound pong from the client", async () => {
+    const { client, next } = await connect();
+    await next(); // "Welcome ..." from the `open` hook
+    client.pong("client-pong");
+    expect(await next()).toBe("pong-received:client-pong");
+    client.close();
+  });
+
+  test("peer.ping() sends a ping frame the client receives", async () => {
+    const { client } = await connect();
+    const pingReceived = new Promise<string>((resolve) => {
+      client.once("ping", (data) => resolve(data.toString()));
+    });
+    client.send("ping-me");
+    expect(await pingReceived).toBe("server-ping");
+    client.close();
+  });
 }

@@ -55,11 +55,21 @@ export function createDemo<T extends Adapter<any, any>>(
           });
           break;
         }
+        case "ping-me": {
+          peer.ping("server-ping");
+          break;
+        }
         default: {
           peer.send(msgText);
           peer.publish("chat", msgText);
         }
       }
+    },
+    ping(peer, data) {
+      peer.send(`ping-received:${new TextDecoder().decode(data)}`);
+    },
+    pong(peer, data) {
+      peer.send(`pong-received:${new TextDecoder().decode(data)}`);
     },
     upgrade(req) {
       if (req.url.endsWith("?unauthorized")) {

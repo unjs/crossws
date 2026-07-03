@@ -3,7 +3,16 @@ import type { Server } from "srvx";
 import type { Hooks } from "../hooks";
 import type { WSOptions } from "./_types";
 
-const HOOK_NAMES = ["upgrade", "message", "open", "close", "drain", "error"] as const;
+const HOOK_NAMES = [
+  "upgrade",
+  "message",
+  "open",
+  "close",
+  "drain",
+  "error",
+  "ping",
+  "pong",
+] as const;
 
 // Compile-time guard: if a hook is added to `Hooks` but not listed above, the
 // leftover key is no longer `never`, so this type resolves to a tuple and the
