@@ -1,5 +1,6 @@
 import { serve as srvxServe } from "srvx/cloudflare";
 import adapter from "../adapters/cloudflare";
+import { defaultResolve } from "./_resolve";
 
 import type { Server, ServerPlugin } from "srvx";
 import type { WSOptions, ServerWithWSOptions } from "./_types";
@@ -8,7 +9,7 @@ export function plugin(wsOpts: WSOptions): ServerPlugin {
   return (server) => {
     const ws = adapter({
       hooks: wsOpts,
-      resolve: wsOpts.resolve,
+      resolve: defaultResolve(server, wsOpts),
       ...wsOpts.options?.cloudflare,
     });
     server.options.middleware.unshift((req, next) => {

@@ -1,5 +1,6 @@
 import { serve as srvxServe, NodeRequest } from "srvx/node";
 import adapter from "../adapters/node";
+import { defaultResolve } from "./_resolve";
 
 import type { Server, ServerPlugin } from "srvx";
 import type { WSOptions, ServerWithWSOptions } from "./_types";
@@ -8,8 +9,8 @@ export function plugin(wsOpts: WSOptions): ServerPlugin {
   return (server) => {
     const ws = adapter({
       hooks: wsOpts,
-      resolve: wsOpts.resolve,
-      ...wsOpts.options?.deno,
+      resolve: defaultResolve(server, wsOpts),
+      ...wsOpts.options?.node,
     });
     const originalServe = server.serve;
     server.serve = () => {

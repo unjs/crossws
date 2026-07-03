@@ -10,6 +10,15 @@ import type { SSEOptions } from "../adapters/sse";
 import type { CloudflareOptions } from "../adapters/cloudflare";
 
 export type WSOptions = Partial<Hooks> & {
+  /**
+   * Resolve the WebSocket hooks for an incoming request.
+   *
+   * When omitted, hooks are resolved by calling the server's `fetch` handler
+   * and reading the `crossws` property off the returned `Response`. Provide
+   * `resolve` only to customize routing (e.g. resolve hooks without invoking
+   * the app). The default is skipped when inline hooks are passed directly
+   * (e.g. `ws({ message })`), which run with zero per-event overhead instead.
+   */
   resolve?: (req: ServerRequest) => Partial<Hooks> | Promise<Partial<Hooks>>;
   options?: {
     bun?: BunOptions;

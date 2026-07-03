@@ -1,19 +1,20 @@
 import { serve as srvxServe } from "srvx";
 import adapter from "../adapters/sse";
+import { defaultResolve } from "./_resolve";
 
 import type { Server, ServerPlugin } from "srvx";
 import type { WSOptions, ServerWithWSOptions } from "./_types";
 
 export function plugin(wsOpts: WSOptions): ServerPlugin {
-  const ws = adapter({
-    hooks: wsOpts,
-    resolve: wsOpts.resolve,
-    ...wsOpts.options?.sse,
-  });
   console.warn(
     "[crossws] Using SSE adapter for WebSocket support. This requires a custom WebSocket client (https://crossws.h3.dev/adapters/sse).",
   );
   return (server) => {
+    const ws = adapter({
+      hooks: wsOpts,
+      resolve: defaultResolve(server, wsOpts),
+      ...wsOpts.options?.sse,
+    });
     server.options.middleware.unshift((req, next) => {
       if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
         return ws.fetch(req);
