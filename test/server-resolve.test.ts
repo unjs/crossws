@@ -4,8 +4,11 @@ import { afterEach, beforeEach, expect, test } from "vitest";
 import WebSocket from "ws";
 import { serve } from "../src/server/node.ts";
 import { defaultResolve } from "../src/server/_resolve.ts";
+import { AdapterHookable } from "../src/hooks.ts";
 import type { Server } from "srvx";
 import type { Hooks } from "../src/hooks.ts";
+import type { Peer } from "../src/peer.ts";
+import type { Message } from "../src/message.ts";
 import type { WSOptions } from "../src/server/_types.ts";
 
 type ServeReturn = ReturnType<typeof serve>;
@@ -171,6 +174,82 @@ test("defaultResolve reads .crossws off the fetch Response", async () => {
   expect(typeof resolve).toBe("function");
   const req = new Request("http://localhost/");
   await expect(resolve!(req as never)).resolves.toBe(hooks);
+});
+
+// `AdapterHookable.callHook` is the single code path EVERY runtime adapter
+// (node/bun/deno/cloudflare/bunny/sse/uws) funnels its events through, so a
+// resolver-invocation count asserted here holds for all providers. This is the
+// core guarantee: `resolve` must not run per message.
+test("cross-provider: resolve runs once per connection, not per message", async () => {
+  let resolveCalls = 0;
+  const hooks = new AdapterHookable({
+    resolve: () => {
+      resolveCalls++;
+      return {
+        open() {},
+        message() {},
+        close() {},
+      };
+    },
+  });
+
+  // One connection = one stable `peer.request` identity, reused across events.
+  const request = new Request("http://localhost/");
+  const peer = { request } as unknown as Peer;
+  const msg = (text: string) => ({ text: () => text }) as unknown as Message;
+
+  await hooks.callHook("open", peer);
+  for (let i = 0; i < 20; i++) {
+    await hooks.callHook("message", peer, msg(`m${i}`));
+  }
+  await hooks.callHook("close", peer, {});
+
+  // 20 messages + open + close = 22 events, but resolve ran only once.
+  expect(resolveCalls).toBe(1);
+
+  // A second, distinct connection resolves independently (once).
+  const peer2 = { request: new Request("http://localhost/other") } as unknown as Peer;
+  await hooks.callHook("open", peer2);
+  await hooks.callHook("message", peer2, msg("hi"));
+  expect(resolveCalls).toBe(2);
+});
+
+test("cross-provider: default fetch resolver is not invoked per message", async () => {
+  let fetchCalls = 0;
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: (req) => {
+      fetchCalls++;
+      return fetchWithCrossws({
+        message(peer, message) {
+          peer.send(`echo:${message.text()}`);
+        },
+      })(req);
+    },
+    websocket: {}, // default resolver
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  await once(client, "open");
+
+  // Drive one message so the connection is fully resolved, then snapshot.
+  client.send("m0");
+  await once(client, "message");
+  const callsAfterFirst = fetchCalls;
+
+  // Many more messages must NOT trigger further fetch/resolve calls.
+  for (let i = 1; i <= 20; i++) {
+    client.send(`m${i}`);
+    await once(client, "message");
+  }
+  expect(fetchCalls).toBe(callsAfterFirst);
+
+  client.close();
+  await once(client, "close");
 });
 
 test("defaultResolve throws a clear error when fetch is missing", () => {

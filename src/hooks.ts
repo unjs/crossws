@@ -6,6 +6,15 @@ import type { Message } from "./message.ts";
 export class AdapterHookable {
   options: AdapterOptions;
 
+  // Memoized `resolve` result per connection. `resolve` may be expensive — the
+  // default `crossws/server` resolver invokes the app's `fetch` handler — so it
+  // must run at most **once per connection**, not on every `callHook` (i.e. not
+  // on every message). The upgrade request and each peer's `request` identity
+  // are stable for the lifetime of a connection, so the resolved hooks are
+  // cached against that object and reused for every subsequent event. Keyed
+  // weakly so entries are released when the request/peer is garbage collected.
+  #resolveCache = new WeakMap<object, MaybePromise<Partial<Hooks> | undefined>>();
+
   constructor(options?: AdapterOptions) {
     this.options = options || {};
   }
@@ -19,9 +28,21 @@ export class AdapterHookable {
     const globalHook = this.options.hooks?.[name];
     const globalPromise = globalHook?.(arg1 as any, arg2 as any);
 
-    // Resolve hooks for request
+    const resolve = this.options.resolve;
+    if (!resolve) {
+      return globalPromise as any; // Fast path: no resolver configured
+    }
+
+    // Resolve hooks for the connection, memoized by the stable request/peer
+    // identity so `resolve` runs once per connection instead of per event.
     const request = (arg1 as Peer).request || arg1;
-    const resolveHooksPromise = this.options.resolve?.(request);
+    let resolveHooksPromise: MaybePromise<Partial<Hooks> | undefined>;
+    if (this.#resolveCache.has(request)) {
+      resolveHooksPromise = this.#resolveCache.get(request);
+    } else {
+      resolveHooksPromise = resolve(request);
+      this.#resolveCache.set(request, resolveHooksPromise);
+    }
     if (!resolveHooksPromise) {
       return globalPromise as any; // Fast path: no hooks to resolve
     }
