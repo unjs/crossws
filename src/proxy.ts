@@ -87,6 +87,24 @@ export interface WebSocketProxyOptions {
   connectTimeout?: number;
 
   /**
+   * Milliseconds of **client→proxy** inactivity after which both the peer
+   * and the upstream connection are closed (peer close code `1001`).
+   *
+   * The timer is reset by every inbound frame the client sends and is
+   * unaffected by upstream→client traffic. This is driven by real application frames, so
+   * it reclaims a connection whose client vanished behind such an
+   * intermediary and left the upstream socket dangling.
+   *
+   * Only enable this for protocols where the client is expected to send
+   * traffic periodically (e.g. a heartbeat / keepalive message). For
+   * server-push-only protocols where the client may be legitimately silent,
+   * leave it disabled or it will close idle-but-live connections.
+   *
+   * @default 0 (disabled)
+   */
+  clientIdleTimeout?: number;
+
+  /**
    * Custom `WebSocket` constructor used to dial the upstream. Useful when
    * the runtime does not expose a global `WebSocket` (Node.js < 22) or
    * when you want to use a different client implementation (e.g. `ws`,
@@ -188,6 +206,7 @@ export function createWebSocketProxy(
   }
 
   const upstreams = new Map<string, UpstreamState>();
+  const clientIdleTimeoutMs = options.clientIdleTimeout ?? 0;
 
   return {
     upgrade(request) {
@@ -219,6 +238,8 @@ export function createWebSocketProxy(
         bufferSize: 0,
         open: false,
         timeout: undefined,
+        idleTimer: undefined,
+        lastActivity: Date.now(),
       };
       upstreams.set(peer.id, state);
 
@@ -231,6 +252,23 @@ export function createWebSocketProxy(
           _cleanupState(upstreams, peer.id, state);
           _safeClose(peer, 1011, "Upstream connect timeout");
         }, timeoutMs);
+      }
+
+      // Client-inactivity watchdog. Re-arms itself for the remaining window
+      // rather than clearing/setting a timer on every inbound frame, so a
+      // chatty client only pays a timestamp write per message.
+      if (clientIdleTimeoutMs > 0) {
+        const checkIdle = () => {
+          if (upstreams.get(peer.id) !== state) return;
+          const remaining = clientIdleTimeoutMs - (Date.now() - state.lastActivity);
+          if (remaining <= 0) {
+            _cleanupState(upstreams, peer.id, state);
+            _safeClose(peer, 1001, "Client idle timeout");
+          } else {
+            state.idleTimer = setTimeout(checkIdle, remaining);
+          }
+        };
+        state.idleTimer = setTimeout(checkIdle, clientIdleTimeoutMs);
       }
 
       let resolved: URL | Promise<URL>;
@@ -260,6 +298,9 @@ export function createWebSocketProxy(
     message(peer, message) {
       const state = upstreams.get(peer.id);
       if (!state) return;
+      // Any inbound client frame is proof of a live client — reset the
+      // inactivity watchdog (the re-arming timer reads this on its next tick).
+      if (clientIdleTimeoutMs > 0) state.lastActivity = Date.now();
       const raw = typeof message.rawData === "string" ? message.rawData : message.uint8Array();
       if (state.open) {
         try {
@@ -294,6 +335,7 @@ export function createWebSocketProxy(
       const state = upstreams.get(peer.id);
       if (!state) return;
       _clearTimeout(state);
+      _clearIdleTimer(state);
       upstreams.delete(peer.id);
       try {
         // `ws` is undefined if the peer closed while an async target was still
@@ -308,6 +350,7 @@ export function createWebSocketProxy(
       const state = upstreams.get(peer.id);
       if (!state) return;
       _clearTimeout(state);
+      _clearIdleTimer(state);
       upstreams.delete(peer.id);
       try {
         state.ws?.close(1011, "Peer error");
@@ -327,6 +370,8 @@ interface UpstreamState {
   bufferSize: number;
   open: boolean;
   timeout: ReturnType<typeof setTimeout> | undefined;
+  idleTimer: ReturnType<typeof setTimeout> | undefined;
+  lastActivity: number;
 }
 
 // Dial the upstream once the target URL is known (synchronously, or after an
@@ -418,6 +463,7 @@ function _cleanupState(
   state: UpstreamState,
 ): void {
   _clearTimeout(state);
+  _clearIdleTimer(state);
   upstreams.delete(id);
   try {
     state.ws?.close();
@@ -430,6 +476,13 @@ function _clearTimeout(state: UpstreamState): void {
   if (state.timeout !== undefined) {
     clearTimeout(state.timeout);
     state.timeout = undefined;
+  }
+}
+
+function _clearIdleTimer(state: UpstreamState): void {
+  if (state.idleTimer !== undefined) {
+    clearTimeout(state.idleTimer);
+    state.idleTimer = undefined;
   }
 }
 
