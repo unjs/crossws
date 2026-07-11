@@ -18,12 +18,14 @@ describe("createWebSocketProxy", () => {
   let limitedProxyServer: Server;
   let badProxyServer: Server;
   let timeoutProxyServer: Server;
+  let idleProxyServer: Server;
   let upstreamURL: string;
   let proxyURL: string;
   let dynamicProxyURL: string;
   let limitedProxyURL: string;
   let badProxyURL: string;
   let timeoutProxyURL: string;
+  let idleProxyURL: string;
   beforeAll(async () => {
     // Upstream echo server (crossws node adapter)
     const upstream = nodeAdapter({
@@ -128,6 +130,20 @@ describe("createWebSocketProxy", () => {
     timeoutProxyURL = `ws://localhost:${timeoutProxyPort}/`;
     await new Promise<void>((resolve) => timeoutProxyServer.listen(timeoutProxyPort, resolve));
     await waitForPort(timeoutProxyPort);
+
+    // Proxy with a short client-inactivity timeout
+    const idleProxy = nodeAdapter({
+      hooks: createWebSocketProxy({
+        target: upstreamURL,
+        clientIdleTimeout: 80,
+      }),
+    });
+    idleProxyServer = createServer((_req, res) => res.end("ok"));
+    idleProxyServer.on("upgrade", idleProxy.handleUpgrade);
+    const idleProxyPort = await getRandomPort("localhost");
+    idleProxyURL = `ws://localhost:${idleProxyPort}/`;
+    await new Promise<void>((resolve) => idleProxyServer.listen(idleProxyPort, resolve));
+    await waitForPort(idleProxyPort);
   });
 
   afterAll(() => {
@@ -137,6 +153,7 @@ describe("createWebSocketProxy", () => {
       limitedProxyServer,
       badProxyServer,
       timeoutProxyServer,
+      idleProxyServer,
       upstreamServer,
     ]) {
       server.closeAllConnections?.();
@@ -450,6 +467,33 @@ describe("createWebSocketProxy", () => {
     await ws.send("aaaaa");
     const event = await closed;
     expect(event.code).toBe(1009);
+  });
+
+  test("closes an idle client with 1001 after clientIdleTimeout", async () => {
+    // The client stays silent after connecting. Upstream→client traffic (the
+    // "welcome" frame) must NOT keep it alive — only client→proxy frames do —
+    // so the inactivity watchdog fires and closes with 1001.
+    const ws = await wsConnect(idleProxyURL, { skip: 1 });
+    const event = await new Promise<CloseEvent>((resolve) => {
+      ws.ws.addEventListener("close", (e) => resolve(e as CloseEvent));
+    });
+    expect(event.code).toBe(1001);
+  });
+
+  test("client traffic resets the inactivity timer", async () => {
+    const ws = await wsConnect(idleProxyURL, { skip: 1 });
+    let closed = false;
+    ws.ws.addEventListener("close", () => {
+      closed = true;
+    });
+    // Each gap is under the 80ms idle window, but the total span is well past
+    // it — the connection must stay open because every send resets the timer.
+    for (let i = 0; i < 4; i++) {
+      await new Promise((r) => setTimeout(r, 40));
+      await ws.send(`ping${i}`);
+      expect(await ws.next()).toBe(`echo:ping${i}`);
+    }
+    expect(closed).toBe(false);
   });
 });
 
