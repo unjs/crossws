@@ -6,3 +6,5 @@ allowBuilds:
   esbuild: false
   sharp: false
   workerd: true
+minimumReleaseAgeExclude:
+  - obuild*
