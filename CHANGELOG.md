@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.4.10
+
+[compare changes](https://github.com/h3js/crossws/compare/v0.4.9...v0.4.10)
+
+### 🚀 Enhancements
+
+- **proxy:** Add `clientIdleTimeout` to reclaim silent clients ([#204](https://github.com/h3js/crossws/pull/204))
+
+### 🏡 Chore
+
+- Update deps ([1d461de](https://github.com/h3js/crossws/commit/1d461de))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](https://github.com/pi0))
+- Pi0x <x@pi0.io>
+
 ## v0.4.9
 
 [compare changes](https://github.com/h3js/crossws/compare/v0.4.8...v0.4.9)
