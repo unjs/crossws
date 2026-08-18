@@ -32,7 +32,7 @@ Deno.serve({ port: 3000 }, (request, info) => {
 ```
 
 ::read-more
-See [`test/fixture/deno.ts`](./test/fixture/deno.ts) for demo and [`src/adapters/deno.ts`](./src/adapters/deno.ts) for implementation.
+See [`test/fixture/deno.ts`](https://github.com/h3js/crossws/blob/main/test/fixture/deno.ts) for demo and [`src/adapters/deno.ts`](https://github.com/h3js/crossws/blob/main/src/adapters/deno.ts) for implementation.
 ::
 
 ## Idle timeout
