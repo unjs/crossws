@@ -114,19 +114,19 @@ class SSEPeer extends Peer<{
 
   constructor(_internal: SSEPeer["_internal"]) {
     super(_internal);
-    _internal.ws.readyState = 0 /* CONNECTING */;
+    _internal.ws.readyState = 0; /* CONNECTING */
     this._sseStream = new ReadableStream({
       start: (controller) => {
-        _internal.ws.readyState = 1 /* OPEN */;
+        _internal.ws.readyState = 1; /* OPEN */
         this._sseStreamController = controller;
         _internal.hooks.callHook("open", this);
       },
       cancel: () => {
-        _internal.ws.readyState = 2 /* CLOSING */;
+        _internal.ws.readyState = 2; /* CLOSING */
         _internal.peers.delete(this);
         _internal.peersMap?.delete(this.id);
         Promise.resolve(this._internal.hooks.callHook("close", this)).finally(() => {
-          _internal.ws.readyState = 3 /* CLOSED */;
+          _internal.ws.readyState = 3; /* CLOSED */
         });
       },
     }).pipeThrough(new TextEncoderStream());

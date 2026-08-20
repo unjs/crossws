@@ -56,13 +56,13 @@ const uwsAdapter: Adapter<UWSAdapter, UWSOptions> = (options = {}) => {
       close(ws, code, message) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
         const peer = getPeer(ws, peers, baseUtils.sync, hooks);
-        ((peer as any)._internal.ws as UwsWebSocketProxy).readyState = 2 /* CLOSING */;
+        ((peer as any)._internal.ws as UwsWebSocketProxy).readyState = 2; /* CLOSING */
         peers.delete(peer);
         hooks.callHook("close", peer, {
           code,
           reason: message?.toString(),
         });
-        ((peer as any)._internal.ws as UwsWebSocketProxy).readyState = 3 /* CLOSED */;
+        ((peer as any)._internal.ws as UwsWebSocketProxy).readyState = 3; /* CLOSED */
       },
       message(ws, message, _isBinary) {
         const peers = getPeers(globalPeers, ws.getUserData().namespace);
@@ -286,7 +286,7 @@ class UWSReqProxy extends StubRequest {
 }
 
 class UwsWebSocketProxy implements Partial<WebSocket> {
-  readyState?: number = 1 /* OPEN */;
+  readyState?: number = 1; /* OPEN */
 
   private _uws: uws.WebSocket<UserData>;
 
