@@ -1,5 +1,5 @@
 // Hooks
-export { defineHooks } from "./hooks.ts";
+export { defineHooks, getWebSocketHooks, kWebSocketHooks, setWebSocketHooks } from "./hooks.ts";
 export type { Hooks, ResolveHooks } from "./hooks.ts";
 
 // Adapter

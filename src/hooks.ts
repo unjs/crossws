@@ -214,6 +214,65 @@ function _parseProtocols(header: string | null | undefined): Set<string> {
   return protocols;
 }
 
+// --- request-attached hooks ---
+
+/**
+ * Registry symbol used to hand WebSocket hooks off to crossws **on the request**.
+ *
+ * This symbol — the literal `Symbol.for("crossws.hooks")` key, not the helpers
+ * below — is the wire format, and is public API. Frameworks that depend on
+ * crossws for *types only* (h3 keeps it an optional peer dependency and has no
+ * runtime import) can write it without importing anything, and because it lives
+ * in the global symbol registry it also crosses duplicate module instances and
+ * realms.
+ *
+ * The request is used rather than the response because a `Response` is routinely
+ * *rebuilt* on its way out of an app — merging a staged header, stripping a HEAD
+ * body, wrapping a stream, `new Response(res.body, res)` in any middleware — and
+ * a rebuilt response carries none of the original's own properties, silently
+ * dropping hooks attached to it. Nothing in that chain replaces the request.
+ *
+ * Honored only by the default resolver of the `crossws/server` plugin; a
+ * user-supplied `resolve` bypasses it entirely.
+ */
+export const kWebSocketHooks: unique symbol = Symbol.for("crossws.hooks");
+
+type HooksCarrier = { [kWebSocketHooks]?: Partial<Hooks> };
+
+/**
+ * Attach WebSocket hooks to an upgrade request, for the default resolver to pick
+ * up after the app's `fetch` handler returns.
+ *
+ * Written to the request object itself and, when the request already carries a
+ * srvx-style `context` bag, into that too — frameworks that derive a new request
+ * internally (e.g. mounting a sub-app under a base path) usually propagate the
+ * context reference, so the hooks survive the derivation.
+ *
+ * The direct write is guarded: ESM is strict mode, so assigning to a
+ * non-extensible request would *throw* rather than fail quietly, turning a lost
+ * hooks bug into a dead upgrade. If a runtime ever hands out a frozen request,
+ * the attach is a no-op and the response channel (`res.crossws`) still applies.
+ */
+export function setWebSocketHooks(request: Request, hooks: Partial<Hooks>): void {
+  try {
+    (request as HooksCarrier)[kWebSocketHooks] = hooks;
+  } catch {
+    // non-extensible request — fall through to the context bag / response channel
+  }
+  const context = (request as { context?: HooksCarrier }).context;
+  if (context) {
+    context[kWebSocketHooks] = hooks;
+  }
+}
+
+/** Read back hooks attached with {@link setWebSocketHooks} (or the raw symbol). */
+export function getWebSocketHooks(request: Request): Partial<Hooks> | undefined {
+  return (
+    (request as HooksCarrier)[kWebSocketHooks] ??
+    (request as { context?: HooksCarrier }).context?.[kWebSocketHooks]
+  );
+}
+
 // --- types ---
 
 export function defineHooks<T extends Partial<Hooks> = Partial<Hooks>>(hooks: T): T {

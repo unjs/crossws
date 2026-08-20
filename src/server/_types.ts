@@ -14,10 +14,13 @@ export type WSOptions = Partial<Hooks> & {
    * Resolve the WebSocket hooks for an incoming request.
    *
    * When omitted, hooks are resolved by calling the server's `fetch` handler
-   * and reading the `crossws` property off the returned `Response`. Provide
-   * `resolve` only to customize routing (e.g. resolve hooks without invoking
-   * the app). The default is skipped when inline hooks are passed directly
-   * (e.g. `ws({ message })`), which run with zero per-event overhead instead.
+   * and reading them back from either the request (the
+   * `Symbol.for("crossws.hooks")` property, see `setWebSocketHooks`) or the
+   * `crossws` property of the returned `Response`. Provide `resolve` only to
+   * customize routing (e.g. resolve hooks without invoking the app) — a
+   * user-supplied `resolve` bypasses both channels. The default is skipped when
+   * inline hooks are passed directly (e.g. `ws({ message })`), which run with
+   * zero per-event overhead instead.
    */
   resolve?: (req: ServerRequest) => Partial<Hooks> | Promise<Partial<Hooks>>;
   options?: {
@@ -39,7 +42,8 @@ export type WSOptions = Partial<Hooks> & {
  *   send on the WebSocket handshake response.
  *
  * Returning a normal `Response` (no `crossws`) is always valid — the connection
- * simply upgrades without hooks.
+ * simply upgrades without hooks, unless the app attached them to the *request*
+ * instead (`setWebSocketHooks`), which is the rebuild-proof channel.
  */
 export type WSUpgradeResult =
   | (Response & { crossws?: Partial<Hooks> })

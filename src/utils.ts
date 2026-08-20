@@ -90,3 +90,27 @@ export function isPlainObject(value: unknown): boolean {
 
   return true;
 }
+
+// Allocated on the first warning rather than at module load: warnings are the
+// exceptional path, and a healthy app never pays for the `Set` at all.
+let warned: Set<string> | undefined;
+
+/**
+ * Log a warning the first time it is seen, then stay silent.
+ *
+ * Diagnostics on a per-connection path (a rejected upgrade, an unsupported
+ * call) would otherwise repeat for every request — and since a remote client
+ * controls how often that path runs, an unguarded `console.warn` is a log
+ * flood it can trigger at will. Once is enough to surface a misconfiguration.
+ *
+ * The message doubles as the dedupe key, so keep it static rather than
+ * interpolating per-request values into it.
+ */
+export function warnOnce(message: string): void {
+  warned ??= new Set();
+  if (warned.has(message)) {
+    return;
+  }
+  warned.add(message);
+  console.warn(message);
+}

@@ -1,10 +1,16 @@
 import { once } from "node:events";
 import { getRandomPort } from "get-port-please";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import WebSocket from "ws";
 import { serve } from "../src/server/node.ts";
 import { defaultResolve } from "../src/server/_resolve.ts";
-import { AdapterHookable } from "../src/hooks.ts";
+import {
+  AdapterHookable,
+  getWebSocketHooks,
+  kWebSocketHooks,
+  setWebSocketHooks,
+} from "../src/hooks.ts";
+import { StubRequest } from "../src/_request.ts";
 import type { Server } from "srvx";
 import type { Hooks } from "../src/hooks.ts";
 import type { Peer, PeerContext } from "../src/peer.ts";
@@ -418,6 +424,224 @@ test("a rejecting app fetch fails the handshake cleanly", async () => {
   const client = new WebSocket(`ws://127.0.0.1:${port}/`);
   const [error] = await once(client, "error");
   expect(error).toBeInstanceOf(Error);
+});
+
+// --- request channel (`Symbol.for("crossws.hooks")`) ---
+//
+// Hooks attached to a `Response` are lost whenever a layer *rebuilds* it (a
+// staged header, a wrapped stream, `new Response(res.body, res)` in any
+// middleware) — a rebuilt response carries none of the original's own
+// properties. The request is never replaced, so it is the durable channel.
+
+// Simulates a framework that routes to a WebSocket handler (attaching hooks to
+// the request) and whose response is then rebuilt by a middleware, dropping any
+// hooks that were attached to it. This is the exact h3 + `routeRules({ headers })`
+// regression.
+function fetchWithRebuiltResponse(hooks: Partial<Hooks>, status = 426): (req: Request) => Response {
+  return (req) => {
+    setWebSocketHooks(req, hooks);
+    const original = Object.assign(new Response("WebSocket upgrade is required.", { status }), {
+      crossws: hooks,
+    });
+    // A middleware merging a staged header — `crossws` does not survive.
+    return new Response(original.body, {
+      status: original.status,
+      headers: new Headers([...original.headers, ["x-test", "test"]]),
+    });
+  };
+}
+
+test("setWebSocketHooks/getWebSocketHooks round-trip via the registry symbol", () => {
+  const hooks: Partial<Hooks> = { message() {} };
+  const req = new Request("http://localhost/");
+  setWebSocketHooks(req, hooks);
+  // The symbol is the wire format: readable without importing the helpers.
+  expect((req as never as Record<symbol, unknown>)[Symbol.for("crossws.hooks")]).toBe(hooks);
+  expect(kWebSocketHooks).toBe(Symbol.for("crossws.hooks"));
+  expect(getWebSocketHooks(req)).toBe(hooks);
+});
+
+test("setWebSocketHooks also writes the request `context` bag when present", () => {
+  const hooks: Partial<Hooks> = { message() {} };
+  const context: Record<symbol, unknown> = {};
+  const req = Object.assign(new Request("http://localhost/"), { context });
+  setWebSocketHooks(req, hooks);
+  // Frameworks that derive a request internally propagate `context`, so hooks
+  // written there survive the derivation.
+  expect(context[kWebSocketHooks]).toBe(hooks);
+  const derived = Object.assign(new Request("http://localhost/sub"), { context });
+  expect(getWebSocketHooks(derived)).toBe(hooks);
+});
+
+test("setWebSocketHooks does not throw on a non-extensible request", () => {
+  const hooks: Partial<Hooks> = { message() {} };
+  // ESM is strict mode, so an unguarded assignment here would throw a
+  // TypeError and take the whole upgrade down — worse than losing the hooks.
+  const req = Object.preventExtensions(new Request("http://localhost/"));
+  expect(() => setWebSocketHooks(req, hooks)).not.toThrow();
+  expect(getWebSocketHooks(req)).toBeUndefined();
+});
+
+test("defaultResolve recovers hooks from the request when the response was rebuilt", async () => {
+  const hooks: Partial<Hooks> = { message() {} };
+  const server = {
+    options: { fetch: fetchWithRebuiltResponse(hooks) },
+  } as unknown as Server;
+  const resolve = defaultResolve(server, {});
+  const req = new Request("http://localhost/");
+  await expect(resolve!(req as never)).resolves.toBe(hooks);
+});
+
+test("hooks on the request survive a rebuilt response end-to-end", async () => {
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: fetchWithRebuiltResponse({
+      message(peer, message) {
+        peer.send(`echo:${message.text()}`);
+      },
+    }),
+    websocket: {}, // default resolver
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  await once(client, "open");
+  client.send("hello");
+  const [reply] = await once(client, "message");
+  expect(reply.toString()).toBe("echo:hello");
+  client.close();
+  await once(client, "close");
+});
+
+test("response-attached hooks win over request-attached hooks", async () => {
+  const fromRequest: Partial<Hooks> = { message() {} };
+  const fromResponse: Partial<Hooks> = { message() {} };
+  const server = {
+    options: {
+      fetch: (req: Request) => {
+        setWebSocketHooks(req, fromRequest);
+        return Object.assign(new Response("ok"), { crossws: fromResponse });
+      },
+    },
+  } as unknown as Server;
+  const resolve = defaultResolve(server, {});
+  await expect(resolve!(new Request("http://localhost/") as never)).resolves.toBe(fromResponse);
+});
+
+test("response hooks win over request hooks in the `{ crossws, headers }` shortcut", async () => {
+  const fromRequest: Partial<Hooks> = { message() {} };
+  const fromResponse: Partial<Hooks> = { open() {} };
+  const server = {
+    options: {
+      fetch: (req: Request) => {
+        setWebSocketHooks(req, fromRequest);
+        return { crossws: fromResponse, headers: { "x-hello": "world" } };
+      },
+    },
+  } as unknown as Server;
+  const resolve = defaultResolve(server, {});
+  const hooks = await resolve!(new Request("http://localhost/") as never);
+  // The shortcut composes its own `upgrade`, so compare the carried hook.
+  expect(hooks.open).toBe(fromResponse.open);
+  expect(hooks.message).toBeUndefined();
+  const result = await (hooks as Required<Hooks>).upgrade(
+    new Request("http://localhost/") as never,
+  );
+  expect(new Headers((result as { headers: HeadersInit }).headers).get("x-hello")).toBe("world");
+});
+
+test("request hooks still apply the `{ headers }` handshake shortcut", async () => {
+  // The request channel must not bypass the plain-object result shape, or a
+  // framework using both would silently lose its handshake headers.
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: (req) => {
+      setWebSocketHooks(req, {
+        message(peer, message) {
+          peer.send(message.text());
+        },
+      });
+      return { headers: { "x-hello": "world" } };
+    },
+    websocket: {},
+  });
+  currentServer = server;
+  await server.ready();
+
+  const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+  const [res] = (await once(client, "upgrade")) as [{ headers: Record<string, string> }];
+  expect(res.headers["x-hello"]).toBe("world");
+  client.send("hi");
+  const [reply] = await once(client, "message");
+  expect(reply.toString()).toBe("hi");
+  client.close();
+  await once(client, "close");
+});
+
+test("request hooks do not override an error/redirect response (auth parity)", async () => {
+  // Middleware that rejects *after* the WebSocket handler ran (an error mapped
+  // to 500, a post-`next()` redirect) must still abort the handshake — the
+  // request channel only recovers lost hooks, it never reinterprets a response.
+  for (const status of [401, 302, 500]) {
+    const server = {
+      options: {
+        fetch: (req: Request) => {
+          setWebSocketHooks(req, { message() {} });
+          return new Response("nope", { status });
+        },
+      },
+    } as unknown as Server;
+    const resolve = defaultResolve(server, {});
+    const hooks = await resolve!(new Request("http://localhost/") as never);
+    const res = await (hooks as Required<Hooks>).upgrade(new Request("http://localhost/") as never);
+    expect((res as Response).status).toBe(status);
+  }
+});
+
+test("a 426 with no hooks on either channel still aborts, warning only once", async () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    const server = {
+      options: { fetch: () => new Response("WebSocket upgrade is required.", { status: 426 }) },
+    } as unknown as Server;
+    const resolve = defaultResolve(server, {});
+    // Twice: the warning sits on a per-connection path a client can hit at
+    // will, so it must not flood the log.
+    for (const _ of [1, 2]) {
+      const hooks = await resolve!(new Request("http://localhost/") as never);
+      const res = await (hooks as Required<Hooks>).upgrade(
+        new Request("http://localhost/") as never,
+      );
+      expect((res as Response).status).toBe(426);
+    }
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("426"));
+  } finally {
+    warn.mockRestore();
+  }
+});
+
+test("request hooks resolve for a restored peer request (no upgrade seed)", async () => {
+  // Hibernation-style restore (Cloudflare Durable Objects) re-enters `resolve`
+  // with a synthesized `StubRequest` rather than the original upgrade request.
+  // The default resolver passes that same object to `fetch`, so the request
+  // channel still round-trips.
+  const hooks: Partial<Hooks> = { message() {} };
+  const server = {
+    options: {
+      fetch: (req: Request) => {
+        setWebSocketHooks(req, hooks);
+        return new Response(null, { status: 200 });
+      },
+    },
+  } as unknown as Server;
+  const resolve = defaultResolve(server, {});
+  await expect(resolve!(new StubRequest("http://localhost/ws") as never)).resolves.toBe(hooks);
 });
 
 test("defaultResolve throws a clear error when fetch is missing", () => {
