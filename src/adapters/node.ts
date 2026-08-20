@@ -22,6 +22,12 @@ type AugmentedReq = IncomingMessage & {
   _namespace: string;
 };
 
+// `@cloudflare/workers-types` is part of the project-wide `types` and declares
+// `Buffer` as `any`. That breaks the global `Buffer` *type* (the merged
+// interface loses its Node-only members such as `equals`), but not the global
+// `Buffer` *value*, so recover a usable type from the constructor.
+type NodeBuffer = ReturnType<typeof Buffer.concat>;
+
 // `ws` instance tagged with the heartbeat liveness flag (see the idle sweep below).
 type HeartbeatWS = WebSocketT & { _isAlive?: boolean };
 
@@ -114,21 +120,17 @@ const nodeAdapter: Adapter<NodeAdapter, NodeOptions> = (options = {}) => {
       ws.on("message", markAlive);
     }
     hooks.callHook("open", peer); // ws is already open
-    ws.on("message", (data: unknown, isBinary: boolean) => {
-      if (Array.isArray(data)) {
-        data = Buffer.concat(data);
-      }
-      if (!isBinary && Buffer.isBuffer(data)) {
-        data = data.toString("utf8");
-      }
+    ws.on("message", (rawData: NodeBuffer | ArrayBuffer | NodeBuffer[], isBinary: boolean) => {
+      const buff = Array.isArray(rawData) ? Buffer.concat(rawData) : rawData;
+      const data = !isBinary && !(buff instanceof ArrayBuffer) ? buff.toString("utf8") : buff;
       hooks.callHook("message", peer, new Message(data, peer));
     });
     // `ws` auto-replies to an inbound ping with a pong per the spec; these
     // hooks only observe the control frames, they don't need to answer them.
-    ws.on("ping", (data: Buffer) => {
+    ws.on("ping", (data: NodeBuffer) => {
       hooks.callHook("ping", peer, data);
     });
-    ws.on("pong", (data: Buffer) => {
+    ws.on("pong", (data: NodeBuffer) => {
       // Skip our own liveness probe's echoed pong (see the idle sweep); it is
       // not an app-level pong and would otherwise fire the `pong` hook every
       // idle interval with a bogus payload.

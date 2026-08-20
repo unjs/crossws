@@ -15,7 +15,12 @@ export function plugin(wsOpts: WSOptions): ServerPlugin {
 
     server.options.middleware.unshift((req, next) => {
       if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
-        return ws.handleUpgrade(req, req.runtime!.bun!.server) as Promise<Response>;
+        return ws.handleUpgrade(
+          req,
+          // srvx models the Bun server with its own structural `BunHttpServer`
+          // type, which is narrower than Bun's own `Server`.
+          req.runtime!.bun!.server as unknown as Parameters<typeof ws.handleUpgrade>[1],
+        ) as Promise<Response>;
       }
       return next();
     });

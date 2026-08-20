@@ -17,7 +17,10 @@ export function plugin(wsOpts: WSOptions): ServerPlugin {
         return ws.handleUpgrade(
           req,
           req.runtime!.cloudflare!.env,
-          req.runtime!.cloudflare!.context,
+          // srvx models the execution context with its own structural
+          // `CloudflareExecutionContext` type, which is narrower than the
+          // `ExecutionContext` of `@cloudflare/workers-types`.
+          req.runtime!.cloudflare!.context as unknown as Parameters<typeof ws.handleUpgrade>[2],
         );
       }
       return next();

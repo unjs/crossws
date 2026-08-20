@@ -162,7 +162,10 @@ export class Message implements Partial<MessageEvent> {
         return this.blob();
       }
       case "nodebuffer": {
-        return globalThis.Buffer ? Buffer.from(this.uint8Array()) : this.uint8Array();
+        // `@cloudflare/workers-types` (part of the project-wide `types`) declares
+        // `Buffer` as a `const`, so it is not visible as a `globalThis` property.
+        const NodeBuffer = (globalThis as { Buffer?: typeof Buffer }).Buffer;
+        return NodeBuffer ? NodeBuffer.from(this.uint8Array()) : this.uint8Array();
       }
       case "uint8array": {
         return this.uint8Array();

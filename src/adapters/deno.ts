@@ -17,7 +17,7 @@ export interface DenoOptions extends AdapterOptions {}
 
 type WebSocketUpgrade = Deno.WebSocketUpgrade;
 type ServeHandlerInfo = {
-  remoteAddr?: { transport: string; hostname: string; port: number };
+  remoteAddr?: { transport?: string; hostname: string; port: number };
 };
 
 // --- adapter ---
