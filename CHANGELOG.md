@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.4.12
+
+[compare changes](https://github.com/h3js/crossws/compare/v0.4.11...v0.4.12)
+
+### 🚀 Enhancements
+
+- Resolve hooks attached to the request via Symbol.for("crossws.hooks")`` ([5747500](https://github.com/h3js/crossws/commit/5747500))
+
+### ✅ Tests
+
+- Fix coverage ([3348b54](https://github.com/h3js/crossws/commit/3348b54))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](https://github.com/pi0))
+
 ## v0.4.11
 
 [compare changes](https://github.com/h3js/crossws/compare/v0.4.10...v0.4.11)
