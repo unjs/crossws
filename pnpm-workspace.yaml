@@ -8,3 +8,4 @@ allowBuilds:
   workerd: true
 minimumReleaseAgeExclude:
   - obuild*
+  - srvx@0.12.7
