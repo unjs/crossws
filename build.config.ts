@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { defineBuildConfig } from "obuild/config";
+import { minify } from "rolldown/utils";
+import type { Plugin } from "rolldown";
 
 const adapters = ["bun", "bunny", "cloudflare", "deno", "node", "sse", "uws", "vercel"];
 
@@ -22,6 +24,7 @@ export default defineBuildConfig({
         ...servers.map((id) => `src/server/${id}.ts`),
       ],
       rolldown: {
+        plugins: [minifyLibsPlugin()],
         external: [
           "@cloudflare/workers-types",
           "bun",
@@ -62,3 +65,36 @@ export default defineBuildConfig({
     },
   },
 });
+
+/**
+ * Minify the vendored dependency chunks obuild emits under `dist/_chunks/libs/`
+ * (currently only `ws`). Our own sources are left readable.
+ *
+ * This runs in `generateBundle` rather than `renderChunk` because obuild's
+ * `dce-only` minifier re-prints chunks after `renderChunk`, which would restore
+ * the whitespace we just removed.
+ */
+function minifyLibsPlugin(): Plugin {
+  return {
+    name: "crossws:minify-libs",
+    async generateBundle(_outputOptions, bundle) {
+      for (const [fileName, chunk] of Object.entries(bundle)) {
+        if (
+          chunk.type !== "chunk" ||
+          !fileName.startsWith("_chunks/libs/") ||
+          !fileName.endsWith(".mjs")
+        ) {
+          continue;
+        }
+        const res = await minify(fileName, chunk.code, { module: true });
+        const errors = res.errors.filter((e) => e.severity === "Error");
+        if (errors.length > 0) {
+          throw new Error(
+            `Failed to minify ${fileName}:\n${errors.map((e) => e.message).join("\n")}`,
+          );
+        }
+        chunk.code = res.code;
+      }
+    },
+  };
+}

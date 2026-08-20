@@ -93,6 +93,7 @@
     "obuild": "^0.4.38",
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
+    "rolldown": "^1.2.4",
     "srvx": "^0.12.7",
     "typescript": "^7.0.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.57.0",

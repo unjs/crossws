@@ -68,6 +68,9 @@ importers:
       oxlint:
         specifier: ^1.79.0
         version: 1.79.0
+      rolldown:
+        specifier: ^1.2.4
+        version: 1.2.4
       srvx:
         specifier: ^0.12.7
         version: 0.12.7
