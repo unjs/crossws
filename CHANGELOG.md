@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.4.11
+
+[compare changes](https://github.com/h3js/crossws/compare/v0.4.10...v0.4.11)
+
+### 🏡 Chore
+
+- Update undocs ([b82556c](https://github.com/h3js/crossws/commit/b82556c))
+- Fix links ([3399a2b](https://github.com/h3js/crossws/commit/3399a2b))
+- Update deps ([8d09317](https://github.com/h3js/crossws/commit/8d09317))
+- Fix type issues ([55904b5](https://github.com/h3js/crossws/commit/55904b5))
+- Lint ([3ef77d0](https://github.com/h3js/crossws/commit/3ef77d0))
+
+### ❤️ Contributors
+
+- Pooya Parsa ([@pi0](https://github.com/pi0))
+
 ## v0.4.10
 
 [compare changes](https://github.com/h3js/crossws/compare/v0.4.9...v0.4.10)
