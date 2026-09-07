@@ -5,6 +5,8 @@ import { defaultResolve } from "./_resolve";
 import type { Server, ServerPlugin, ServerOptions } from "srvx";
 import type { WSOptions, ServerWithWSOptions } from "./_types";
 
+const registeredServers = new WeakSet<object>();
+
 export function plugin(wsOpts: WSOptions): ServerPlugin {
   return (server) => {
     const ws = adapter({
@@ -14,15 +16,22 @@ export function plugin(wsOpts: WSOptions): ServerPlugin {
     });
     const originalServe = server.serve;
     server.serve = () => {
-      server.node?.server!.on("upgrade", (req, socket, head) => {
-        ws.handleUpgrade(
-          req,
-          socket,
-          head,
-          // @ts-expect-error (upgrade is not typed)
-          new NodeRequest({ req, upgrade: { socket, head } }),
-        );
-      });
+      const nodeServer = server.node?.server;
+      if (!registeredServers.has(server) && (!nodeServer || !registeredServers.has(nodeServer))) {
+        registeredServers.add(server);
+        if (nodeServer) {
+          registeredServers.add(nodeServer);
+        }
+        nodeServer?.on("upgrade", (req, socket, head) => {
+          ws.handleUpgrade(
+            req,
+            socket,
+            head,
+            // @ts-expect-error (upgrade is not typed)
+            new NodeRequest({ req, upgrade: { socket, head } }),
+          );
+        });
+      }
       return originalServe.call(server);
     };
   };
