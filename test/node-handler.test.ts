@@ -113,3 +113,27 @@ test("fromNodeUpgradeHandler does not invoke node adapter's own handleUpgrade", 
   client.close();
   await once(client, "close");
 });
+
+test("repeated serve() calls do not register duplicate upgrade handlers", async () => {
+  const port = await getRandomPort("localhost");
+  const server = serve({
+    port,
+    hostname: "127.0.0.1",
+    fetch: () => new Response("ok"),
+    websocket: {
+      message(peer, message) {
+        peer.send(message.text());
+      },
+    },
+  });
+  currentServer = server;
+  await server.ready();
+
+  const initialListeners = server.node?.server?.listenerCount("upgrade") ?? 0;
+  expect(initialListeners).toBe(1);
+
+  // Repeated call to serve() should not add duplicate upgrade listeners
+  await server.serve();
+  const subsequentListeners = server.node?.server?.listenerCount("upgrade") ?? 0;
+  expect(subsequentListeners).toBe(1);
+});
